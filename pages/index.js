@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Dropzone from "../components/Dropzone";
 import JSZip from "jszip";
-import { Loader2, CheckCircle, Download } from "lucide-react";
+import { Loader2, CheckCircle, Download, X } from "lucide-react";
 
 export default function Home() {
   const [files, setFiles] = useState([]);
@@ -14,6 +14,16 @@ export default function Home() {
     setFiles([]);
     setResults({});
     setProcessing(false);
+  };
+
+  // Remove a single file from the list
+  const removeFile = (fileName) => {
+    setFiles((prev) => prev.filter((f) => f.name !== fileName));
+    setResults((prev) => {
+      const updated = { ...prev };
+      delete updated[fileName];
+      return updated;
+    });
   };
 
   const convertAll = async () => {
@@ -163,10 +173,21 @@ export default function Home() {
           const percent = result?.percent ?? 0;
 
           return (
-            <div key={file.name} className="p-4 bg-white shadow rounded-lg">
-              <p className="font-semibold">{file.name}</p>
+            <div key={file.name} className="p-4 bg-white shadow rounded-lg relative">
+              {/* Remove Button */}
+              <button
+                onClick={() => removeFile(file.name)}
+                disabled={processing}
+                className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Remove file"
+              >
+                <X size={16} />
+              </button>
+
+              <p className="font-semibold pr-8">{file.name}</p>
 
               <p className="text-sm text-gray-600">
+                {!result && "Pending"}
                 {result?.status === "processing" &&
                   `Converting... ${percent}%`}
                 {result?.status === "done" &&

@@ -13,7 +13,7 @@ export default function Dropzone({ setFiles, resetResults }) {
 
     // Replace files with new uploaded ones
     setFiles(fixedFiles);
-  }, []);
+  }, [setFiles, resetResults]);
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: { "image/heic": [".heic", ".HEIC"] },
