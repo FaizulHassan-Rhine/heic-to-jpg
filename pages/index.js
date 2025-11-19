@@ -1,73 +1,209 @@
 import { useState } from "react";
 import Dropzone from "../components/Dropzone";
-import FilePreview from "../components/FilePreview";
-import { Loader2, Moon, Sun } from "lucide-react";
+import JSZip from "jszip";
+import { Loader2, CheckCircle, Download } from "lucide-react";
 
 export default function Home() {
   const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [results, setResults] = useState({});
+  const [processing, setProcessing] = useState(false);
+  const [format, setFormat] = useState("jpg-high");
 
-  const remove = (i) => setFiles(files.filter((_, idx) => idx !== i));
+  // Reset previous results when uploading new batch
+  const resetResults = () => {
+    setFiles([]);
+    setResults({});
+    setProcessing(false);
+  };
 
-  const convert = async () => {
-    if (files.length === 0) return alert("Please upload HEIC files.");
+  const convertAll = async () => {
+    setProcessing(true);
 
-    const form = new FormData();
-    files.forEach((f) => form.append("files", f));
+    const updated = {};
 
-    setLoading(true);
-    const res = await fetch("/api/convert", { method: "POST", body: form });
-    const blob = await res.blob();
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
 
-    const url = URL.createObjectURL(blob);
+      updated[file.name] = { status: "processing", percent: 0 };
+      setResults({ ...updated });
+
+      // Smooth progress simulation
+      let p = 0;
+      const timer = setInterval(() => {
+        p += Math.random() * 15;
+        if (p >= 95) p = 95;
+        updated[file.name].percent = Math.floor(p);
+        setResults({ ...updated });
+      }, 200);
+
+      // SEND REQUEST TO API
+      const form = new FormData();
+      form.append("file", file);
+      form.append("format", format);
+
+      const res = await fetch("/api/convert-single", {
+        method: "POST",
+        body: form,
+      });
+
+      clearInterval(timer);
+
+      const out = await res.arrayBuffer();
+      const ext = res.headers.get("X-Output-Extension");
+      const blob = new Blob([out]);
+
+      updated[file.name] = {
+        status: "done",
+        percent: 100,
+        ext,
+        blob,
+        size: blob.size,
+      };
+
+      setResults({ ...updated });
+    }
+
+    setProcessing(false);
+  };
+
+  const downloadAll = async () => {
+    const zip = new JSZip();
+
+    for (const name in results) {
+      const r = results[name];
+      if (r.status === "done") {
+        const outName = name.replace(/\.(heic|HEIC)$/i, `.${r.ext}`);
+        zip.file(outName, r.blob);
+      }
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
-    a.href = url;
+    a.href = URL.createObjectURL(zipBlob);
     a.download = "converted.zip";
     a.click();
-    URL.revokeObjectURL(url);
-
-    setLoading(false);
   };
 
   return (
-    <div className={dark ? "dark" : ""}>
-      <div className="min-h-screen p-6">
-        <button
-          onClick={() => setDark(!dark)}
-          className="absolute top-4 right-4 p-2 bg-gray-200 dark:bg-gray-800 rounded-full"
-        >
-          {dark ? <Sun /> : <Moon />}
-        </button>
+    <div className="p-6 max-w-5xl mx-auto">
 
-        <div className="max-w-3xl mx-auto mt-10">
-          <h1 className="text-3xl font-bold text-center mb-8">
-            HEIC → JPG Bulk Converter
-          </h1>
+      <h1 className="text-3xl font-bold text-center mb-8">
+        HEIC → JPG / WebP Converter
+      </h1>
 
-          <Dropzone setFiles={setFiles} />
+      <Dropzone setFiles={setFiles} resetResults={resetResults} />
 
-          {files.length > 0 && (
-            <FilePreview files={files} remove={remove} />
-          )}
+      {/* QUALITY OPTIONS */}
+      <div className="mt-6 text-center">
+        <p className="font-semibold mb-2">Output Format</p>
 
-          <div className="text-center mt-8">
-            <button
-              onClick={convert}
-              disabled={loading}
-              className="px-6 py-3 rounded-lg bg-primary text-white shadow-lg hover:bg-primary/80 transition"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="animate-spin" /> Converting...
-                </span>
-              ) : (
-                "Convert & Download ZIP"
-              )}
-            </button>
-          </div>
+        <div className="flex justify-center gap-4">
+          <label className="border-2 border-gray-300 rounded-md p-2 cursor-pointer">
+            <input
+              type="radio"
+              name="format"
+              defaultChecked
+              onChange={() => setFormat("jpg-high")}
+            />{" "}
+            High-Res JPG (95%)
+          </label>
+
+          <label className="border-2 border-gray-300 rounded-md p-2 cursor-pointer">
+            <input
+              type="radio"
+              name="format"
+              onChange={() => setFormat("jpg-balanced")}
+            />{" "}
+            Balanced JPG (80%)
+          </label>
+
+          <label className="border-2 border-gray-300 rounded-md p-2 cursor-pointer">
+            <input
+              type="radio"
+              name="format"
+              onChange={() => setFormat("webp-high")}
+            />{" "}
+            High-Res WebP (90%)
+          </label>
+
+          <label className="border-2 border-gray-300 rounded-md p-2 cursor-pointer">
+            <input
+              type="radio"
+              name="format"
+              onChange={() => setFormat("webp-balanced")}
+            />{" "}
+            Balanced WebP (80%)
+          </label>
         </div>
       </div>
+
+      {/* Convert Button */}
+      {files.length > 0 && (
+        <div className="text-center mt-8">
+          <button
+            onClick={convertAll}
+            disabled={processing}
+            className="px-6 py-3 bg-primary text-white rounded-lg shadow hover:bg-primary/80"
+          >
+            {processing ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="animate-spin" /> Converting...
+              </span>
+            ) : (
+              "Convert All"
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* FILE STATUS LIST */}
+      <div className="mt-10 space-y-4">
+        {files.map((file) => {
+          const result = results[file.name];
+          const percent = result?.percent ?? 0;
+
+          return (
+            <div key={file.name} className="p-4 bg-white shadow rounded-lg">
+              <p className="font-semibold">{file.name}</p>
+
+              <p className="text-sm text-gray-600">
+                {result?.status === "processing" &&
+                  `Converting... ${percent}%`}
+                {result?.status === "done" &&
+                  `Done — ${(result.size / 1024).toFixed(2)} KB`}
+              </p>
+
+              {/* Progress Bar */}
+              {result?.status === "processing" && (
+                <div className="w-full bg-gray-200 h-2 rounded mt-3">
+                  <div
+                    className="bg-primary h-2 rounded transition-all duration-200"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+              )}
+
+              {result?.status === "done" && (
+                <CheckCircle size={22} className="text-green-600 mt-3" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Download ZIP */}
+      {files.length > 0 &&
+        Object.values(results).filter((x) => x.status === "done").length ===
+          files.length && (
+          <div className="text-center mt-10">
+            <button
+              onClick={downloadAll}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg flex gap-2 items-center hover:bg-green-700 mx-auto"
+            >
+              <Download /> Download All (ZIP)
+            </button>
+          </div>
+        )}
     </div>
   );
 }
