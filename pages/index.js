@@ -1,19 +1,27 @@
 import { useState } from "react";
 import Dropzone from "../components/Dropzone";
 import JSZip from "jszip";
-import { Loader2, CheckCircle, Download, X } from "lucide-react";
+import { Loader2, CheckCircle, Download, X, AlertCircle } from "lucide-react";
 
 export default function Home() {
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
   const [format, setFormat] = useState("jpg-high");
+  const [totalUploads, setTotalUploads] = useState(0);
+  const [totalCompleted, setTotalCompleted] = useState(0);
 
   // Reset previous results when uploading new batch
   const resetResults = () => {
     setFiles([]);
     setResults({});
     setProcessing(false);
+  };
+
+  // Track uploads when files are added
+  const handleFilesAdded = (newFiles) => {
+    setFiles(newFiles);
+    setTotalUploads((prev) => prev + newFiles.length);
   };
 
   // Remove a single file from the list
@@ -51,26 +59,41 @@ export default function Home() {
       form.append("file", file);
       form.append("format", format);
 
-      const res = await fetch("/api/convert-single", {
-        method: "POST",
-        body: form,
-      });
+      try {
+        const res = await fetch("/api/convert-single", {
+          method: "POST",
+          body: form,
+        });
 
-      clearInterval(timer);
+        clearInterval(timer);
 
-      const out = await res.arrayBuffer();
-      const ext = res.headers.get("X-Output-Extension");
-      const blob = new Blob([out]);
+        if (!res.ok) {
+          throw new Error("Conversion failed");
+        }
 
-      updated[file.name] = {
-        status: "done",
-        percent: 100,
-        ext,
-        blob,
-        size: blob.size,
-      };
+        const out = await res.arrayBuffer();
+        const ext = res.headers.get("X-Output-Extension");
+        const blob = new Blob([out]);
 
-      setResults({ ...updated });
+        updated[file.name] = {
+          status: "done",
+          percent: 100,
+          ext,
+          blob,
+          size: blob.size,
+        };
+
+        setResults({ ...updated });
+        setTotalCompleted((prev) => prev + 1);
+      } catch (error) {
+        clearInterval(timer);
+        updated[file.name] = {
+          status: "error",
+          percent: 0,
+        };
+        setResults({ ...updated });
+        console.error("Conversion error:", error);
+      }
     }
 
     setProcessing(false);
@@ -101,7 +124,19 @@ export default function Home() {
         HEIC → JPG / WebP Converter
       </h1>
 
-      <Dropzone setFiles={setFiles} resetResults={resetResults} />
+      {/* Statistics Display */}
+      <div className="mb-6 flex justify-center gap-8">
+        <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-3 rounded-lg shadow">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Uploaded</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalUploads}</p>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900/20 px-6 py-3 rounded-lg shadow">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Completed</p>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{totalCompleted}</p>
+        </div>
+      </div>
+
+      <Dropzone setFiles={handleFilesAdded} resetResults={resetResults} />
 
       {/* QUALITY OPTIONS */}
       <div className="mt-6 text-center">
@@ -192,6 +227,8 @@ export default function Home() {
                   `Converting... ${percent}%`}
                 {result?.status === "done" &&
                   `Done — ${(result.size / 1024).toFixed(2)} KB`}
+                {result?.status === "error" &&
+                  "Error — Conversion failed"}
               </p>
 
               {/* Progress Bar */}
@@ -206,6 +243,10 @@ export default function Home() {
 
               {result?.status === "done" && (
                 <CheckCircle size={22} className="text-green-600 mt-3" />
+              )}
+
+              {result?.status === "error" && (
+                <AlertCircle size={22} className="text-red-600 mt-3" />
               )}
             </div>
           );

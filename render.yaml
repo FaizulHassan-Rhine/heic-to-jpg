@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: heic-converter
+    env: node
+    plan: free
+    branch: main   # Change to "master" if needed
+    autoDeploy: true
+
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm start"
+
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+
+      - key: NEXT_PUBLIC_SITE_URL
+        value: https://heic-converter-wx5t.onrender.com/
+
+    # Optional: If Sharp needs extra OS libs
+    # render automatically provides most deps, but if needed:
+    # buildFilter:
+    #   paths:
+    #     - "package.json"
+
+    # Optional: Increase build timeout (Sharp sometimes slow)
+    buildTimeoutSeconds: 2000
