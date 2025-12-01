@@ -1,5 +1,8 @@
 import { useDropzone } from "react-dropzone";
 import { useCallback } from "react";
+import { Card, CardContent } from "./ui/card";
+import { Upload } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function Dropzone({ setFiles, resetResults }) {
   const onDrop = useCallback((acceptedFiles) => {
@@ -15,20 +18,28 @@ export default function Dropzone({ setFiles, resetResults }) {
     setFiles(fixedFiles);
   }, [setFiles, resetResults]);
 
-  const { getRootProps, getInputProps } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "image/heic": [".heic", ".HEIC"] },
     multiple: true,
     onDrop,
   });
 
   return (
-    <div
+    <Card
       {...getRootProps()}
-      className="border-2 border-dashed border-gray-400 dark:border-gray-700 p-10 rounded-xl text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+      className={cn(
+        "cursor-pointer transition-colors border-dashed",
+        isDragActive && "border-primary bg-accent"
+      )}
     >
-      <input {...getInputProps()} />
-      <p className="text-lg font-semibold">Drag & Drop HEIC images here</p>
-      <p className="text-gray-500 text-sm">or click to select</p>
-    </div>
+      <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+        <input {...getInputProps()} />
+        <Upload className="h-12 w-12 mb-4 text-muted-foreground" />
+        <p className="text-lg font-semibold mb-2">
+          {isDragActive ? "Drop files here" : "Drag & Drop HEIC images here"}
+        </p>
+        <p className="text-sm text-muted-foreground">or click to select</p>
+      </CardContent>
+    </Card>
   );
 }

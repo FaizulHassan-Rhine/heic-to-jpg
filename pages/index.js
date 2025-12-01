@@ -1,7 +1,13 @@
 import { useState } from "react";
 import Dropzone from "../components/Dropzone";
 import JSZip from "jszip";
-import { Loader2, CheckCircle, Download, X, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, Download, X, AlertCircle, FileImage } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Progress } from "../components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
+import { Badge } from "../components/ui/badge";
+import { Separator } from "../components/ui/separator";
 
 export default function Home() {
   const [files, setFiles] = useState([]);
@@ -118,154 +124,203 @@ export default function Home() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-
-      <h1 className="text-3xl font-bold text-center mb-8">
-        HEIC → JPG / WebP Converter
-      </h1>
-
-      {/* Statistics Display */}
-      <div className="mb-6 flex justify-center gap-8">
-        <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-3 rounded-lg shadow">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Uploaded</p>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalUploads}</p>
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight">
+            HEIC → JPG / WebP Converter
+          </h1>
+          <p className="text-muted-foreground">
+            Convert your HEIC images to JPG or WebP format with ease
+          </p>
         </div>
-        <div className="bg-green-50 dark:bg-green-900/20 px-6 py-3 rounded-lg shadow">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Completed</p>
-          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{totalCompleted}</p>
+
+        {/* Statistics Display */}
+        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Total Uploaded
+                </p>
+                <p className="text-3xl font-bold text-primary">{totalUploads}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Total Completed
+                </p>
+                <p className="text-3xl font-bold text-primary">{totalCompleted}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      <Dropzone setFiles={handleFilesAdded} resetResults={resetResults} />
+        {/* Dropzone */}
+        <Dropzone setFiles={handleFilesAdded} resetResults={resetResults} />
 
-      {/* QUALITY OPTIONS */}
-      <div className="mt-6 text-center">
-        <p className="font-semibold mb-2">Output Format</p>
-
-        <div className="flex justify-center gap-4">
-          <label className="border-2 border-gray-300 rounded-md p-2 cursor-pointer">
-            <input
-              type="radio"
-              name="format"
-              defaultChecked
-              onChange={() => setFormat("jpg-high")}
-            />{" "}
-            High-Res JPG (95%)
-          </label>
-
-          <label className="border-2 border-gray-300 rounded-md p-2 cursor-pointer">
-            <input
-              type="radio"
-              name="format"
-              onChange={() => setFormat("jpg-balanced")}
-            />{" "}
-            Balanced JPG (80%)
-          </label>
-
-          <label className="border-2 border-gray-300 rounded-md p-2 cursor-pointer">
-            <input
-              type="radio"
-              name="format"
-              onChange={() => setFormat("webp-high")}
-            />{" "}
-            High-Res WebP (90%)
-          </label>
-
-          <label className="border-2 border-gray-300 rounded-md p-2 cursor-pointer">
-            <input
-              type="radio"
-              name="format"
-              onChange={() => setFormat("webp-balanced")}
-            />{" "}
-            Balanced WebP (80%)
-          </label>
-        </div>
-      </div>
-
-      {/* Convert Button */}
-      {files.length > 0 && (
-        <div className="text-center mt-8">
-          <button
-            onClick={convertAll}
-            disabled={processing}
-            className="px-6 py-3 bg-primary text-white rounded-lg shadow hover:bg-primary/80"
-          >
-            {processing ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="animate-spin" /> Converting...
-              </span>
-            ) : (
-              "Convert All"
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* FILE STATUS LIST */}
-      <div className="mt-10 space-y-4">
-        {files.map((file) => {
-          const result = results[file.name];
-          const percent = result?.percent ?? 0;
-
-          return (
-            <div key={file.name} className="p-4 bg-white shadow rounded-lg relative">
-              {/* Remove Button */}
-              <button
-                onClick={() => removeFile(file.name)}
-                disabled={processing}
-                className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Remove file"
+        {/* QUALITY OPTIONS */}
+        {files.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Output Format</CardTitle>
+              <CardDescription>
+                Choose the format and quality for your converted images
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={format}
+                onValueChange={setFormat}
+                className="grid grid-cols-2 gap-4"
               >
-                <X size={16} />
-              </button>
-
-              <p className="font-semibold pr-8">{file.name}</p>
-
-              <p className="text-sm text-gray-600">
-                {!result && "Pending"}
-                {result?.status === "processing" &&
-                  `Converting... ${percent}%`}
-                {result?.status === "done" &&
-                  `Done — ${(result.size / 1024).toFixed(2)} KB`}
-                {result?.status === "error" &&
-                  "Error — Conversion failed"}
-              </p>
-
-              {/* Progress Bar */}
-              {result?.status === "processing" && (
-                <div className="w-full bg-gray-200 h-2 rounded mt-3">
-                  <div
-                    className="bg-primary h-2 rounded transition-all duration-200"
-                    style={{ width: `${percent}%` }}
-                  />
+                <div className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent">
+                  <RadioGroupItem value="jpg-high" id="jpg-high" />
+                  <label htmlFor="jpg-high" className="flex-1 cursor-pointer">
+                    <div className="font-medium">High-Res JPG</div>
+                    <div className="text-sm text-muted-foreground">95% Quality</div>
+                  </label>
                 </div>
-              )}
+                <div className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent">
+                  <RadioGroupItem value="jpg-balanced" id="jpg-balanced" />
+                  <label htmlFor="jpg-balanced" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Balanced JPG</div>
+                    <div className="text-sm text-muted-foreground">80% Quality</div>
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent">
+                  <RadioGroupItem value="webp-high" id="webp-high" />
+                  <label htmlFor="webp-high" className="flex-1 cursor-pointer">
+                    <div className="font-medium">High-Res WebP</div>
+                    <div className="text-sm text-muted-foreground">90% Quality</div>
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent">
+                  <RadioGroupItem value="webp-balanced" id="webp-balanced" />
+                  <label htmlFor="webp-balanced" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Balanced WebP</div>
+                    <div className="text-sm text-muted-foreground">80% Quality</div>
+                  </label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+        )}
 
-              {result?.status === "done" && (
-                <CheckCircle size={22} className="text-green-600 mt-3" />
-              )}
-
-              {result?.status === "error" && (
-                <AlertCircle size={22} className="text-red-600 mt-3" />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Download ZIP */}
-      {files.length > 0 &&
-        Object.values(results).filter((x) => x.status === "done").length ===
-          files.length && (
-          <div className="text-center mt-10">
-            <button
-              onClick={downloadAll}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg flex gap-2 items-center hover:bg-green-700 mx-auto"
+        {/* Convert Button */}
+        {files.length > 0 && (
+          <div className="flex justify-center">
+            <Button
+              onClick={convertAll}
+              disabled={processing}
+              size="lg"
+              className="min-w-[200px]"
             >
-              <Download /> Download All (ZIP)
-            </button>
+              {processing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Converting...
+                </>
+              ) : (
+                "Convert All"
+              )}
+            </Button>
           </div>
         )}
+
+        {/* FILE STATUS LIST */}
+        {files.length > 0 && (
+          <div className="space-y-4">
+            <Separator />
+            <h2 className="text-2xl font-semibold">Files</h2>
+            <div className="space-y-3">
+              {files.map((file) => {
+                const result = results[file.name];
+                const percent = result?.percent ?? 0;
+
+                return (
+                  <Card key={file.name} className="relative">
+                    <CardContent className="pt-6">
+                      {/* Remove Button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFile(file.name)}
+                        disabled={processing}
+                        className="absolute top-4 right-4 h-8 w-8"
+                        title="Remove file"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+
+                      <div className="pr-12 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <FileImage className="h-5 w-5 text-muted-foreground mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold truncate">{file.name}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {!result && (
+                                <Badge variant="secondary">Pending</Badge>
+                              )}
+                              {result?.status === "processing" && (
+                                <Badge variant="default">
+                                  Converting... {percent}%
+                                </Badge>
+                              )}
+                              {result?.status === "done" && (
+                                <>
+                                  <Badge variant="default" className="bg-green-600">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Done
+                                  </Badge>
+                                  <span className="text-sm text-muted-foreground">
+                                    {(result.size / 1024).toFixed(2)} KB
+                                  </span>
+                                </>
+                              )}
+                              {result?.status === "error" && (
+                                <Badge variant="destructive">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Error
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        {result?.status === "processing" && (
+                          <Progress value={percent} className="h-2" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Download ZIP */}
+        {files.length > 0 &&
+          Object.values(results).filter((x) => x.status === "done").length ===
+            files.length && (
+            <div className="flex justify-center">
+              <Button
+                onClick={downloadAll}
+                size="lg"
+                className="bg-green-600 hover:bg-green-700 min-w-[200px]"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download All (ZIP)
+              </Button>
+            </div>
+          )}
+      </div>
     </div>
   );
 }
