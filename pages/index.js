@@ -1,7 +1,9 @@
 import { useState } from "react";
 import Dropzone from "../components/Dropzone";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import JSZip from "jszip";
-import { Loader2, CheckCircle, Download, X, AlertCircle, FileImage } from "lucide-react";
+import { Loader2, CheckCircle, Download, X, AlertCircle, FileImage, Zap, Shield } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
@@ -9,7 +11,93 @@ import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 
+// Helper function to detect file type
+const getFileType = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  if (['heic'].includes(ext)) return 'heic';
+  if (['jpg', 'jpeg'].includes(ext)) return 'jpg';
+  if (['png'].includes(ext)) return 'png';
+  if (['webp'].includes(ext)) return 'webp';
+  return null;
+};
+
+// Get available output formats based on input type
+const getAvailableFormats = (fileType) => {
+  if (fileType === 'heic') {
+    return [
+      { value: 'jpg-high', label: 'High-Res JPG', quality: '95%' },
+      { value: 'jpg-balanced', label: 'Balanced JPG', quality: '80%' },
+      { value: 'webp-high', label: 'High-Res WebP', quality: '90%' },
+      { value: 'webp-balanced', label: 'Balanced WebP', quality: '80%' },
+    ];
+  }
+  if (fileType === 'jpg') {
+    return [
+      { value: 'webp-high', label: 'High-Res WebP', quality: '90%' },
+      { value: 'webp-balanced', label: 'Balanced WebP', quality: '80%' },
+      { value: 'png', label: 'PNG', quality: 'Lossless' },
+    ];
+  }
+  if (fileType === 'png') {
+    return [
+      { value: 'jpg-high', label: 'High-Res JPG', quality: '95%' },
+      { value: 'jpg-balanced', label: 'Balanced JPG', quality: '80%' },
+      { value: 'webp-high', label: 'High-Res WebP', quality: '90%' },
+      { value: 'webp-balanced', label: 'Balanced WebP', quality: '80%' },
+    ];
+  }
+  if (fileType === 'webp') {
+    return [
+      { value: 'jpg-high', label: 'High-Res JPG', quality: '95%' },
+      { value: 'jpg-balanced', label: 'Balanced JPG', quality: '80%' },
+      { value: 'png', label: 'PNG', quality: 'Lossless' },
+    ];
+  }
+  return [];
+};
+
+// Get common format for all files (if all same type)
+const getCommonFileType = (files) => {
+  if (files.length === 0) return null;
+  const types = files.map(f => getFileType(f.name));
+  const firstType = types[0];
+  return types.every(t => t === firstType) ? firstType : 'mixed';
+};
+
+// Conversion type options
+const conversionTypes = [
+  {
+    id: 'heic',
+    label: 'HEIC',
+    description: 'Convert HEIC images',
+    outputs: ['JPG', 'WebP'],
+    icon: '📱'
+  },
+  {
+    id: 'jpg',
+    label: 'JPG',
+    description: 'Convert JPG images',
+    outputs: ['WebP', 'PNG'],
+    icon: '🖼️'
+  },
+  {
+    id: 'png',
+    label: 'PNG',
+    description: 'Convert PNG images',
+    outputs: ['JPG', 'WebP'],
+    icon: '🖼️'
+  },
+  {
+    id: 'webp',
+    label: 'WebP',
+    description: 'Convert WebP images',
+    outputs: ['JPG', 'PNG'],
+    icon: '🖼️'
+  },
+];
+
 export default function Home() {
+  const [selectedInputType, setSelectedInputType] = useState(null);
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -28,6 +116,26 @@ export default function Home() {
   const handleFilesAdded = (newFiles) => {
     setFiles(newFiles);
     setTotalUploads((prev) => prev + newFiles.length);
+    // Set default format based on selected input type
+    if (selectedInputType) {
+      const availableFormats = getAvailableFormats(selectedInputType);
+      if (availableFormats.length > 0) {
+        setFormat(availableFormats[0].value);
+      }
+    }
+  };
+
+  // Handle conversion type selection
+  const handleConversionTypeSelect = (type) => {
+    setSelectedInputType(type);
+    setFiles([]);
+    setResults({});
+    setProcessing(false);
+    // Set default format for selected type
+    const availableFormats = getAvailableFormats(type);
+    if (availableFormats.length > 0) {
+      setFormat(availableFormats[0].value);
+    }
   };
 
   // Remove a single file from the list
@@ -64,6 +172,7 @@ export default function Home() {
       const form = new FormData();
       form.append("file", file);
       form.append("format", format);
+      form.append("inputType", getFileType(file.name) || "heic");
 
       try {
         const res = await fetch("/api/convert-single", {
@@ -111,7 +220,8 @@ export default function Home() {
     for (const name in results) {
       const r = results[name];
       if (r.status === "done") {
-        const outName = name.replace(/\.(heic|HEIC)$/i, `.${r.ext}`);
+        // Replace any image extension with the output extension
+        const outName = name.replace(/\.(heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP)$/i, `.${r.ext}`);
         zip.file(outName, r.blob);
       }
     }
@@ -124,113 +234,182 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">
-            HEIC → JPG / WebP Converter
-          </h1>
-          <p className="text-muted-foreground">
-            Convert your HEIC images to JPG or WebP format with ease
-          </p>
-        </div>
-
-        {/* Statistics Display */}
-        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Total Uploaded
-                </p>
-                <p className="text-3xl font-bold text-primary">{totalUploads}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Total Completed
-                </p>
-                <p className="text-3xl font-bold text-primary">{totalCompleted}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Dropzone */}
-        <Dropzone setFiles={handleFilesAdded} resetResults={resetResults} />
-
-        {/* QUALITY OPTIONS */}
-        {files.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Output Format</CardTitle>
-              <CardDescription>
-                Choose the format and quality for your converted images
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup
-                value={format}
-                onValueChange={setFormat}
-                className="grid grid-cols-2 gap-4"
-              >
-                <div className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent">
-                  <RadioGroupItem value="jpg-high" id="jpg-high" />
-                  <label htmlFor="jpg-high" className="flex-1 cursor-pointer">
-                    <div className="font-medium">High-Res JPG</div>
-                    <div className="text-sm text-muted-foreground">95% Quality</div>
-                  </label>
-                </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent">
-                  <RadioGroupItem value="jpg-balanced" id="jpg-balanced" />
-                  <label htmlFor="jpg-balanced" className="flex-1 cursor-pointer">
-                    <div className="font-medium">Balanced JPG</div>
-                    <div className="text-sm text-muted-foreground">80% Quality</div>
-                  </label>
-                </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent">
-                  <RadioGroupItem value="webp-high" id="webp-high" />
-                  <label htmlFor="webp-high" className="flex-1 cursor-pointer">
-                    <div className="font-medium">High-Res WebP</div>
-                    <div className="text-sm text-muted-foreground">90% Quality</div>
-                  </label>
-                </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent">
-                  <RadioGroupItem value="webp-balanced" id="webp-balanced" />
-                  <label htmlFor="webp-balanced" className="flex-1 cursor-pointer">
-                    <div className="font-medium">Balanced WebP</div>
-                    <div className="text-sm text-muted-foreground">80% Quality</div>
-                  </label>
-                </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Convert Button */}
-        {files.length > 0 && (
-          <div className="flex justify-center">
-            <Button
-              onClick={convertAll}
-              disabled={processing}
-              size="lg"
-              className="min-w-[200px]"
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Converting...
-                </>
-              ) : (
-                "Convert All"
-              )}
-            </Button>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      
+      <main className="flex-1">
+        <div className="container mx-auto px-4 py-12 space-y-32">
+          {/* Hero Section */}
+          <div className="text-center space-y-4 max-w-3xl mx-auto">
+            <h1 className="text-5xl font-bold tracking-tight">
+              Image Format Converter
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              Convert between HEIC, JPG, PNG, and WebP formats with ease. Fast, free, and secure.
+              Support for all major image formats with batch processing.
+            </p>
           </div>
-        )}
+
+          {/* Converter Section */}
+          <section id="converter" className="space-y-8 py-8">
+          
+
+            {/* Step 1: Conversion Type Selection */}
+            {!selectedInputType && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Step 1: Select Input Format</CardTitle>
+                  <CardDescription>
+                    Choose what type of images you want to convert
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {conversionTypes.map((type) => {
+                      const availableFormats = getAvailableFormats(type.id);
+                      return (
+                        <div
+                          key={type.id}
+                          onClick={() => handleConversionTypeSelect(type.id)}
+                          className="p-6 border rounded-lg cursor-pointer hover:border-primary hover:bg-accent transition-colors"
+                        >
+                          <div className="text-4xl mb-3">{type.icon}</div>
+                          <h3 className="font-semibold text-lg mb-1">{type.label}</h3>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {type.description}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {type.outputs.map((output) => (
+                              <Badge key={output} variant="secondary">
+                                → {output}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+                {/* Step 2: Upload Section */}
+            {selectedInputType && (
+              <>
+                {/* Back Button */}
+                <div className="flex justify-start">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedInputType(null);
+                      setFiles([]);
+                      setResults({});
+                      setProcessing(false);
+                    }}
+                  >
+                    ← Change Conversion Type
+                  </Button>
+                </div>
+
+                {/* Statistics Display */}
+                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">
+                          Total Uploaded
+                        </p>
+                        <p className="text-3xl font-bold text-primary">{totalUploads}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">
+                          Total Completed
+                        </p>
+                        <p className="text-3xl font-bold text-primary">{totalCompleted}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Dropzone */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Step 2: Upload {selectedInputType.toUpperCase()} Images</CardTitle>
+                    <CardDescription>
+                      Drag and drop or click to select your {selectedInputType.toUpperCase()} files
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Dropzone 
+                      setFiles={handleFilesAdded} 
+                      resetResults={resetResults}
+                      inputType={selectedInputType}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Step 3: Output Format Selection */}
+                {files.length > 0 && (() => {
+                  const availableFormats = getAvailableFormats(selectedInputType);
+                  
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Step 3: Choose Output Format</CardTitle>
+                        <CardDescription>
+                          Select the format and quality for your converted images
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <RadioGroup
+                          value={format}
+                          onValueChange={setFormat}
+                          className={`grid gap-4 ${availableFormats.length <= 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}
+                        >
+                          {availableFormats.map((fmt) => (
+                            <div
+                              key={fmt.value}
+                              className="flex items-center space-x-3 p-4 border rounded-md cursor-pointer hover:bg-accent transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent"
+                            >
+                              <RadioGroupItem value={fmt.value} id={fmt.value} />
+                              <label htmlFor={fmt.value} className="flex-1 cursor-pointer">
+                                <div className="font-medium">{fmt.label}</div>
+                                <div className="text-sm text-muted-foreground">{fmt.quality} Quality</div>
+                              </label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                {/* Convert Button */}
+                {files.length > 0 && (
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={convertAll}
+                      disabled={processing}
+                      size="lg"
+                      className="min-w-[200px]"
+                    >
+                      {processing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Converting...
+                        </>
+                      ) : (
+                        "Convert All"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
 
         {/* FILE STATUS LIST */}
         {files.length > 0 && (
@@ -320,7 +499,128 @@ export default function Home() {
               </Button>
             </div>
           )}
-      </div>
+          </section>
+
+          {/* How It Works Section */}
+          <section id="how-it-works" className="space-y-8 py-8">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold">How It Works</h2>
+              <p className="text-muted-foreground">
+                Convert your images in just a few simple steps
+              </p>
+            </div>
+            <div className="grid md:grid-cols-4 gap-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl">
+                      1
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Select & Upload</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Choose your input format (HEIC, JPG, PNG, or WebP) and upload your images
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl">
+                      2
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Choose Output Format</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Select your desired output format (JPG, PNG, or WebP) and quality setting
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl">
+                      3
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Convert</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Click convert and watch your images transform in real-time
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl">
+                      4
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Download</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Download all converted images as a convenient ZIP file
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* Why Use It Section */}
+          <section id="why-use-it" className="space-y-8 py-8">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold">Why Use This Converter?</h2>
+              <p className="text-muted-foreground">
+                Everything you need to convert images between formats efficiently
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <Zap className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle>Lightning Fast</CardTitle>
+                  <CardDescription>
+                    Convert multiple images simultaneously with our optimized processing engine
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle>100% Secure</CardTitle>
+                  <CardDescription>
+                    Your files are processed locally and never stored on our servers
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <Download className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle>Multiple Formats</CardTitle>
+                  <CardDescription>
+                    Convert between HEIC, JPG, PNG, and WebP with customizable quality settings
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }
