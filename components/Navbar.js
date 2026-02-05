@@ -1,47 +1,47 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
+import NextImage from "next/image";
 import { Button } from "./ui/button";
-import { Image, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import Link from "next/link";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
-    setIsMenuOpen(false); // Close menu after clicking
-  };
+  const router = useRouter();
+  const currentPath = router.pathname;
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image className="h-6 w-6 text-primary" />
+          <Link href="/" className="flex items-center gap-2">
+            <NextImage 
+              src="/logo.png" 
+              alt="ImageSwitch Logo" 
+              width={40} 
+              height={40}
+              className="h-10 w-10"
+            />
             <span className="font-bold text-xl">ImageSwitch</span>
-          </div>
+          </Link>
           
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => scrollToSection("how-it-works")}
-            >
-              How it Works
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => scrollToSection("why-use-it")}
-            >
-              Why Use It
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => scrollToSection("converter")}
-            >
-              Convert Now
-            </Button>
+            <Link href="/convert">
+              <Button variant={currentPath === "/convert" ? "default" : "ghost"}>
+                Convert
+              </Button>
+            </Link>
+            <Link href="/compress">
+              <Button variant={currentPath === "/compress" ? "default" : "ghost"}>
+                Compress
+              </Button>
+            </Link>
+            <Link href="/guide">
+              <Button variant={currentPath === "/guide" ? "default" : "ghost"}>
+                Guide
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Hamburger Button */}
@@ -64,27 +64,33 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden border-t">
             <div className="flex flex-col py-4 space-y-2">
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => scrollToSection("how-it-works")}
-              >
-                How it Works
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => scrollToSection("why-use-it")}
-              >
-                Why Use It
-              </Button>
-              <Button
-                variant="default"
-                className="w-full justify-start"
-                onClick={() => scrollToSection("converter")}
-              >
-                Convert Now
-              </Button>
+              <Link href="/convert" className="w-full">
+                <Button
+                  variant={currentPath === "/convert" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Convert
+                </Button>
+              </Link>
+              <Link href="/compress" className="w-full">
+                <Button
+                  variant={currentPath === "/compress" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Compress
+                </Button>
+              </Link>
+              <Link href="/guide" className="w-full">
+                <Button
+                  variant={currentPath === "/guide" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Guide
+                </Button>
+              </Link>
             </div>
           </div>
         )}

@@ -4,23 +4,44 @@ import { Card, CardContent } from "./ui/card";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function Dropzone({ setFiles, resetResults, inputType }) {
+export default function Dropzone({ setFiles, resetResults, inputType, disabled, onDisabledClick }) {
   const onDrop = useCallback((acceptedFiles) => {
-    // Fix for HEIC file type in browsers
-    const fixedFiles = acceptedFiles.map(
-      (f) => new File([f], f.name || `image.${inputType || 'heic'}`, { type: f.type })
-    );
+    if (disabled) {
+      if (onDisabledClick) onDisabledClick();
+      return;
+    }
+
+    // Fix for HEIC file type in browsers and ensure correct MIME types
+    const fixedFiles = acceptedFiles.map((f) => {
+      // Determine MIME type from file extension if not set
+      let mimeType = f.type;
+      if (!mimeType) {
+        const ext = f.name.split('.').pop().toLowerCase();
+        const mimeTypes = {
+          'heic': 'image/heic',
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'webp': 'image/webp',
+        };
+        mimeType = mimeTypes[ext] || f.type;
+      }
+      
+      return new File([f], f.name || `image.${inputType || 'heic'}`, { type: mimeType });
+    });
 
     // Clear previous batch
     resetResults();
 
     // Replace files with new uploaded ones
     setFiles(fixedFiles);
-  }, [setFiles, resetResults, inputType]);
+  }, [setFiles, resetResults, inputType, disabled, onDisabledClick]);
 
   // Get accept object based on input type
   const getAcceptObject = () => {
-    if (!inputType) return {};
+    if (!inputType) {
+      return {};
+    }
     
     if (inputType === 'heic') {
       return { "image/heic": [".heic", ".HEIC"] };
@@ -41,7 +62,15 @@ export default function Dropzone({ setFiles, resetResults, inputType }) {
     accept: getAcceptObject(),
     multiple: true,
     onDrop,
+    disabled: disabled,
+    noClick: disabled,
   });
+
+  const handleClick = () => {
+    if (disabled && onDisabledClick) {
+      onDisabledClick();
+    }
+  };
 
   const getTypeLabel = () => {
     if (inputType === 'heic') return 'HEIC';
@@ -51,24 +80,45 @@ export default function Dropzone({ setFiles, resetResults, inputType }) {
     return 'images';
   };
 
+  const rootProps = getRootProps();
+  
   return (
-    <Card
-      {...getRootProps()}
+    <div
+      {...rootProps}
+      onClick={disabled ? handleClick : rootProps.onClick}
       className={cn(
-        "cursor-pointer transition-colors border-dashed",
-        isDragActive && "border-primary bg-accent"
+        "w-full border-2 border-dashed rounded-xl transition-all duration-200",
+        "flex flex-col items-center justify-center py-20 px-8",
+        "bg-gradient-to-br from-background to-muted/20",
+        disabled 
+          ? "cursor-not-allowed opacity-50" 
+          : "cursor-pointer hover:border-primary/50 hover:bg-gradient-to-br hover:from-primary/5 hover:to-primary/10 hover:shadow-lg hover:shadow-primary/10",
+        isDragActive && !disabled
+          ? "border-primary bg-gradient-to-br from-primary/10 to-primary/20 shadow-lg shadow-primary/20 scale-[1.02]" 
+          : "border-border"
       )}
     >
-      <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-        <input {...getInputProps()} />
-        <Upload className="h-12 w-12 mb-4 text-muted-foreground" />
-        <p className="text-lg font-semibold mb-2">
-          {isDragActive ? "Drop files here" : `Drag & Drop ${getTypeLabel()} images here`}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {inputType ? `Upload ${getTypeLabel()} files` : "Select a conversion type first"}
-        </p>
-      </CardContent>
-    </Card>
+      <input {...getInputProps()} />
+      <div className={cn(
+        "mb-6 p-4 rounded-full transition-all duration-200",
+        isDragActive 
+          ? "bg-primary/10 scale-110" 
+          : "bg-muted"
+      )}>
+        <Upload className={cn(
+          "h-10 w-10 transition-colors duration-200",
+          isDragActive ? "text-primary" : "text-muted-foreground"
+        )} />
+      </div>
+      <p className={cn(
+        "text-lg font-semibold mb-2 transition-colors",
+        isDragActive && "text-primary"
+      )}>
+        {isDragActive ? "Drop files here" : `Drag & Drop images here`}
+      </p>
+      <p className="text-sm text-muted-foreground">
+        {inputType ? `Upload ${getTypeLabel()} files` : "Please select an input format first"}
+      </p>
+    </div>
   );
 }

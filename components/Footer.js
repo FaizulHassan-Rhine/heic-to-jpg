@@ -1,4 +1,5 @@
-import { Image } from "lucide-react";
+import NextImage from "next/image";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -7,7 +8,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Image className="h-5 w-5 text-primary" />
+              <NextImage 
+                src="/logo.png" 
+                alt="ImageSwitch Logo" 
+                width={40} 
+                height={40}
+                className="h-10 w-10"
+              />
               <span className="font-bold">ImageSwitch</span>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -19,19 +26,19 @@ export default function Footer() {
             <h3 className="font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a href="#how-it-works" className="hover:text-foreground transition-colors">
-                  How it Works
-                </a>
+                <Link href="/convert" className="hover:text-foreground transition-colors">
+                  Convert
+                </Link>
               </li>
               <li>
-                <a href="#why-use-it" className="hover:text-foreground transition-colors">
-                  Why Use It
-                </a>
+                <Link href="/compress" className="hover:text-foreground transition-colors">
+                  Compress
+                </Link>
               </li>
               <li>
-                <a href="#converter" className="hover:text-foreground transition-colors">
-                  Converter
-                </a>
+                <Link href="/guide" className="hover:text-foreground transition-colors">
+                  Guide
+                </Link>
               </li>
             </ul>
           </div>
