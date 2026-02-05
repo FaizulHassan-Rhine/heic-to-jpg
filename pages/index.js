@@ -52,7 +52,7 @@ export default function Home() {
                   </p>
                 </CardContent>
               </Card>
-              <Card className="border-2">
+              <Card className="border-2 ">
                 <CardContent className="pt-6 pb-6 text-center">
                   <Download className="h-8 w-8 text-primary mx-auto mb-4" />
                   <h3 className="font-bold text-lg mb-2">Multiple Formats</h3>
