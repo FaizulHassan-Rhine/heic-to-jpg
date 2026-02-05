@@ -1,6 +1,3 @@
-import { useEffect } from "react";
-import { useRouter } from "next/router";
-import NextImage from "next/image";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { Card, CardContent } from "../components/ui/card";
@@ -9,13 +6,6 @@ import { Zap, Shield, Download } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Redirect to /convert by default
-    router.replace("/convert");
-  }, [router]);
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -23,15 +13,6 @@ export default function Home() {
       <main className="flex-1 flex items-center justify-center">
         <div className="container mx-auto px-4 py-12">
           <div className="text-center space-y-8 max-w-3xl mx-auto">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 mb-4">
-              <NextImage 
-                src="/logo.png" 
-                alt="ImageSwitch Logo" 
-                width={40} 
-                height={40}
-                className="h-10 w-10"
-              />
-            </div>
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               ImageSwitch
             </h1>
