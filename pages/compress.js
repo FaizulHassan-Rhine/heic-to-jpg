@@ -63,6 +63,7 @@ export default function Compress() {
   // Track uploads when files are added
   const handleFilesAdded = (newFiles) => {
     const MAX_FILES = 20;
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB (local limit)
     
     // Check if adding these files would exceed the limit
     if (newFiles.length > MAX_FILES) {
@@ -70,12 +71,32 @@ export default function Compress() {
       return;
     }
     
-    setFiles(newFiles);
-    setTotalUploads((prev) => prev + newFiles.length);
+    // Check individual file sizes
+    const oversizedFiles = [];
+    const validFiles = [];
+    
+    newFiles.forEach((file) => {
+      if (file.size > MAX_FILE_SIZE) {
+        oversizedFiles.push(file.name);
+      } else {
+        validFiles.push(file);
+      }
+    });
+    
+    if (oversizedFiles.length > 0) {
+      const fileNames = oversizedFiles.join(", ");
+      toast.error(`File size limit is 20MB (4.5MB on Vercel). The following files are too large: ${fileNames}`);
+      if (validFiles.length === 0) {
+        return; // Don't proceed if all files are too large
+      }
+    }
+    
+    setFiles(validFiles);
+    setTotalUploads((prev) => prev + validFiles.length);
     
     const newPreviewUrls = {};
     
-    newFiles.forEach((file) => {
+    validFiles.forEach((file) => {
       const hasImageMimeType = file.type && file.type.startsWith('image/');
       const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|heic|bmp|svg)$/i.test(file.name);
       const isImage = hasImageMimeType || hasImageExtension;
@@ -296,6 +317,25 @@ export default function Compress() {
       delete updated[fileName];
       return updated;
     });
+  };
+
+  // Download single file
+  const downloadSingleFile = (fileName) => {
+    const result = results[fileName];
+    if (!result || result.status !== "done") return;
+
+    const file = files.find((f) => f.name === fileName);
+    if (!file) return;
+
+    // Replace extension with output extension
+    const outName = fileName.replace(/\.(heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP)$/i, `.${result.ext}`);
+    
+    const url = URL.createObjectURL(result.blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = outName;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const downloadAll = async () => {
@@ -662,6 +702,16 @@ export default function Compress() {
                                         </span>
                                       );
                                     })()}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => downloadSingleFile(file.name)}
+                                      className="ml-2 h-6 text-xs px-2"
+                                      title="Download this file"
+                                    >
+                                      <Download className="h-3 w-3 mr-1" />
+                                      Download
+                                    </Button>
                                   </>
                                 )}
                                 {result?.status === "error" && (

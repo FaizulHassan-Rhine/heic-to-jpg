@@ -42,17 +42,41 @@ export default async function handler(req, res) {
           return resolve();
         }
 
+        // Check file size
+        // Local development: 20MB limit
+        // Vercel: 4.5MB limit (Vercel's hard limit)
+        const isVercel = process.env.VERCEL === '1';
+        const maxSize = isVercel ? 4.5 * 1024 * 1024 : 20 * 1024 * 1024; // 4.5MB on Vercel, 20MB locally
+        if (fileBuffer.length > maxSize) {
+          res.status(413).json({ 
+            error: `File too large. Maximum size is ${(maxSize / 1024 / 1024).toFixed(1)}MB. Your file is ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB.` 
+          });
+          return resolve();
+        }
+
         // Detect if it's HEIC and convert to PNG first
         let inputBuffer;
+        
+        // Try to use Sharp first (works for JPG, PNG, WebP)
         try {
-          // Try to convert as HEIC first
-          inputBuffer = await convert({
-            buffer: fileBuffer,
-            format: "PNG",
-          });
-        } catch (err) {
-          // If not HEIC, use directly
+          const testMetadata = await sharp(fileBuffer).metadata();
+          // If Sharp can read it, use directly
           inputBuffer = fileBuffer;
+        } catch (sharpError) {
+          // If Sharp can't read it, try HEIC conversion
+          try {
+            inputBuffer = await convert({
+              buffer: fileBuffer,
+              format: "PNG",
+            });
+          } catch (heicError) {
+            console.error("Format detection error:", { sharpError: sharpError.message, heicError: heicError.message });
+            res.status(400).json({ 
+              error: "Unsupported image format. Please use HEIC, JPG, PNG, or WebP.",
+              details: process.env.NODE_ENV === 'development' ? `Sharp error: ${sharpError.message}, HEIC error: ${heicError.message}` : undefined
+            });
+            return resolve();
+          }
         }
 
         let sharpInstance = sharp(inputBuffer);
@@ -111,7 +135,15 @@ export default async function handler(req, res) {
         resolve();
       } catch (err) {
         console.error("Compression error:", err);
-        res.status(500).json({ error: "Compression failed" });
+        console.error("Error details:", {
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+        });
+        res.status(500).json({ 
+          error: "Compression failed",
+          details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
         resolve();
       }
     });
