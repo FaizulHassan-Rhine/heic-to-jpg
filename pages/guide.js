@@ -16,7 +16,7 @@ export default function Guide() {
           {/* Hero Section */}
           <div className="text-center space-y-6 max-w-3xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Complete Guide to ImageSwitch
+              Complete Guide to ConvertMastery
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
               Learn everything you need to know about converting and compressing images with our powerful, free tool.
@@ -183,7 +183,7 @@ export default function Guide() {
           {/* Why Use It Section */}
           <section id="why-use-it" className="space-y-12">
             <div className="text-center space-y-2">
-              <h2 className="text-4xl font-bold">Why Use ImageSwitch?</h2>
+              <h2 className="text-4xl font-bold">Why Use ConvertMastery?</h2>
               <p className="text-lg text-muted-foreground">
                 Everything you need to convert and compress images efficiently
               </p>
@@ -286,7 +286,7 @@ export default function Guide() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    ImageSwitch is completely free to use with no hidden costs, registration requirements, or usage limits. Convert and compress as many images as you need, whenever you need.
+                    ConvertMastery is completely free to use with no hidden costs, registration requirements, or usage limits. Convert and compress as many images as you need, whenever you need.
                   </p>
                 </CardContent>
               </Card>

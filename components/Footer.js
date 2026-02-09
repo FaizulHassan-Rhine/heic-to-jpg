@@ -9,12 +9,12 @@ export default function Footer() {
             © {new Date().getFullYear()}
             <NextImage 
               src="/logo.png" 
-              alt="ImageSwitch Logo" 
+              alt="ConvertMastery Logo" 
               width={20} 
               height={20}
               className="h-5 w-5"
             />
-            ImageSwitch. All rights reserved.
+            ConvertMastery. All rights reserved.
           </p>
         </div>
       </div>

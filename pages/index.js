@@ -14,7 +14,7 @@ export default function Home() {
         <div className="container mx-auto px-4 py-12">
           <div className="text-center space-y-8 max-w-3xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              ImageSwitch
+              ConvertMastery
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
               Convert and compress your images with ease. Free, fast, and secure.

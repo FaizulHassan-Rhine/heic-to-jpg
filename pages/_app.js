@@ -2,15 +2,15 @@ import "../styles/globals.css";
 import Head from "next/head";
 import { Analytics } from "@vercel/analytics/next"
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://imageswitch.com";
-const siteName = "ImageSwitch";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
+const siteName = "ConvertMastery";
 const siteDescription = "Convert and compress your images with ease. Free, fast, and secure. Support for HEIC, JPG, PNG, and WebP formats.";
 
 export default function App({ Component, pageProps }) {
   return (
     <>
       <Head>
-        <title>{siteName} - Free Image Converter & Compressor</title>
+        <title>ConvertMastery - Free Image Converter &amp; Compressor</title>
         <meta name="description" content={siteDescription} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/logo.png" />
@@ -19,7 +19,7 @@ export default function App({ Component, pageProps }) {
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={siteUrl} />
-        <meta property="og:title" content={`${siteName} - Free Image Converter & Compressor`} />
+        <meta property="og:title" content="ConvertMastery - Free Image Converter &amp; Compressor" />
         <meta property="og:description" content={siteDescription} />
         <meta property="og:image" content={`${siteUrl}/logo.png`} />
         <meta property="og:image:width" content="1200" />
@@ -29,7 +29,7 @@ export default function App({ Component, pageProps }) {
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content={siteUrl} />
-        <meta name="twitter:title" content={`${siteName} - Free Image Converter & Compressor`} />
+        <meta name="twitter:title" content="ConvertMastery - Free Image Converter &amp; Compressor" />
         <meta name="twitter:description" content={siteDescription} />
         <meta name="twitter:image" content={`${siteUrl}/logo.png`} />
         
@@ -47,7 +47,7 @@ export default function App({ Component, pageProps }) {
         />
       </Head>
       <Component {...pageProps} />
-      <Analytics />
+      {process.env.VERCEL && <Analytics />}
     </>
   );
 }
