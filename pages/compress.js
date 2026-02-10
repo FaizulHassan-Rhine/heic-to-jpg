@@ -100,8 +100,10 @@ export default function Compress() {
       const hasImageMimeType = file.type && file.type.startsWith('image/');
       const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|heic|bmp|svg)$/i.test(file.name);
       const isImage = hasImageMimeType || hasImageExtension;
+      const isHeic = /\.(heic|HEIC)$/i.test(file.name);
       
-      if (isImage) {
+      // Skip creating preview URL for HEIC files as browsers can't display them
+      if (isImage && !isHeic) {
         try {
           const url = URL.createObjectURL(file);
           if (url) {
@@ -614,7 +616,7 @@ export default function Compress() {
 
                           <div className={`flex items-center gap-4 ${result && (result.status === "done" || result.status === "error") ? "pr-24" : "pr-12"}`}>
                             <div className="flex-shrink-0">
-                              {previewUrl ? (
+                              {previewUrl && !/\.(heic|HEIC)$/i.test(file.name) ? (
                                 <img
                                   src={previewUrl}
                                   alt={file.name}

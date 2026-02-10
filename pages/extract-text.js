@@ -60,10 +60,14 @@ export default function ExtractText() {
     setFiles(validFiles);
     setTotalUploads((prev) => prev + validFiles.length);
     
-    // Create preview URLs
+    // Create preview URLs (skip HEIC as browsers can't display them)
     const newPreviewUrls = {};
     validFiles.forEach((file) => {
-      newPreviewUrls[file.name] = URL.createObjectURL(file);
+      const isHeic = /\.(heic|HEIC)$/i.test(file.name);
+      // Skip creating preview URL for HEIC files as browsers can't display them
+      if (!isHeic) {
+        newPreviewUrls[file.name] = URL.createObjectURL(file);
+      }
     });
     setPreviewUrls((prev) => ({ ...prev, ...newPreviewUrls }));
     
@@ -387,12 +391,16 @@ export default function ExtractText() {
                         <div className="flex gap-4 p-4">
                           {/* Image Preview */}
                           <div className="flex-shrink-0">
-                            {previewUrl && (
+                            {previewUrl && !/\.(heic|HEIC)$/i.test(file.name) ? (
                               <img
                                 src={previewUrl}
                                 alt={file.name}
                                 className="w-24 h-24 object-cover rounded border"
                               />
+                            ) : (
+                              <div className="w-24 h-24 bg-muted rounded border flex items-center justify-center">
+                                <FileImage className="h-8 w-8 text-muted-foreground" />
+                              </div>
                             )}
                           </div>
 

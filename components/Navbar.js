@@ -28,16 +28,20 @@ const TOOL_CATEGORIES = [
   },
   {
     label: "Document Tools",
-    paths: ["/doc-to-pdf", "/pdf-to-doc"],
+    paths: ["/doc-to-pdf", "/pdf-to-doc", "/scanner", "/merge-pdf", "/compress-pdf"],
     items: [
       { href: "/doc-to-pdf", label: "Doc to PDF" },
       { href: "/pdf-to-doc", label: "PDF to DOCX/TXT" },
+      { href: "/merge-pdf", label: "Merge PDF" },
+      { href: "/compress-pdf", label: "Compress PDF" },
+      { href: "/scanner", label: "Document Scanner" },
     ],
   },
   {
     label: "Audio Tools",
-    paths: ["/text-to-speech", "/speech-to-text"],
+    paths: ["/audio-convert", "/text-to-speech", "/speech-to-text"],
     items: [
+      { href: "/audio-convert", label: "Audio Converter" },
       { href: "/text-to-speech", label: "Text to Speech" },
       { href: "/speech-to-text", label: "Speech to Text" },
     ],
@@ -102,9 +106,8 @@ export default function Navbar() {
                 >
                   {category.label}
                   <ChevronDown
-                    className={`h-3.5 w-3.5 transition-transform ${
-                      openDropdown === category.label ? "rotate-180" : ""
-                    }`}
+                    className={`h-3.5 w-3.5 transition-transform ${openDropdown === category.label ? "rotate-180" : ""
+                      }`}
                   />
                 </Button>
 
@@ -118,11 +121,10 @@ export default function Navbar() {
                       {category.items.map((item) => (
                         <Link key={item.href} href={item.href}>
                           <div
-                            className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm ${
-                              currentPath === item.href
-                                ? "bg-accent font-medium"
-                                : ""
-                            }`}
+                            className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm ${currentPath === item.href
+                              ? "bg-accent font-medium"
+                              : ""
+                              }`}
                             onClick={() => setOpenDropdown(null)}
                           >
                             {item.label}
@@ -170,17 +172,15 @@ export default function Navbar() {
                   {/* Category Header */}
                   <button
                     onClick={() => toggleMobileCategory(category.label)}
-                    className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
-                      category.paths.includes(currentPath)
-                        ? "text-primary bg-accent/50"
-                        : "text-foreground hover:bg-accent/30"
-                    }`}
+                    className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${category.paths.includes(currentPath)
+                      ? "text-primary bg-accent/50"
+                      : "text-foreground hover:bg-accent/30"
+                      }`}
                   >
                     {category.label}
                     <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        mobileExpanded === category.label ? "rotate-180" : ""
-                      }`}
+                      className={`h-4 w-4 transition-transform ${mobileExpanded === category.label ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
 
@@ -190,11 +190,10 @@ export default function Navbar() {
                       {category.items.map((item) => (
                         <Link key={item.href} href={item.href} className="block">
                           <div
-                            className={`px-4 py-2.5 text-sm transition-colors ${
-                              currentPath === item.href
-                                ? "text-primary font-medium bg-accent/40"
-                                : "text-muted-foreground hover:text-foreground hover:bg-accent/20"
-                            }`}
+                            className={`px-4 py-2.5 text-sm transition-colors ${currentPath === item.href
+                              ? "text-primary font-medium bg-accent/40"
+                              : "text-muted-foreground hover:text-foreground hover:bg-accent/20"
+                              }`}
                             onClick={() => setIsMenuOpen(false)}
                           >
                             {item.label}
@@ -209,11 +208,10 @@ export default function Navbar() {
               {/* Guide */}
               <Link href="/guide" className="block">
                 <div
-                  className={`px-4 py-3 text-sm font-medium transition-colors ${
-                    currentPath === "/guide"
-                      ? "text-primary bg-accent/50"
-                      : "text-foreground hover:bg-accent/30"
-                  }`}
+                  className={`px-4 py-3 text-sm font-medium transition-colors ${currentPath === "/guide"
+                    ? "text-primary bg-accent/50"
+                    : "text-foreground hover:bg-accent/30"
+                    }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Guide
