@@ -3,758 +3,390 @@ import Dropzone from "../components/Dropzone";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import JSZip from "jszip";
-import { Loader2, CheckCircle, Download, AlertCircle, FileImage, RefreshCw, Trash2, Upload, RotateCcw } from "lucide-react";
+import {
+  Loader2, CheckCircle, Download, AlertCircle, FileImage,
+  RefreshCw, Trash2, Upload, RotateCcw, Image as ImageIcon,
+  Settings2, ArrowRight
+} from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
+import { cn } from "@/lib/utils";
 import toast, { Toaster } from "react-hot-toast";
+import Head from "next/head";
 
-// Helper function to detect file type
+// ─────────────────────────── HELPERS ───────────────────────────
+
+const formatSize = (bytes) => {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
 const getFileType = (fileName) => {
   const ext = fileName.split('.').pop().toLowerCase();
   if (['heic'].includes(ext)) return 'heic';
   if (['jpg', 'jpeg'].includes(ext)) return 'jpg';
   if (['png'].includes(ext)) return 'png';
   if (['webp'].includes(ext)) return 'webp';
-  return null;
+  return 'unknown';
 };
 
-// Get available output formats based on input type
-const getAvailableFormats = (fileType) => {
-  if (fileType === 'heic') {
-    return [
-      { value: 'jpg-high', label: 'High-Res JPG', quality: '95%' },
-      { value: 'jpg-balanced', label: 'Balanced JPG', quality: '80%' },
-      { value: 'webp-high', label: 'High-Res WebP', quality: '90%' },
-      { value: 'webp-balanced', label: 'Balanced WebP', quality: '80%' },
-    ];
-  }
-  if (fileType === 'jpg') {
-    return [
-      { value: 'webp-high', label: 'High-Res WebP', quality: '90%' },
-      { value: 'webp-balanced', label: 'Balanced WebP', quality: '80%' },
-      { value: 'png', label: 'PNG', quality: 'Lossless' },
-    ];
-  }
-  if (fileType === 'png') {
-    return [
-      { value: 'jpg-high', label: 'High-Res JPG', quality: '95%' },
-      { value: 'jpg-balanced', label: 'Balanced JPG', quality: '80%' },
-      { value: 'webp-high', label: 'High-Res WebP', quality: '90%' },
-      { value: 'webp-balanced', label: 'Balanced WebP', quality: '80%' },
-    ];
-  }
-  if (fileType === 'webp') {
-    return [
-      { value: 'jpg-high', label: 'High-Res JPG', quality: '95%' },
-      { value: 'jpg-balanced', label: 'Balanced JPG', quality: '80%' },
-      { value: 'png', label: 'PNG', quality: 'Lossless' },
-    ];
-  }
-  return [];
-};
+// ─────────────────────────── COMPONENT ───────────────────────────
 
-// Conversion type options
-const conversionTypes = [
-  {
-    id: 'heic',
-    label: 'HEIC',
-    description: 'Convert HEIC images',
-    outputs: ['JPG', 'WebP'],
-    icon: '📱'
-  },
-  {
-    id: 'jpg',
-    label: 'JPG',
-    description: 'Convert JPG images',
-    outputs: ['WebP', 'PNG'],
-    icon: '🖼️'
-  },
-  {
-    id: 'png',
-    label: 'PNG',
-    description: 'Convert PNG images',
-    outputs: ['JPG', 'WebP'],
-    icon: '🖼️'
-  },
-  {
-    id: 'webp',
-    label: 'WebP',
-    description: 'Convert WebP images',
-    outputs: ['JPG', 'PNG'],
-    icon: '🖼️'
-  },
-];
-
-export default function Convert() {
-  const [selectedInputType, setSelectedInputType] = useState(null);
+export default function ConvertImage() {
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
-  const [format, setFormat] = useState("jpg-high");
-  const [totalUploads, setTotalUploads] = useState(0);
-  const [totalCompleted, setTotalCompleted] = useState(0);
   const [previewUrls, setPreviewUrls] = useState({});
-  const [imageDimensions, setImageDimensions] = useState({});
 
-  // Reset previous results when uploading new batch
-  const resetResults = () => {
-    setFiles([]);
-    setResults({});
-    setProcessing(false);
-  };
+  // Settings
+  const [targetFormat, setTargetFormat] = useState("jpg"); // jpg, png, webp
+  const [quality, setQuality] = useState("high"); // high, balanced
 
-  // Track uploads when files are added
+  // ── File Handling ──
+
   const handleFilesAdded = (newFiles) => {
-    const MAX_FILES = 50;
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB (local limit)
-    
-    // Check if adding these files would exceed the limit
-    if (newFiles.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} images allowed at a time. Please select ${MAX_FILES} or fewer images.`);
-      return;
-    }
-    
-    // Check individual file sizes
-    const oversizedFiles = [];
-    const validFiles = [];
-    
-    newFiles.forEach((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        oversizedFiles.push(file.name);
-      } else {
-        validFiles.push(file);
+    // Filter oversized
+    const valid = [];
+    newFiles.forEach(f => {
+      if (f.size > 20 * 1024 * 1024) toast.error(`"${f.name}" is too large (>20MB)`);
+      else valid.push(f);
+    });
+
+    if (valid.length === 0) return;
+
+    // Generate previews
+    const newPreviews = {};
+    valid.forEach(f => {
+      const type = getFileType(f.name);
+      // HEIC previews are hard client-side without libs, so skip for now (or handle if lib exists)
+      if (type !== 'heic' && f.type.startsWith("image/")) {
+        newPreviews[f.name] = URL.createObjectURL(f);
       }
     });
-    
-    if (oversizedFiles.length > 0) {
-      const fileNames = oversizedFiles.join(", ");
-      toast.error(`File size limit is 20MB (4.5MB on Vercel). The following files are too large: ${fileNames}`);
-      if (validFiles.length === 0) {
-        return; // Don't proceed if all files are too large
-      }
-    }
-    
-    setFiles(validFiles);
-    setTotalUploads((prev) => prev + validFiles.length);
-    
-    // Create preview URLs for all files (skip HEIC as browsers can't display them)
-    const newPreviewUrls = {};
-    
-    validFiles.forEach((file) => {
-      const hasImageMimeType = file.type && file.type.startsWith('image/');
-      const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|heic|bmp|svg)$/i.test(file.name);
-      const isImage = hasImageMimeType || hasImageExtension;
-      const isHeic = /\.(heic|HEIC)$/i.test(file.name);
-      
-      // Skip creating preview URL for HEIC files as browsers can't display them
-      if (isImage && !isHeic) {
-        try {
-          const url = URL.createObjectURL(file);
-          if (url) {
-            newPreviewUrls[file.name] = url;
-            
-            const img = new Image();
-            img.onload = () => {
-              setImageDimensions((prev) => ({
-                ...prev,
-                [file.name]: {
-                  width: img.naturalWidth,
-                  height: img.naturalHeight,
-                },
-              }));
-            };
-            img.onerror = () => {
-              console.warn(`Failed to load preview for ${file.name}`);
-            };
-            img.src = url;
-          }
-        } catch (error) {
-          console.error(`Failed to create preview URL for ${file.name}:`, error);
-        }
-      }
+
+    setFiles(prev => [...prev, ...valid]);
+    setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
+  };
+
+  const removeFile = (name) => {
+    setFiles(prev => prev.filter(f => f.name !== name));
+    setResults(prev => {
+      const n = { ...prev };
+      delete n[name];
+      return n;
     });
-    
-    setPreviewUrls((prev) => {
-      Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
-      return newPreviewUrls;
-    });
-    
-    // Set default format based on selected input type
-    if (selectedInputType && newFiles.length > 0) {
-      const availableFormats = getAvailableFormats(selectedInputType);
-      if (availableFormats.length > 0) {
-        setFormat(availableFormats[0].value);
-      }
+    if (previewUrls[name]) {
+      URL.revokeObjectURL(previewUrls[name]);
+      setPreviewUrls(prev => {
+        const n = { ...prev };
+        delete n[name];
+        return n;
+      });
     }
   };
 
-  // Handle conversion type selection
-  const handleConversionTypeSelect = (type) => {
-    // Clean up preview URLs when switching formats
-    Object.values(previewUrls).forEach((url) => URL.revokeObjectURL(url));
-    setSelectedInputType(type);
-    setFiles([]);
-    setResults({});
-    setPreviewUrls({});
-    setImageDimensions({});
-    setProcessing(false);
-    const availableFormats = getAvailableFormats(type);
-    if (availableFormats.length > 0) {
-      setFormat(availableFormats[0].value);
-    }
-  };
+  // ── Conversion Logic ──
 
-  // Remove a single file from the list
-  const removeFile = (fileName) => {
-    setFiles((prev) => prev.filter((f) => f.name !== fileName));
-    setResults((prev) => {
-      const updated = { ...prev };
-      delete updated[fileName];
-      return updated;
-    });
-    setPreviewUrls((prev) => {
-      if (prev[fileName]) {
-        URL.revokeObjectURL(prev[fileName]);
-        const updated = { ...prev };
-        delete updated[fileName];
-        return updated;
-      }
-      return prev;
-    });
-    setImageDimensions((prev) => {
-      const updated = { ...prev };
-      delete updated[fileName];
-      return updated;
-    });
-  };
+  const convertSingle = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
 
-  const convertAll = async () => {
-    setProcessing(true);
-    const updated = {};
+    // Construct format string expected by API (e.g., "jpg-high")
+    // Previous API uses "jpg-high", "webp-balanced" etc.
+    // PNG doesn't typically have quality suffix in the previous code map, but "png" is enough.
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      updated[file.name] = { status: "processing", percent: 0 };
-      setResults({ ...updated });
-
-      let p = 0;
-      const timer = setInterval(() => {
-        p += Math.random() * 15;
-        if (p >= 95) p = 95;
-        updated[file.name].percent = Math.floor(p);
-        setResults({ ...updated });
-      }, 200);
-
-      const form = new FormData();
-      form.append("file", file);
-      form.append("format", format);
-      form.append("inputType", getFileType(file.name) || "heic");
-
-      try {
-        const res = await fetch("/api/convert-single", {
-          method: "POST",
-          body: form,
-        });
-
-        clearInterval(timer);
-
-        if (!res.ok) {
-          throw new Error("Conversion failed");
-        }
-
-        const out = await res.arrayBuffer();
-        const ext = res.headers.get("X-Output-Extension");
-        const blob = new Blob([out]);
-
-        updated[file.name] = {
-          status: "done",
-          percent: 100,
-          ext,
-          blob,
-          size: blob.size,
-        };
-
-        setResults({ ...updated });
-        setTotalCompleted((prev) => prev + 1);
-      } catch (error) {
-        clearInterval(timer);
-        updated[file.name] = {
-          status: "error",
-          percent: 0,
-        };
-        setResults({ ...updated });
-        console.error("Conversion error:", error);
-      }
+    let formatString = targetFormat;
+    if (targetFormat !== 'png') {
+      formatString = `${targetFormat}-${quality}`;
     }
 
-    setProcessing(false);
-  };
-
-  // Reprocess a single failed file
-  const reprocessFile = async (fileName) => {
-    const file = files.find((f) => f.name === fileName);
-    if (!file) return;
-
-    const updated = { ...results };
-    updated[fileName] = { status: "processing", percent: 0 };
-    setResults(updated);
-
-    let p = 0;
-    const timer = setInterval(() => {
-      p += Math.random() * 15;
-      if (p >= 95) p = 95;
-      updated[fileName].percent = Math.floor(p);
-      setResults({ ...updated });
-    }, 200);
-
-    const form = new FormData();
-    form.append("file", file);
-    form.append("format", format);
-    form.append("inputType", getFileType(file.name) || "heic");
+    formData.append("format", formatString);
+    formData.append("inputType", getFileType(file.name));
 
     try {
       const res = await fetch("/api/convert-single", {
         method: "POST",
-        body: form,
+        body: formData
       });
 
-      clearInterval(timer);
+      if (!res.ok) throw new Error("Failed");
 
-      if (!res.ok) {
-        throw new Error("Conversion failed");
-      }
+      const blob = await res.blob();
+      const ext = res.headers.get("X-Output-Extension") || targetFormat;
 
-      const out = await res.arrayBuffer();
-      const ext = res.headers.get("X-Output-Extension");
-      const blob = new Blob([out]);
-
-      updated[fileName] = {
+      return {
         status: "done",
-        percent: 100,
-        ext,
         blob,
         size: blob.size,
+        ext,
+        saved: Math.max(0, file.size - blob.size),
+        percent: Math.round(((file.size - blob.size) / file.size) * 100)
       };
 
-      setResults({ ...updated });
-      setTotalCompleted((prev) => prev + 1);
-    } catch (error) {
-      clearInterval(timer);
-      updated[fileName] = {
-        status: "error",
-        percent: 0,
-      };
-      setResults({ ...updated });
-      console.error("Conversion error:", error);
+    } catch (e) {
+      console.error(e);
+      return { status: "error" };
     }
   };
 
-  // Clean all files and results
-  const cleanAll = () => {
-    Object.values(previewUrls).forEach((url) => URL.revokeObjectURL(url));
-    setFiles([]);
-    setResults({});
-    setPreviewUrls({});
-    setImageDimensions({});
-    setProcessing(false);
-    setTotalUploads(0);
-    setTotalCompleted(0);
-  };
+  const processAll = async () => {
+    setProcessing(true);
+    const newResults = { ...results };
 
-  // Reset individual file result
-  const resetFileResult = (fileName) => {
-    setResults((prev) => {
-      const updated = { ...prev };
-      if (updated[fileName]?.status === "done") {
-        setTotalCompleted((count) => Math.max(0, count - 1));
+    // Mark all pending
+    for (const f of files) {
+      if (!newResults[f.name]) {
+        newResults[f.name] = { status: "processing" };
       }
-      delete updated[fileName];
-      return updated;
-    });
-  };
+    }
+    setResults({ ...newResults });
 
-  // Download single file
-  const downloadSingleFile = (fileName) => {
-    const result = results[fileName];
-    if (!result || result.status !== "done") return;
+    // Process in batches
+    const pending = files.filter(f => !results[f.name] || results[f.name].status === "error");
 
-    const file = files.find((f) => f.name === fileName);
-    if (!file) return;
+    for (let i = 0; i < pending.length; i += 3) {
+      const batch = pending.slice(i, i + 3);
+      await Promise.all(batch.map(async (file) => {
+        const res = await convertSingle(file);
+        setResults(prev => ({ ...prev, [file.name]: res }));
+      }));
+    }
 
-    // Replace extension with output extension
-    const outName = fileName.replace(/\.(heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP)$/i, `.${result.ext}`);
-    
-    const url = URL.createObjectURL(result.blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = outName;
-    a.click();
-    URL.revokeObjectURL(url);
+    setProcessing(false);
   };
 
   const downloadAll = async () => {
     const zip = new JSZip();
-
-    for (const name in results) {
-      const r = results[name];
-      if (r.status === "done") {
-        const outName = name.replace(/\.(heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP)$/i, `.${r.ext}`);
-        zip.file(outName, r.blob);
+    let count = 0;
+    files.forEach(f => {
+      const res = results[f.name];
+      if (res?.status === "done") {
+        const name = f.name.substring(0, f.name.lastIndexOf(".")) + "." + res.ext;
+        zip.file(name, res.blob);
+        count++;
       }
-    }
+    });
 
-    const zipBlob = await zip.generateAsync({ type: "blob" });
+    if (count === 0) return;
+    const content = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(zipBlob);
-    a.download = "converted.zip";
+    a.href = URL.createObjectURL(content);
+    a.download = "converted_images.zip";
     a.click();
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Toaster position="top-center" />
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Head>
+        <title>Convert Images - ConvertMastery</title>
+      </Head>
       <Navbar />
-      
-      <main className="flex-1">
-        <div className="container mx-auto px-4 py-12 space-y-32">
-          <section id="converter" className="space-y-8 py-8">
-            {/* Upload Box and Statistics - Top Row */}
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Dropzone - Left Side */}
-              <div className="flex-1">
-                <Dropzone 
-                  setFiles={handleFilesAdded} 
-                  resetResults={resetResults}
-                  inputType={selectedInputType}
-                  disabled={!selectedInputType}
-                  onDisabledClick={() => toast.error("Please select an input format first")}
-                />
-              </div>
-              
-              {/* Statistics - Right Side (Small Boxes) */}
-              <div className="flex flex-col gap-4 md:w-48">
-                <Card className="border-2 hover:border-primary/50 transition-all duration-200 hover:shadow-lg bg-gradient-to-br from-background to-primary/5">
-                  <CardContent className="pt-4 pb-4 px-4">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 mb-2">
-                        <Upload className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">
-                        Total Uploaded
-                      </p>
-                      <p className="text-2xl font-bold text-primary">{totalUploads}</p>
+
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
+            Convert Images
+          </h1>
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            Transform HEIC, JPG, PNG, WEBP files instantly.
+            Mass conversion with high quality.
+          </p>
+        </div>
+
+        {/* Main Workspace */}
+        <div className="grid gap-8">
+
+          {/* 1. Upload */}
+          <Card className="border-2 border-dashed border-gray-300 hover:border-purple-500 bg-white shadow-sm transition-all">
+            <CardContent className="p-0">
+              <Dropzone
+                setFiles={handleFilesAdded}
+                className="p-10"
+                title="Upload Images to Convert"
+                description="JPG, PNG, WebP, HEIC, TIFF • Max 10MB each"
+              // Removed inputType restriction to allow any image
+              />
+            </CardContent>
+          </Card>
+
+          {/* 2. Controls & List */}
+          {files.length > 0 && (
+            <div className="grid md:grid-cols-[300px_1fr] gap-6 items-start">
+
+              {/* Sidebar: Settings */}
+              <Card className="md:sticky md:top-24 h-fit">
+                <CardContent className="p-5 space-y-6">
+                  <div className="flex items-center gap-2 font-semibold text-lg text-gray-800">
+                    <Settings2 className="w-5 h-5" /> Output Settings
+                  </div>
+
+                  {/* Format Selection */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-600">Target Format</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {['jpg', 'png', 'webp'].map(fmt => (
+                        <button
+                          key={fmt}
+                          onClick={() => setTargetFormat(fmt)}
+                          className={cn(
+                            "flex items-center justify-between px-3 py-3 text-sm rounded-lg border-2 transition-all uppercase font-medium",
+                            targetFormat === fmt ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm" : "border-gray-200 hover:border-gray-300 text-gray-600"
+                          )}
+                        >
+                          {fmt}
+                          {targetFormat === fmt && <CheckCircle className="w-4 h-4 ml-2" />}
+                        </button>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-2 hover:border-primary/50 transition-all duration-200 hover:shadow-lg bg-gradient-to-br from-background to-green-500/5">
-                  <CardContent className="pt-4 pb-4 px-4">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-500/10 mb-2">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+
+                  {/* Quality Selection */}
+                  {targetFormat !== 'png' && (
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-gray-600">Quality</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setQuality("high")}
+                          className={cn("px-2 py-2 text-sm rounded-lg border-2 transition-all", quality === "high" ? "border-purple-500 bg-purple-50 text-purple-700 font-medium" : "border-gray-200 hover:border-gray-300")}
+                        >
+                          High
+                        </button>
+                        <button
+                          onClick={() => setQuality("balanced")}
+                          className={cn("px-2 py-2 text-sm rounded-lg border-2 transition-all", quality === "balanced" ? "border-purple-500 bg-purple-50 text-purple-700 font-medium" : "border-gray-200 hover:border-gray-300")}
+                        >
+                          Balanced
+                        </button>
                       </div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">
-                        Total Completed
-                      </p>
-                      <p className="text-2xl font-bold text-green-600">{totalCompleted}</p>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+
+                  <Separator />
+
+                  <Button
+                    onClick={processAll}
+                    disabled={processing}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white h-11"
+                  >
+                    {processing ? (
+                      <> <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Converting... </>
+                    ) : (
+                      <> <RefreshCw className="w-4 h-4 mr-2" /> Convert All </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Main: File List */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-gray-400" />
+                    Files ({files.length})
+                  </h3>
+                  {Object.values(results).some(r => r.status === "done") && (
+                    <Button variant="outline" size="sm" onClick={downloadAll}>
+                      <Download className="w-4 h-4 mr-2" /> Download All
+                    </Button>
+                  )}
+                </div>
+
+                {files.map((file, idx) => {
+                  const res = results[file.name];
+                  const preview = previewUrls[file.name];
+
+                  return (
+                    <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center p-3 gap-4">
+                        {/* Preview */}
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden relative border">
+                          {preview ? (
+                            <img src={preview} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="flex items-center justify-center w-full h-full text-xs font-bold text-gray-400 uppercase">
+                              {file.name.split('.').pop()}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-medium truncate pr-4 text-gray-900">{file.name}</h4>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1">
+                              {res?.status === "done" && (
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => {
+                                  const url = URL.createObjectURL(res.blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = file.name.substring(0, file.name.lastIndexOf(".")) + "." + res.ext;
+                                  a.click();
+                                }}>
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500" onClick={() => removeFile(file.name)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-sm mt-1">
+                            <Badge variant="secondary" className="font-normal text-gray-500 bg-gray-100 hover:bg-gray-100">
+                              {formatSize(file.size)}
+                            </Badge>
+
+                            <ArrowRight className="w-3 h-3 text-gray-300" />
+
+                            {res?.status === "done" ? (
+                              <>
+                                <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200">
+                                  {formatSize(res.size)}
+                                </Badge>
+                                {res.percent > 0 && (
+                                  <span className="text-xs font-bold text-green-600 ml-1">
+                                    (-{res.percent}%)
+                                  </span>
+                                )}
+                                <Badge variant="outline" className="border-purple-200 text-purple-700 uppercase">
+                                  {res.ext}
+                                </Badge>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="text-gray-400 border-dashed border-gray-300 uppercase">
+                                To {targetFormat}
+                              </Badge>
+                            )}
+
+                            {res?.status === "error" && (
+                              <Badge variant="destructive">Error</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {res?.status === "processing" && (
+                        <div className="h-1 bg-purple-100 w-full">
+                          <div className="h-full bg-purple-500 animate-pulse w-full"></div>
+                        </div>
+                      )}
+                    </Card>
+                  )
+                })}
               </div>
             </div>
-
-            {/* Input Type Selection - Below Upload Box */}
-            <Card className="border-2 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
-                <CardTitle className="text-2xl">Select Input Format</CardTitle>
-                <CardDescription className="text-base">
-                  {selectedInputType ? "Selected format: " + selectedInputType.toUpperCase() + " - Click another to change" : "Choose what type of images you want to convert"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="grid md:grid-cols-4 gap-4">
-                  {conversionTypes.map((type) => {
-                    const availableFormats = getAvailableFormats(type.id);
-                    const isSelected = selectedInputType === type.id;
-                    return (
-                      <div
-                        key={type.id}
-                        onClick={() => handleConversionTypeSelect(type.id)}
-                        className={`relative p-6 border-2 rounded-xl cursor-pointer transition-all duration-200 group ${
-                          isSelected
-                            ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg ring-2 ring-primary/20"
-                            : "hover:border-primary hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-lg"
-                        }`}
-                      >
-                        {isSelected && (
-                          <div className="absolute top-2 right-2">
-                            <CheckCircle className="h-6 w-6 text-primary" />
-                          </div>
-                        )}
-                        <h3 className={`font-bold text-lg mb-2 ${isSelected ? "text-primary" : ""}`}>{type.label}</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {type.description}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {type.outputs.map((output) => (
-                            <Badge 
-                              key={output} 
-                              variant={isSelected ? "default" : "secondary"} 
-                              className="text-xs"
-                            >
-                              → {output}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Output Format Selection - Show after files are uploaded */}
-            {files.length > 0 && selectedInputType && (() => {
-              const availableFormats = getAvailableFormats(selectedInputType);
-              
-              if (availableFormats.length === 0) {
-                return (
-                  <Card className="border-2">
-                    <CardContent className="pt-6 pb-6">
-                      <p className="text-center text-muted-foreground">
-                        Unsupported file type. Please upload HEIC, JPG, PNG, or WebP images.
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              }
-              
-              return (
-                <Card className="border-2 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
-                    <CardTitle className="text-2xl">Choose Output Format</CardTitle>
-                    <CardDescription className="text-base">
-                      Select the format and quality for your converted images
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <RadioGroup
-                      value={format}
-                      onValueChange={setFormat}
-                      className={`grid gap-4 ${availableFormats.length <= 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}
-                    >
-                      {availableFormats.map((fmt) => (
-                        <div
-                          key={fmt.value}
-                          className="flex items-center space-x-3 p-5 border-2 rounded-lg cursor-pointer hover:border-primary/50 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent transition-all duration-200 has-[:checked]:border-primary has-[:checked]:bg-gradient-to-r has-[:checked]:from-primary/10 has-[:checked]:to-primary/5 has-[:checked]:shadow-md"
-                        >
-                          <RadioGroupItem value={fmt.value} id={fmt.value} />
-                          <label htmlFor={fmt.value} className="flex-1 cursor-pointer">
-                            <div className="font-semibold text-base">{fmt.label}</div>
-                            <div className="text-sm text-muted-foreground mt-1">{fmt.quality} Quality</div>
-                          </label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </CardContent>
-                </Card>
-              );
-            })()}
-
-            {/* Convert Button */}
-            {files.length > 0 && (
-              <div className="flex justify-center">
-                <Button
-                  onClick={convertAll}
-                  disabled={processing}
-                  size="lg"
-                  className="min-w-[200px]"
-                >
-                  {processing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Converting...
-                    </>
-                  ) : (
-                    "Convert All"
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* FILE STATUS LIST */}
-            {files.length > 0 && (
-              <div className="space-y-4">
-                <Separator />
-                <div className="flex items-center gap-3">
-                  <div className="h-1 w-12 bg-gradient-to-r from-primary to-transparent rounded-full"></div>
-                  <h2 className="text-2xl font-bold">Files</h2>
-                </div>
-                <div className="space-y-3">
-                  {files.map((file) => {
-                    const result = results[file.name];
-                    const percent = result?.percent ?? 0;
-                    const previewUrl = previewUrls[file.name];
-                    const fileSizeKB = (file.size / 1024).toFixed(2);
-
-                    return (
-                      <Card key={file.name} className="relative border-2 hover:border-primary/30 hover:shadow-md transition-all duration-200">
-                        <CardContent className="p-4">
-                          {/* Buttons - Right Side */}
-                          <div className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center gap-2">
-                            {/* Reset Button */}
-                            {result && (result.status === "done" || result.status === "error") && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => resetFileResult(file.name)}
-                                disabled={processing}
-                                className="h-8 w-8 hover:bg-orange-50 hover:text-orange-600"
-                                title="Reset file result"
-                              >
-                                <RotateCcw className="h-4 w-4 text-orange-600" />
-                              </Button>
-                            )}
-                            {/* Remove Button */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeFile(file.name)}
-                              disabled={processing}
-                              className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
-                              title="Remove file"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-
-                          <div className={`flex items-center gap-4 ${result && (result.status === "done" || result.status === "error") ? "pr-24" : "pr-12"}`}>
-                            {/* Image Preview */}
-                            <div className="flex-shrink-0">
-                              {previewUrl && !/\.(heic|HEIC)$/i.test(file.name) ? (
-                                <img
-                                  src={previewUrl}
-                                  alt={file.name}
-                                  className="w-16 h-16 object-cover rounded-md border"
-                                />
-                              ) : (
-                                <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center border">
-                                  <FileImage className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                              )}
-                            </div>
-
-                            {/* File Info */}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-sm">{file.name}</p>
-                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                <span className="text-xs text-muted-foreground">
-                                  {fileSizeKB} KB
-                                </span>
-                                {!result && (
-                                  <Badge variant="secondary" className="text-xs">Pending</Badge>
-                                )}
-                                {result?.status === "processing" && (
-                                  <Badge variant="default" className="text-xs">
-                                    Converting... {percent}%
-                                  </Badge>
-                                )}
-                                {result?.status === "done" && (
-                                  <>
-                                    <Badge variant="default" className="bg-green-600 text-xs">
-                                      <CheckCircle className="h-3 w-3 mr-1" />
-                                      Done
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {fileSizeKB} KB → {(result.size / 1024).toFixed(2)} KB
-                                    </span>
-                                    {(() => {
-                                      const reduction = ((1 - result.size / file.size) * 100).toFixed(1);
-                                      return parseFloat(reduction) > 0 && (
-                                        <span className="text-xs font-medium text-green-600">
-                                          (-{reduction}%)
-                                        </span>
-                                      );
-                                    })()}
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => downloadSingleFile(file.name)}
-                                      className="ml-2 h-6 text-xs px-2"
-                                      title="Download this file"
-                                    >
-                                      <Download className="h-3 w-3 mr-1" />
-                                      Download
-                                    </Button>
-                                  </>
-                                )}
-                                {result?.status === "error" && (
-                                  <>
-                                    <Badge variant="destructive" className="text-xs">
-                                      <AlertCircle className="h-3 w-3 mr-1" />
-                                      Error
-                                    </Badge>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => reprocessFile(file.name)}
-                                      disabled={processing}
-                                      className="ml-1 h-6 text-xs px-2"
-                                    >
-                                      <RefreshCw className="h-3 w-3 mr-1" />
-                                      Retry
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-
-                              {/* Progress Bar */}
-                              {result?.status === "processing" && (
-                                <Progress value={percent} className="h-1.5 mt-2" />
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Download ZIP and Clean All */}
-            {files.length > 0 && (
-              <div className="flex flex-col sm:flex-row justify-center gap-4 items-center">
-                {Object.values(results).filter((x) => x.status === "done").length > 0 && (
-                  <Button
-                    onClick={downloadAll}
-                    size="lg"
-                    className="bg-green-600 hover:bg-green-700 min-w-[200px]"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download All (ZIP)
-                  </Button>
-                )}
-                <Button
-                  onClick={cleanAll}
-                  size="lg"
-                  variant="outline"
-                  className="min-w-[200px]"
-                >
-                  <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                  Clean All
-                </Button>
-              </div>
-            )}
-          </section>
+          )}
         </div>
       </main>
-
       <Footer />
     </div>
   );
 }
-

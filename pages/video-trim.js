@@ -1,16 +1,18 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import Dropzone from "../components/Dropzone";
 import {
   Loader2, CheckCircle, AlertCircle, Scissors, Upload,
-  Download, RotateCcw, Play, Pause, FileVideo, Volume2, VolumeX
+  Download, RotateCcw, Play, Pause, FileVideo, Volume2, VolumeX,
+  Settings2, Clock, ArrowRight
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
-import toast, { Toaster } from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import toast, { Toaster } from "react-hot-toast";
 import Head from "next/head";
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
@@ -21,12 +23,10 @@ let ffmpegLoadingState = false;
 
 const getFFmpeg = async (onProgress) => {
   if (ffmpegInstance && ffmpegInstance.loaded) return ffmpegInstance;
-
   if (ffmpegLoadingState) {
     while (ffmpegLoadingState) await new Promise((r) => setTimeout(r, 100));
     return ffmpegInstance;
   }
-
   ffmpegLoadingState = true;
   try {
     const { FFmpeg } = await import("@ffmpeg/ffmpeg");
@@ -35,7 +35,6 @@ const getFFmpeg = async (onProgress) => {
     ffmpeg.on("progress", ({ progress }) => {
       if (onProgress) onProgress(Math.round(progress * 100));
     });
-    ffmpeg.on("log", ({ message }) => console.log("[FFmpeg]", message));
     const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
     await ffmpeg.load({
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
@@ -44,17 +43,10 @@ const getFFmpeg = async (onProgress) => {
     ffmpegInstance = ffmpeg;
     return ffmpeg;
   } catch (error) {
-    throw new Error("Failed to load video processor. Please refresh and try again.");
+    throw new Error("Failed to load video processor.");
   } finally {
     ffmpegLoadingState = false;
   }
-};
-
-const formatTime = (seconds) => {
-  if (isNaN(seconds)) return "0:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
 const formatTimeDetailed = (seconds) => {
@@ -62,17 +54,17 @@ const formatTimeDetailed = (seconds) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
+  // Always show minutes and seconds
   if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
-const parseTimeInput = (str) => {
-  const parts = str.split(":").map(Number);
-  if (parts.some(isNaN)) return null;
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  if (parts.length === 1) return parts[0];
-  return null;
+const formatSize = (bytes) => {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
 export default function VideoTrim() {
@@ -82,63 +74,50 @@ export default function VideoTrim() {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+
+  // Trim State
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(0);
-  const [startInput, setStartInput] = useState("00:00");
-  const [endInput, setEndInput] = useState("00:00");
+
+  // Processing State
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [ffmpegReady, setFfmpegReady] = useState(false);
   const [ffmpegLoading, setFfmpegLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(null); // "start", "end", or null
+
   const videoRef = useRef(null);
-  const fileInputRef = useRef(null);
   const timelineRef = useRef(null);
 
-  const handleFileSelect = (files) => {
+  const handleFilesAdded = (files) => {
     const f = files[0];
     if (!f) return;
+    if (!f.type.startsWith("video/")) { toast.error("Not a video file"); return; }
+    if (f.size > MAX_FILE_SIZE) { toast.error("File exceeds 500MB"); return; }
 
-    if (!f.type.startsWith("video/")) {
-      toast.error("Please select a video file");
-      return;
-    }
-    if (f.size > MAX_FILE_SIZE) {
-      toast.error("File exceeds 500MB limit");
-      return;
-    }
-
-    // Cleanup previous
     if (videoUrl) URL.revokeObjectURL(videoUrl);
-
-    const url = URL.createObjectURL(f);
     setFile(f);
-    setVideoUrl(url);
+    setVideoUrl(URL.createObjectURL(f));
     setResult(null);
     setStartTime(0);
     setEndTime(0);
-    setStartInput("00:00");
-    setEndInput("00:00");
     setCurrentTime(0);
+    setIsPlaying(false);
   };
 
   const onVideoLoaded = () => {
     const video = videoRef.current;
     if (!video) return;
-    const dur = video.duration;
-    setDuration(dur);
-    setEndTime(dur);
-    setEndInput(formatTimeDetailed(dur));
+    setDuration(video.duration);
+    setEndTime(video.duration);
   };
 
   const onTimeUpdate = () => {
     const video = videoRef.current;
     if (!video) return;
     setCurrentTime(video.currentTime);
-
-    // Stop at end time
-    if (video.currentTime >= endTime) {
+    if (video.currentTime >= endTime && isPlaying) {
       video.pause();
       setIsPlaying(false);
     }
@@ -147,24 +126,14 @@ export default function VideoTrim() {
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
-
-    if (isPlaying) {
-      video.pause();
-    } else {
-      // Start from startTime if at beginning or past endTime
+    if (isPlaying) video.pause();
+    else {
       if (video.currentTime < startTime || video.currentTime >= endTime) {
         video.currentTime = startTime;
       }
       video.play();
     }
     setIsPlaying(!isPlaying);
-  };
-
-  const toggleMute = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setIsMuted(!isMuted);
   };
 
   const seekTo = (time) => {
@@ -174,33 +143,7 @@ export default function VideoTrim() {
     setCurrentTime(time);
   };
 
-  // Handle start time input
-  const handleStartInputChange = (val) => {
-    setStartInput(val);
-    const parsed = parseTimeInput(val);
-    if (parsed !== null && parsed >= 0 && parsed < endTime) {
-      setStartTime(parsed);
-    }
-  };
-
-  const handleStartInputBlur = () => {
-    setStartInput(formatTimeDetailed(startTime));
-  };
-
-  // Handle end time input
-  const handleEndInputChange = (val) => {
-    setEndInput(val);
-    const parsed = parseTimeInput(val);
-    if (parsed !== null && parsed > startTime && parsed <= duration) {
-      setEndTime(parsed);
-    }
-  };
-
-  const handleEndInputBlur = () => {
-    setEndInput(formatTimeDetailed(endTime));
-  };
-
-  // Timeline drag handlers
+  // Timeline Drag Logic
   const handleTimelineMouseDown = (e, type) => {
     e.preventDefault();
     setIsDragging(type);
@@ -208,28 +151,24 @@ export default function VideoTrim() {
 
   useEffect(() => {
     if (!isDragging) return;
-
     const handleMouseMove = (e) => {
       const timeline = timelineRef.current;
       if (!timeline) return;
       const rect = timeline.getBoundingClientRect();
-      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-      const time = (x / rect.width) * duration;
+      const clickX = e.clientX - rect.left;
+      const percent = Math.max(0, Math.min(clickX / rect.width, 1));
+      const time = percent * duration;
 
       if (isDragging === "start") {
-        const newStart = Math.max(0, Math.min(time, endTime - 1));
+        const newStart = Math.min(time, endTime - 0.5); // Min 0.5s duration
         setStartTime(newStart);
-        setStartInput(formatTimeDetailed(newStart));
         seekTo(newStart);
-      } else if (isDragging === "end") {
-        const newEnd = Math.max(startTime + 1, Math.min(time, duration));
+      } else {
+        const newEnd = Math.max(time, startTime + 0.5);
         setEndTime(newEnd);
-        setEndInput(formatTimeDetailed(newEnd));
       }
     };
-
     const handleMouseUp = () => setIsDragging(null);
-
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
@@ -238,25 +177,14 @@ export default function VideoTrim() {
     };
   }, [isDragging, duration, startTime, endTime]);
 
-  // Click on timeline to seek
-  const handleTimelineClick = (e) => {
-    if (isDragging) return;
-    const timeline = timelineRef.current;
-    if (!timeline) return;
-    const rect = timeline.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const time = (x / rect.width) * duration;
-    seekTo(time);
-  };
-
   const loadFFmpeg = async () => {
     setFfmpegLoading(true);
     try {
       await getFFmpeg((p) => setProgress(p));
       setFfmpegReady(true);
-      toast.success("Video processor ready!");
-    } catch (error) {
-      toast.error(error.message);
+      toast.success("Ready to process!");
+    } catch (e) {
+      toast.error(e.message);
     } finally {
       setFfmpegLoading(false);
     }
@@ -264,20 +192,9 @@ export default function VideoTrim() {
 
   const trimVideo = async () => {
     if (!file) return;
-
-    if (startTime >= endTime) {
-      toast.error("Start time must be before end time");
-      return;
-    }
-
     if (!ffmpegReady) {
-      toast.loading("Loading video processor...");
-      try {
-        await loadFFmpeg();
-      } catch {
-        return;
-      }
-      toast.dismiss();
+      await loadFFmpeg();
+      if (!ffmpegInstance) return;
     }
 
     setProcessing(true);
@@ -286,468 +203,254 @@ export default function VideoTrim() {
     try {
       const ffmpeg = await getFFmpeg((p) => setProgress(p));
       const { fetchFile } = await import("@ffmpeg/util");
-
-      const inputExt = file.name.split(".").pop().toLowerCase();
-      const inputName = `input.${inputExt}`;
-      const outputName = `output.${inputExt === "mkv" ? "mkv" : "mp4"}`;
+      const ext = file.name.split('.').pop();
+      const inputName = `input.${ext}`;
+      const outputName = `output.mp4`; // Always MP4 for consistency
 
       await ffmpeg.writeFile(inputName, await fetchFile(file));
 
-      const durationSec = (endTime - startTime).toFixed(2);
-
-      // Re-encode for precise frame-accurate trimming
       await ffmpeg.exec([
         "-i", inputName,
-        "-ss", String(startTime.toFixed(2)),
-        "-t", durationSec,
-        "-c:v", "libx264",
-        "-crf", "18",
-        "-preset", "fast",
+        "-ss", startTime.toFixed(3),
+        "-to", endTime.toFixed(3),
+        "-c:v", "libx264", "-preset", "fast", "-crf", "22", // Re-encode for accuracy
         "-c:a", "aac",
-        "-b:a", "192k",
-        "-movflags", "+faststart",
-        "-avoid_negative_ts", "make_zero",
-        outputName,
+        outputName
       ]);
 
       const data = await ffmpeg.readFile(outputName);
-      const mimeType = inputExt === "webm" ? "video/webm" : "video/mp4";
-      const blob = new Blob([data.buffer], { type: mimeType });
+      const blob = new Blob([data.buffer], { type: "video/mp4" });
 
       await ffmpeg.deleteFile(inputName);
       await ffmpeg.deleteFile(outputName);
 
-      const trimmedName = file.name.replace(/\.[^.]+$/, "") + `-trimmed.${inputExt === "mkv" ? "mkv" : "mp4"}`;
-
       setResult({
         blob,
         size: blob.size,
-        name: trimmedName,
-        url: URL.createObjectURL(blob),
+        name: file.name.replace(/\.[^.]+$/, "") + "_trimmed.mp4",
+        url: URL.createObjectURL(blob)
       });
+      toast.success("Trim Complete!");
 
-      toast.success("Video trimmed successfully!");
     } catch (error) {
-      console.error("Trim error:", error);
-      toast.error("Failed to trim video: " + (error.message || "Unknown error"));
+      console.error(error);
+      toast.error("Trim failed.");
     } finally {
       setProcessing(false);
-      setProgress(0);
     }
   };
 
-  const downloadResult = () => {
-    if (!result) return;
-    const a = document.createElement("a");
-    a.href = result.url;
-    a.download = result.name;
-    a.click();
-  };
-
-  const resetAll = () => {
-    if (videoUrl) URL.revokeObjectURL(videoUrl);
-    if (result?.url) URL.revokeObjectURL(result.url);
-    setFile(null);
-    setVideoUrl(null);
-    setDuration(0);
-    setCurrentTime(0);
-    setStartTime(0);
-    setEndTime(0);
-    setStartInput("00:00");
-    setEndInput("00:00");
-    setResult(null);
-    setIsPlaying(false);
-    setProcessing(false);
-    setProgress(0);
-  };
-
-  const formatSize = (bytes) => {
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-  };
-
-  const clipDuration = endTime - startTime;
   const startPercent = duration > 0 ? (startTime / duration) * 100 : 0;
   const endPercent = duration > 0 ? (endTime / duration) * 100 : 100;
   const currentPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Head>
-        <title>Video Trimmer - ConvertMastery</title>
-        <meta name="description" content="Trim and cut videos for free. Set start and end points visually. Runs entirely in your browser." />
+        <title>Video Trim - ConvertMastery</title>
       </Head>
+      <Navbar />
 
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar />
-        <Toaster position="top-center" />
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
+            Trim Video
+          </h1>
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            Cut video clips with frame-level precision.
+          </p>
+        </div>
 
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Video Trimmer</h1>
-            <p className="text-gray-500">Cut and trim your videos — fast, free, and private</p>
-          </div>
-
-          {/* Upload */}
-          {!file && (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-200 border-gray-300 hover:border-green-400 hover:bg-green-50/50 mb-6"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/*"
-                className="hidden"
-                onChange={(e) => handleFileSelect(e.target.files)}
-              />
-              <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-xl font-medium text-gray-600">Upload a video to trim</p>
-              <p className="text-sm text-gray-400 mt-2">MP4, WebM, AVI, MOV, MKV • Max 500MB</p>
-            </div>
-          )}
-
-          {/* Video Player & Controls */}
-          {file && (
-            <div className="space-y-4">
-              {/* File Info Bar */}
-              <div className="flex items-center justify-between bg-white rounded-lg p-3 border">
-                <div className="flex items-center gap-3">
-                  <FileVideo className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 truncate max-w-[300px]">{file.name}</p>
-                    <p className="text-xs text-gray-400">
-                      {formatSize(file.size)} • {formatTimeDetailed(duration)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={resetAll} variant="ghost" size="sm">
-                    <RotateCcw className="h-4 w-4 mr-1" />
-                    New Video
-                  </Button>
-                </div>
-              </div>
-
-              {/* Video Preview */}
-              <Card className="overflow-hidden">
-                <div className="bg-black relative">
+        {!file ? (
+          <Card className="border-2 border-dashed border-gray-300 hover:border-rose-500 bg-white shadow-sm transition-all max-w-3xl mx-auto">
+            <CardContent className="p-0">
+              <Dropzone setFiles={handleFilesAdded} className="p-16" />
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
+            {/* Main Player Area */}
+            <div className="space-y-6">
+              <Card className="overflow-hidden border-rose-100 shadow-md">
+                <div className="bg-black aspect-video relative flex items-center justify-center">
                   <video
                     ref={videoRef}
                     src={videoUrl}
-                    className="w-full max-h-[450px] mx-auto"
+                    className="max-w-full max-h-[500px]"
                     onLoadedMetadata={onVideoLoaded}
                     onTimeUpdate={onTimeUpdate}
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
                     onEnded={() => setIsPlaying(false)}
+                    muted={isMuted}
+                    onClick={togglePlay}
                   />
+                  {/* Overlay Play Button if Paused */}
+                  {!isPlaying && (
+                    <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-all group">
+                      <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-all">
+                        <Play className="w-8 h-8 text-white fill-current ml-1" />
+                      </div>
+                    </button>
+                  )}
                 </div>
 
-                <CardContent className="p-4">
-                  {/* Playback Controls */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <Button
-                      onClick={togglePlay}
-                      size="icon"
-                      className="bg-green-600 hover:bg-green-700 text-white h-10 w-10 rounded-full"
-                    >
-                      {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-                    </Button>
-                    <Button onClick={toggleMute} variant="ghost" size="icon" className="h-10 w-10">
-                      {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                    </Button>
-                    <span className="text-sm text-gray-600 font-mono">
-                      {formatTimeDetailed(currentTime)} / {formatTimeDetailed(duration)}
-                    </span>
+                {/* Timeline Controls */}
+                <div className="p-6 bg-white border-t space-y-6">
+                  {/* Time Display */}
+                  <div className="flex justify-between items-center text-sm font-mono font-medium text-gray-600">
+                    <span>{formatTimeDetailed(currentTime)}</span>
+                    <span>{formatTimeDetailed(duration)}</span>
                   </div>
 
-                  {/* Timeline */}
-                  <div className="mb-4">
+                  {/* Timeline Bar */}
+                  <div
+                    ref={timelineRef}
+                    className="relative h-12 bg-gray-100 rounded-lg cursor-pointer select-none ring-1 ring-gray-200"
+                    onClick={(e) => {
+                      if (isDragging) return;
+                      const rect = timelineRef.current.getBoundingClientRect();
+                      const p = (e.clientX - rect.left) / rect.width;
+                      seekTo(p * duration);
+                    }}
+                  >
+                    {/* Active Range */}
                     <div
-                      ref={timelineRef}
-                      className="relative h-12 bg-gray-200 rounded-lg overflow-hidden cursor-pointer select-none"
-                      onClick={handleTimelineClick}
+                      className="absolute top-0 bottom-0 bg-rose-100/50 border-x border-rose-400"
+                      style={{ left: `${startPercent}%`, width: `${endPercent - startPercent}%` }}
                     >
-                      {/* Selected range */}
-                      <div
-                        className="absolute top-0 bottom-0 bg-green-200/60"
-                        style={{
-                          left: `${startPercent}%`,
-                          width: `${endPercent - startPercent}%`,
-                        }}
-                      />
-
-                      {/* Unselected areas - dimmed */}
-                      <div
-                        className="absolute top-0 bottom-0 bg-gray-400/40"
-                        style={{ left: 0, width: `${startPercent}%` }}
-                      />
-                      <div
-                        className="absolute top-0 bottom-0 bg-gray-400/40"
-                        style={{ left: `${endPercent}%`, width: `${100 - endPercent}%` }}
-                      />
-
-                      {/* Start handle */}
-                      <div
-                        className="absolute top-0 bottom-0 w-3 bg-green-600 cursor-ew-resize z-20 flex items-center justify-center hover:bg-green-700 transition-colors rounded-l"
-                        style={{ left: `calc(${startPercent}% - 6px)` }}
-                        onMouseDown={(e) => handleTimelineMouseDown(e, "start")}
-                      >
-                        <div className="w-0.5 h-6 bg-white rounded-full" />
-                      </div>
-
-                      {/* End handle */}
-                      <div
-                        className="absolute top-0 bottom-0 w-3 bg-green-600 cursor-ew-resize z-20 flex items-center justify-center hover:bg-green-700 transition-colors rounded-r"
-                        style={{ left: `calc(${endPercent}% - 6px)` }}
-                        onMouseDown={(e) => handleTimelineMouseDown(e, "end")}
-                      >
-                        <div className="w-0.5 h-6 bg-white rounded-full" />
-                      </div>
-
-                      {/* Current time indicator */}
-                      <div
-                        className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30"
-                        style={{ left: `${currentPercent}%` }}
-                      >
-                        <div className="w-3 h-3 bg-red-500 rounded-full -ml-[5px] -mt-1" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 pointer-events-none text-rose-800 text-xs font-bold">
+                        DRAG HANDLES
                       </div>
                     </div>
+
+                    {/* Drag Handles */}
+                    <div
+                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-rose-600 hover:bg-rose-700 cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
+                      style={{ left: `${startPercent}%` }}
+                      onMouseDown={(e) => handleTimelineMouseDown(e, "start")}
+                    >
+                      <div className="w-0.5 h-6 bg-white/50 rounded-full" />
+                    </div>
+                    <div
+                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-rose-600 hover:bg-rose-700 cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
+                      style={{ left: `${endPercent}%` }}
+                      onMouseDown={(e) => handleTimelineMouseDown(e, "end")}
+                    >
+                      <div className="w-0.5 h-6 bg-white/50 rounded-full" />
+                    </div>
+
+                    {/* Playhead */}
+                    <div
+                      className="absolute top-0 bottom-0 w-0.5 bg-gray-800 z-0 pointer-events-none"
+                      style={{ left: `${currentPercent}%` }}
+                    />
                   </div>
 
-                  {/* Time Inputs */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Start Time</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={startInput}
-                          onChange={(e) => handleStartInputChange(e.target.value)}
-                          onBlur={handleStartInputBlur}
-                          className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500"
-                          placeholder="00:00"
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setStartTime(currentTime);
-                            setStartInput(formatTimeDetailed(currentTime));
-                          }}
-                          title="Set to current time"
-                          className="text-xs flex-shrink-0"
-                        >
-                          Set
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">End Time</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={endInput}
-                          onChange={(e) => handleEndInputChange(e.target.value)}
-                          onBlur={handleEndInputBlur}
-                          className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500"
-                          placeholder="00:00"
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEndTime(currentTime);
-                            setEndInput(formatTimeDetailed(currentTime));
-                          }}
-                          title="Set to current time"
-                          className="text-xs flex-shrink-0"
-                        >
-                          Set
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Clip Duration</label>
-                      <div className="px-3 py-2 border rounded-lg text-sm font-mono bg-gray-50 text-gray-700">
-                        {formatTimeDetailed(clipDuration)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => { seekTo(startTime); }}
-                      className="text-xs"
-                    >
-                      Go to Start
+                  <div className="flex gap-2 justify-center">
+                    <Button size="icon" variant="outline" onClick={togglePlay}>
+                      {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => { seekTo(endTime); }}
-                      className="text-xs"
-                    >
-                      Go to End
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        // Preview the selected clip
-                        seekTo(startTime);
-                        videoRef.current?.play();
-                        setIsPlaying(true);
-                      }}
-                      className="text-xs"
-                    >
-                      <Play className="h-3 w-3 mr-1" />
-                      Preview Clip
+                    <Button size="icon" variant="outline" onClick={() => setIsMuted(!isMuted)}>
+                      {isMuted ? <VolumeX className="w-5 h-5 text-red-500" /> : <Volume2 className="w-5 h-5" />}
                     </Button>
                   </div>
-                </CardContent>
+                </div>
               </Card>
 
-              {/* Trim Button */}
-              <div className="flex flex-wrap gap-3">
-                {!ffmpegReady && !processing && (
-                  <Button
-                    onClick={loadFFmpeg}
-                    disabled={ffmpegLoading}
-                    variant="outline"
-                    className="border-blue-500 text-blue-600"
-                  >
-                    {ffmpegLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Loading Processor...
-                      </>
-                    ) : (
-                      "Load Video Processor"
-                    )}
-                  </Button>
-                )}
-
-                <Button
-                  onClick={trimVideo}
-                  disabled={processing || clipDuration <= 0}
-                  className="bg-green-700 hover:bg-green-800 text-white px-8"
-                >
-                  {processing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Trimming...
-                    </>
-                  ) : (
-                    <>
-                      <Scissors className="h-4 w-4 mr-2" />
-                      Trim Video
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Progress */}
-              {processing && (
-                <div>
-                  <Progress value={progress} className="h-2" />
-                  <p className="text-sm text-gray-500 mt-1 text-center">{progress}% complete</p>
-                </div>
-              )}
-
-              {/* Result */}
+              {/* Result Card */}
               {result && (
-                <Card className="border-green-200 bg-green-50/30">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <CheckCircle className="h-8 w-8 text-green-600 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="font-medium text-green-800">Video trimmed!</p>
-                        <p className="text-sm text-gray-600">
-                          {result.name} • {formatSize(result.size)}
-                          <span className="text-green-600 ml-2">
-                            (was {formatSize(file.size)})
-                          </span>
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={downloadResult}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
+                <Card className="border border-green-200 bg-green-50 shadow-sm">
+                  <CardContent className="p-6 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 shrink-0">
+                      <CheckCircle className="w-6 h-6" />
                     </div>
-
-                    {/* Preview trimmed result */}
-                    {result.url && (
-                      <div className="mt-4">
-                        <p className="text-xs text-gray-500 mb-2">Preview trimmed video:</p>
-                        <video
-                          src={result.url}
-                          controls
-                          className="w-full max-h-[300px] rounded-lg bg-black"
-                        />
-                      </div>
-                    )}
+                    <div className="flex-1">
+                      <h4 className="font-bold text-green-900">Video Trimmed Successfully!</h4>
+                      <p className="text-sm text-green-700 mt-1">{result.name} ({formatSize(result.size)})</p>
+                    </div>
+                    <Button onClick={() => {
+                      const a = document.createElement("a");
+                      a.href = result.url;
+                      a.download = result.name;
+                      a.click();
+                    }} className="bg-green-600 text-white hover:bg-green-700 shadow-sm">
+                      <Download className="w-4 h-4 mr-2" /> Download
+                    </Button>
                   </CardContent>
                 </Card>
               )}
             </div>
-          )}
 
-          {/* Empty State */}
-          {!file && (
-            <div className="text-center py-8">
-              <Scissors className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-500">Upload a video to get started</h3>
-              <p className="text-gray-400 mt-1">Set start and end points, then trim instantly</p>
+            {/* Sidebar Controls */}
+            <div className="space-y-4">
+              <Card className="border-0 shadow-lg ring-1 ring-gray-100 h-fit lg:sticky lg:top-24">
+                <CardContent className="p-6 space-y-6">
+                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900 border-b pb-4">
+                    <Settings2 className="w-5 h-5 text-rose-600" /> Options
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Start Time</label>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-rose-500" />
+                        <span className="font-mono text-lg font-medium text-gray-900">
+                          {formatTimeDetailed(startTime)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">End Time</label>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-rose-500" />
+                        <span className="font-mono text-lg font-medium text-gray-900">
+                          {formatTimeDetailed(endTime)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm px-1">
+                      <span className="text-gray-500">Duration:</span>
+                      <span className="font-bold text-gray-900">{formatTimeDetailed(endTime - startTime)}</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={trimVideo}
+                    disabled={processing || (ffmpegLoading && !ffmpegReady)}
+                    className="w-full bg-rose-600 hover:bg-rose-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold"
+                  >
+                    {processing ? (
+                      <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Trimming... </>
+                    ) : ffmpegLoading ? (
+                      <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Loading Core... </>
+                    ) : (
+                      <> <Scissors className="w-5 h-5 mr-2" /> Trim Video </>
+                    )}
+                  </Button>
+
+                  <Button onClick={() => setFile(null)} variant="ghost" className="w-full text-gray-500 hover:text-red-500">
+                    <RotateCcw className="w-4 h-4 mr-2" /> Pick New Video
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {processing && (
+                <Card className="border-rose-100 bg-rose-50 animate-in fade-in slide-in-from-bottom-2">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between text-xs font-semibold text-rose-700 mb-2">
+                      <span>Processing...</span>
+                      <span>{progress}%</span>
+                    </div>
+                    <Progress value={progress} className="h-2 bg-rose-200" indicatorClassName="bg-rose-600" />
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          )}
-
-          {/* Info */}
-          <div className="mt-12 grid md:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Scissors className="h-8 w-8 mx-auto text-green-600 mb-3" />
-                <h3 className="font-semibold mb-2">Visual Timeline</h3>
-                <p className="text-sm text-gray-500">Drag handles or type exact times to set your clip range</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Play className="h-8 w-8 mx-auto text-blue-600 mb-3" />
-                <h3 className="font-semibold mb-2">Preview First</h3>
-                <p className="text-sm text-gray-500">Preview your clip before trimming to get it just right</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Download className="h-8 w-8 mx-auto text-purple-600 mb-3" />
-                <h3 className="font-semibold mb-2">Instant Export</h3>
-                <p className="text-sm text-gray-500">Uses stream copy — no re-encoding for lightning-fast trims</p>
-              </CardContent>
-            </Card>
           </div>
-
-          {/* Notice */}
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-            <strong>Note:</strong> Video trimming runs in your browser using WebAssembly. Uses stream copy (-c copy) for fast trimming without quality loss. For best results, use Chrome or Edge.
-          </div>
-        </main>
-
-        <Footer />
-      </div>
-    </>
+        )}
+      </main>
+      <Footer />
+    </div>
   );
 }
-

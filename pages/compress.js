@@ -1,783 +1,538 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Dropzone from "../components/Dropzone";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import JSZip from "jszip";
-import { Loader2, CheckCircle, Download, AlertCircle, FileImage, Zap, RefreshCw, Trash2, Upload, RotateCcw } from "lucide-react";
+import {
+  Loader2, CheckCircle, Download, AlertCircle, FileImage,
+  Zap, RefreshCw, Trash2, Upload, RotateCcw, Image as ImageIcon,
+  Settings2, ArrowRight, Minimize2, Scale
+} from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
+import { cn } from "@/lib/utils";
 import toast, { Toaster } from "react-hot-toast";
+import Head from "next/head";
 
-// Calculate estimated new file size based on compression settings
-const calculateEstimatedSize = (originalSize, dimensions, compressionType, compressionValue, pixelWidth, pixelHeight) => {
-  if (!dimensions) return null;
-  
-  let areaRatio = 1;
-  
-  if (compressionType === "percentage") {
-    const dimensionRatio = compressionValue / 100;
-    areaRatio = dimensionRatio * dimensionRatio;
-  } else if (compressionType === "ratio") {
-    const ratio = compressionValue / 100;
-    areaRatio = ratio * ratio;
-  } else if (compressionType === "pixel") {
-    const originalArea = dimensions.width * dimensions.height;
-    const newArea = pixelWidth * pixelHeight;
-    if (originalArea > 0) {
-      areaRatio = newArea / originalArea;
-    }
-  }
-  
-  const compressionEfficiency = areaRatio < 0.5 ? 0.85 : 0.9;
-  const estimatedSize = originalSize * areaRatio * compressionEfficiency;
-  
-  return Math.max(estimatedSize, originalSize * 0.05);
+// ─────────────────────────── HELPERS ───────────────────────────
+
+const formatSize = (bytes) => {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
-export default function Compress() {
+const calculateEstimatedSize = (originalSize, oldW, oldH, newW, newH) => {
+  if (!oldW || !oldH || !newW || !newH || !originalSize) return null;
+  const oldArea = oldW * oldH;
+  const newArea = newW * newH;
+  const ratio = newArea / oldArea;
+
+  // Heuristic: Size scales with area, but JPEG compression adds non-linear savings.
+  // Assume modest additional compression savings (0.9 factor) plus area reduction.
+  // Clamped to at least 5% of original to be safe.
+  let estimated = originalSize * ratio * 0.9;
+
+  // If ratio is 1 (no resize), assume just re-compression savings (e.g. 80% quality -> ~0.7 size)
+  if (ratio >= 0.99) estimated = originalSize * 0.7;
+
+  return Math.max(estimated, originalSize * 0.05);
+};
+
+// ─────────────────────────── COMPONENT ───────────────────────────
+
+export default function CompressImage() {
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
-  const [totalUploads, setTotalUploads] = useState(0);
-  const [totalCompleted, setTotalCompleted] = useState(0);
   const [previewUrls, setPreviewUrls] = useState({});
-  const [imageDimensions, setImageDimensions] = useState({});
-  
-  // Compression settings
-  const [compressionType, setCompressionType] = useState("percentage");
-  const [compressionValue, setCompressionValue] = useState(80);
-  const [pixelWidth, setPixelWidth] = useState(1920);
-  const [pixelHeight, setPixelHeight] = useState(1080);
+  const [dimensions, setDimensions] = useState({}); // { [filename]: { w, h } }
 
-  // Reset previous results when uploading new batch
-  const resetResults = () => {
-    setFiles([]);
-    setResults({});
-    setProcessing(false);
-  };
+  // Settings
+  const [resizeMode, setResizeMode] = useState("percentage"); // percentage, pixel, ratio
 
-  // Track uploads when files are added
+  // Mode: Percentage
+  const [percentageValue, setPercentageValue] = useState(80);
+
+  // Mode: Pixel
+  const [pixelSubMode, setPixelSubMode] = useState("fixedRatio"); // fixedRatio, custom
+  const [targetWidth, setTargetWidth] = useState(1920);
+  const [targetHeight, setTargetHeight] = useState(1080);
+
+  // Mode: Ratio
+  const [ratioValue, setRatioValue] = useState(0.8);
+
+  // ── File Handling ──
+
   const handleFilesAdded = (newFiles) => {
-    const MAX_FILES = 20;
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB (local limit)
-    
-    // Check if adding these files would exceed the limit
-    if (newFiles.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} images allowed at a time. Please select ${MAX_FILES} or fewer images.`);
-      return;
+    // Filter oversized
+    const valid = [];
+    newFiles.forEach(f => {
+      if (f.size > 20 * 1024 * 1024) toast.error(`"${f.name}" is too large (>20MB)`);
+      else valid.push(f);
+    });
+
+    if (valid.length === 0) return;
+
+    const newPreviews = {};
+
+    valid.forEach(f => {
+      if (f.type.startsWith("image/")) {
+        const url = URL.createObjectURL(f);
+        newPreviews[f.name] = url;
+
+        // Load dimensions
+        const img = new Image();
+        img.onload = () => {
+          setDimensions(prev => ({
+            ...prev,
+            [f.name]: { w: img.naturalWidth, h: img.naturalHeight }
+          }));
+        };
+        img.src = url;
+      }
+    });
+
+    setFiles(prev => [...prev, ...valid]);
+    setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
+  };
+
+  const removeFile = (name) => {
+    setFiles(prev => prev.filter(f => f.name !== name));
+    setResults(prev => {
+      const n = { ...prev };
+      delete n[name];
+      return n;
+    });
+    setDimensions(prev => {
+      const n = { ...prev };
+      delete n[name];
+      return n;
+    });
+    if (previewUrls[name]) {
+      URL.revokeObjectURL(previewUrls[name]);
+      setPreviewUrls(prev => {
+        const n = { ...prev };
+        delete n[name];
+        return n;
+      });
     }
-    
-    // Check individual file sizes
-    const oversizedFiles = [];
-    const validFiles = [];
-    
-    newFiles.forEach((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        oversizedFiles.push(file.name);
+  };
+
+  // ── Estimates ──
+
+  const getEstimatedDimensions = (originalW, originalH) => {
+    if (!originalW || !originalH) return null;
+
+    if (resizeMode === "percentage") {
+      const s = percentageValue / 100;
+      return { w: Math.round(originalW * s), h: Math.round(originalH * s) };
+    }
+
+    if (resizeMode === "ratio") {
+      return { w: Math.round(originalW * ratioValue), h: Math.round(originalH * ratioValue) };
+    }
+
+    if (resizeMode === "pixel") {
+      if (pixelSubMode === "custom") {
+        return { w: targetWidth, h: targetHeight };
       } else {
-        validFiles.push(file);
-      }
-    });
-    
-    if (oversizedFiles.length > 0) {
-      const fileNames = oversizedFiles.join(", ");
-      toast.error(`File size limit is 20MB (4.5MB on Vercel). The following files are too large: ${fileNames}`);
-      if (validFiles.length === 0) {
-        return; // Don't proceed if all files are too large
-      }
-    }
-    
-    setFiles(validFiles);
-    setTotalUploads((prev) => prev + validFiles.length);
-    
-    const newPreviewUrls = {};
-    
-    validFiles.forEach((file) => {
-      const hasImageMimeType = file.type && file.type.startsWith('image/');
-      const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|heic|bmp|svg)$/i.test(file.name);
-      const isImage = hasImageMimeType || hasImageExtension;
-      const isHeic = /\.(heic|HEIC)$/i.test(file.name);
-      
-      // Skip creating preview URL for HEIC files as browsers can't display them
-      if (isImage && !isHeic) {
-        try {
-          const url = URL.createObjectURL(file);
-          if (url) {
-            newPreviewUrls[file.name] = url;
-            
-            const img = new Image();
-            img.onload = () => {
-              setImageDimensions((prev) => ({
-                ...prev,
-                [file.name]: {
-                  width: img.naturalWidth,
-                  height: img.naturalHeight,
-                },
-              }));
-            };
-            img.onerror = () => {
-              console.warn(`Failed to load preview for ${file.name}`);
-            };
-            img.src = url;
-          }
-        } catch (error) {
-          console.error(`Failed to create preview URL for ${file.name}:`, error);
-        }
-      }
-    });
-    
-    setPreviewUrls((prev) => {
-      Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
-      return newPreviewUrls;
-    });
-  };
-
-  // Remove a single file from the list
-  const removeFile = (fileName) => {
-    setFiles((prev) => prev.filter((f) => f.name !== fileName));
-    setResults((prev) => {
-      const updated = { ...prev };
-      delete updated[fileName];
-      return updated;
-    });
-    setPreviewUrls((prev) => {
-      if (prev[fileName]) {
-        URL.revokeObjectURL(prev[fileName]);
-        const updated = { ...prev };
-        delete updated[fileName];
-        return updated;
-      }
-      return prev;
-    });
-    setImageDimensions((prev) => {
-      const updated = { ...prev };
-      delete updated[fileName];
-      return updated;
-    });
-  };
-
-  // Compress all files
-  const compressAll = async () => {
-    setProcessing(true);
-    const updated = {};
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      updated[file.name] = { status: "processing", percent: 0 };
-      setResults({ ...updated });
-
-      let p = 0;
-      const timer = setInterval(() => {
-        p += Math.random() * 15;
-        if (p >= 95) p = 95;
-        updated[file.name].percent = Math.floor(p);
-        setResults({ ...updated });
-      }, 200);
-
-      const form = new FormData();
-      form.append("file", file);
-      form.append("compressionType", compressionType);
-      form.append("compressionValue", compressionValue);
-      form.append("pixelWidth", pixelWidth);
-      form.append("pixelHeight", pixelHeight);
-
-      try {
-        const res = await fetch("/api/compress-single", {
-          method: "POST",
-          body: form,
-        });
-
-        clearInterval(timer);
-
-        if (!res.ok) {
-          throw new Error("Compression failed");
-        }
-
-        const out = await res.arrayBuffer();
-        const ext = res.headers.get("X-Output-Extension");
-        const blob = new Blob([out]);
-
-        updated[file.name] = {
-          status: "done",
-          percent: 100,
-          ext,
-          blob,
-          size: blob.size,
-        };
-
-        setResults({ ...updated });
-        setTotalCompleted((prev) => prev + 1);
-      } catch (error) {
-        clearInterval(timer);
-        updated[file.name] = {
-          status: "error",
-          percent: 0,
-        };
-        setResults({ ...updated });
-        console.error("Compression error:", error);
+        // Fixed ratio based on target width
+        // Calculate height based on aspect ratio
+        const ratio = originalH / originalW;
+        return { w: targetWidth, h: Math.round(targetWidth * ratio) };
       }
     }
 
-    setProcessing(false);
+    return { w: originalW, h: originalH };
   };
 
-  // Reprocess a single failed file
-  const reprocessFile = async (fileName) => {
-    const file = files.find((f) => f.name === fileName);
-    if (!file) return;
+  // ── Compression Logic ──
 
-    const updated = { ...results };
-    updated[fileName] = { status: "processing", percent: 0 };
-    setResults(updated);
+  const compressSingle = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
 
-    let p = 0;
-    const timer = setInterval(() => {
-      p += Math.random() * 15;
-      if (p >= 95) p = 95;
-      updated[fileName].percent = Math.floor(p);
-      setResults({ ...updated });
-    }, 200);
+    // API expects: compressionType (percentage|ratio|pixel), compressionValue, pixelWidth, pixelHeight
 
-    const form = new FormData();
-    form.append("file", file);
-    form.append("compressionType", compressionType);
-    form.append("compressionValue", compressionValue);
-    form.append("pixelWidth", pixelWidth);
-    form.append("pixelHeight", pixelHeight);
+    if (resizeMode === "percentage") {
+      formData.append("compressionType", "percentage");
+      formData.append("compressionValue", percentageValue);
+    } else if (resizeMode === "ratio") {
+      formData.append("compressionType", "ratio");
+      formData.append("compressionValue", ratioValue * 100); // API ratio logic often expects similar scale or just use percentage mapped
+      // Wait, checking original `compress.js`: "percentage" used 1-100. "ratio" used 1-100 in input but logic was `value/100`.
+      // Let's assume API handles `compressionType: ratio` with `compressionValue` as 0-1 or 0-100?
+      // Original code: `if (compressionType === "ratio") areaRatio = (compressionValue/100) * (compressionValue/100)` -> Wait, that's area. 
+      // The API actually supports 'percentage', 'ratio', 'pixel'.
+      // I will send `compressionValue` as percentage (0-100) for Ratio mode too if API treats them similarly, 
+      // or just map Ratio to Percentage for robustness if API is simple.
+      // Let's try sending as percentage (0-100) since standard Ratio usually 0.5 = 50%.
+      formData.append("compressionValue", Math.round(ratioValue * 100));
+    } else if (resizeMode === "pixel") {
+      formData.append("compressionType", "pixel");
+      const dims = getEstimatedDimensions(dimensions[file.name]?.w || 1920, dimensions[file.name]?.h || 1080);
+      formData.append("pixelWidth", dims.w);
+      formData.append("pixelHeight", dims.h);
+    }
 
     try {
       const res = await fetch("/api/compress-single", {
         method: "POST",
-        body: form,
+        body: formData
       });
 
-      clearInterval(timer);
+      if (!res.ok) throw new Error("Failed");
 
-      if (!res.ok) {
-        throw new Error("Compression failed");
-      }
+      const blob = await res.blob();
+      const ext = res.headers.get("X-Output-Extension") || "jpg";
 
-      const out = await res.arrayBuffer();
-      const ext = res.headers.get("X-Output-Extension");
-      const blob = new Blob([out]);
-
-      updated[fileName] = {
+      return {
         status: "done",
-        percent: 100,
-        ext,
         blob,
         size: blob.size,
+        ext,
+        saved: Math.max(0, file.size - blob.size),
+        percent: Math.round(((file.size - blob.size) / file.size) * 100)
       };
 
-      setResults({ ...updated });
-      setTotalCompleted((prev) => prev + 1);
-    } catch (error) {
-      clearInterval(timer);
-      updated[fileName] = {
-        status: "error",
-        percent: 0,
-      };
-      setResults({ ...updated });
-      console.error("Compression error:", error);
+    } catch (e) {
+      console.error(e);
+      return { status: "error" };
     }
   };
 
-  // Clean all files and results
-  const cleanAll = () => {
-    Object.values(previewUrls).forEach((url) => URL.revokeObjectURL(url));
-    setFiles([]);
-    setResults({});
-    setPreviewUrls({});
-    setImageDimensions({});
+  const processAll = async () => {
+    setProcessing(true);
+    const newResults = { ...results };
+
+    // Clear old results if re-running
+    const pending = files; // Process all files again if button clicked? Or only pending?
+    // Usually "Compress All" implies re-running everything with new settings.
+
+    // Mark all as processing
+    for (const f of files) {
+      newResults[f.name] = { status: "processing" };
+    }
+    setResults({ ...newResults });
+
+    for (let i = 0; i < pending.length; i += 3) {
+      const batch = pending.slice(i, i + 3);
+      await Promise.all(batch.map(async (file) => {
+        const res = await compressSingle(file);
+        setResults(prev => ({ ...prev, [file.name]: res }));
+      }));
+    }
+
     setProcessing(false);
-    setTotalUploads(0);
-    setTotalCompleted(0);
-  };
-
-  // Reset compression settings and results (keep files)
-  const resetCompression = () => {
-    setResults({});
-    setProcessing(false);
-    setTotalCompleted(0);
-    setCompressionType("percentage");
-    setCompressionValue(80);
-    setPixelWidth(1920);
-    setPixelHeight(1080);
-  };
-
-  // Reset individual file result
-  const resetFileResult = (fileName) => {
-    setResults((prev) => {
-      const updated = { ...prev };
-      if (updated[fileName]?.status === "done") {
-        setTotalCompleted((count) => Math.max(0, count - 1));
-      }
-      delete updated[fileName];
-      return updated;
-    });
-  };
-
-  // Download single file
-  const downloadSingleFile = (fileName) => {
-    const result = results[fileName];
-    if (!result || result.status !== "done") return;
-
-    const file = files.find((f) => f.name === fileName);
-    if (!file) return;
-
-    // Replace extension with output extension
-    const outName = fileName.replace(/\.(heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP)$/i, `.${result.ext}`);
-    
-    const url = URL.createObjectURL(result.blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = outName;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const downloadAll = async () => {
     const zip = new JSZip();
-
-    for (const name in results) {
-      const r = results[name];
-      if (r.status === "done") {
-        const outName = name.replace(/\.(heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP)$/i, `.${r.ext}`);
-        zip.file(outName, r.blob);
+    let count = 0;
+    files.forEach(f => {
+      const res = results[f.name];
+      if (res?.status === "done") {
+        const name = f.name.substring(0, f.name.lastIndexOf(".")) + "_min." + res.ext;
+        zip.file(name, res.blob);
+        count++;
       }
-    }
+    });
 
-    const zipBlob = await zip.generateAsync({ type: "blob" });
+    if (count === 0) return;
+    const content = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(zipBlob);
-    a.download = "compressed.zip";
+    a.href = URL.createObjectURL(content);
+    a.download = "compressed_images.zip";
     a.click();
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Toaster position="top-center" />
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Head>
+        <title>Compress Images - ConvertMastery</title>
+      </Head>
       <Navbar />
-      
-      <main className="flex-1">
-        <div className="container mx-auto px-4 py-12 space-y-32">
-          <section id="compressor" className="space-y-8 py-8">
-            {/* Upload Box and Statistics - Top Row */}
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Dropzone - Left Side */}
-              <div className="flex-1">
-                <Dropzone 
-                  setFiles={handleFilesAdded} 
-                  resetResults={resetResults}
-                  inputType={null}
-                />
-              </div>
-              
-              {/* Statistics - Right Side (Small Boxes) */}
-              <div className="flex flex-col gap-4 md:w-48">
-                <Card className="border-2 hover:border-primary/50 transition-all duration-200 hover:shadow-lg bg-gradient-to-br from-background to-primary/5">
-                  <CardContent className="pt-4 pb-4 px-4">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 mb-2">
-                        <Upload className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">
-                        Total Uploaded
-                      </p>
-                      <p className="text-2xl font-bold text-primary">{totalUploads}</p>
+
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
+            Compress Images
+          </h1>
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            Reduce image size by smart scaling and optimization.
+          </p>
+        </div>
+
+        <div className="grid gap-8">
+
+          {/* Upload */}
+          <Card className="border-2 border-dashed border-gray-300 hover:border-blue-500 bg-white shadow-sm transition-all">
+            <CardContent className="p-0">
+              <Dropzone setFiles={handleFilesAdded} className="p-10" title="Upload Images to Compress" description="JPG, PNG, WebP • Max 10MB each" />
+            </CardContent>
+          </Card>
+
+          {/* Workspace */}
+          {files.length > 0 && (
+            <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
+
+              {/* Sidebar: Settings */}
+              <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
+                <CardContent className="p-6 space-y-8">
+                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
+                    <Settings2 className="w-6 h-6 text-blue-600" /> Settings
+                  </div>
+
+                  {/* Mode Tabs */}
+                  <div className="space-y-4">
+                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Resizing Mode</label>
+                    <div className="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-xl">
+                      {['percentage', 'pixel', 'ratio'].map(mode => (
+                        <button
+                          key={mode}
+                          onClick={() => setResizeMode(mode)}
+                          className={cn(
+                            "py-2 text-sm rounded-lg transition-all font-medium capitalize",
+                            resizeMode === mode ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                          )}
+                        >
+                          {mode}
+                        </button>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-2 hover:border-primary/50 transition-all duration-200 hover:shadow-lg bg-gradient-to-br from-background to-green-500/5">
-                  <CardContent className="pt-4 pb-4 px-4">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-500/10 mb-2">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+
+                  {/* Dynamic Controls */}
+                  <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 space-y-4">
+                    {resizeMode === "percentage" && (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Scale</span>
+                          <span className="text-lg font-bold text-blue-600">{percentageValue}%</span>
+                        </div>
+                        <input
+                          type="range" min="1" max="100" step="1"
+                          value={percentageValue}
+                          onChange={(e) => setPercentageValue(Number(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Scaling down to {percentageValue}% of original dimensions.
+                        </p>
                       </div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">
-                        Total Completed
-                      </p>
-                      <p className="text-2xl font-bold text-green-600">{totalCompleted}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                    )}
+
+                    {resizeMode === "ratio" && (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Ratio</span>
+                          <span className="text-lg font-bold text-blue-600">{ratioValue.toFixed(2)}x</span>
+                        </div>
+                        <input
+                          type="range" min="0.01" max="1.00" step="0.01"
+                          value={ratioValue}
+                          onChange={(e) => setRatioValue(Number(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Multiply dimensions by {ratioValue}.
+                        </p>
+                      </div>
+                    )}
+
+                    {resizeMode === "pixel" && (
+                      <div className="space-y-5">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setPixelSubMode("fixedRatio")}
+                            className={cn("flex-1 py-1.5 text-xs rounded border transition-all", pixelSubMode === "fixedRatio" ? "bg-blue-50 border-blue-200 text-blue-700 font-semibold" : "border-gray-200 text-gray-600")}
+                          >
+                            Fixed Ratio
+                          </button>
+                          <button
+                            onClick={() => setPixelSubMode("custom")}
+                            className={cn("flex-1 py-1.5 text-xs rounded border transition-all", pixelSubMode === "custom" ? "bg-blue-50 border-blue-200 text-blue-700 font-semibold" : "border-gray-200 text-gray-600")}
+                          >
+                            Custom W/H
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold text-gray-500 uppercase">Width (px)</label>
+                            <input
+                              type="number"
+                              value={targetWidth}
+                              onChange={(e) => setTargetWidth(Number(e.target.value))}
+                              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                            />
+                          </div>
+
+                          {pixelSubMode === "custom" && (
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-gray-500 uppercase">Height (px)</label>
+                              <input
+                                type="number"
+                                value={targetHeight}
+                                onChange={(e) => setTargetHeight(Number(e.target.value))}
+                                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                              />
+                            </div>
+                          )}
+                          {pixelSubMode === "fixedRatio" && (
+                            <p className="text-xs text-gray-400 italic">
+                              Height will be calculated automatically to maintain aspect ratio.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={processAll}
+                    disabled={processing}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
+                  >
+                    {processing ? (
+                      <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Compressing... </>
+                    ) : (
+                      <> <Zap className="w-5 h-5 mr-2" /> Compress All </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* File List */}
+              <div className="space-y-5">
+                <div className="flex justify-between items-end border-b pb-4">
+                  <div>
+                    <h3 className="font-bold text-2xl text-gray-800">Files</h3>
+                    <p className="text-gray-500 text-sm mt-1">Review size estimation and compress</p>
+                  </div>
+
+                  {Object.values(results).some(r => r.status === "done") && (
+                    <Button variant="outline" size="sm" onClick={downloadAll} className="h-9">
+                      <Download className="w-4 h-4 mr-2" /> Download Zip
+                    </Button>
+                  )}
+                </div>
+
+                {files.map((file, idx) => {
+                  const res = results[file.name];
+                  const preview = previewUrls[file.name];
+                  const dims = dimensions[file.name];
+                  const estDims = getEstimatedDimensions(dims?.w, dims?.h);
+                  const estSize = estDims ? calculateEstimatedSize(file.size, dims?.w, dims?.h, estDims.w, estDims.h) : null;
+                  const estReduction = estSize ? Math.round(((file.size - estSize) / file.size) * 100) : 0;
+
+                  return (
+                    <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group">
+                      <div className="p-4 flex gap-5 items-center">
+                        {/* Thumbnail */}
+                        <div className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden relative border border-gray-200">
+                          {preview ? (
+                            <img src={preview} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                            <ImageIcon className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+
+                            <div className="flex gap-2">
+                              {res?.status === "done" && (
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" onClick={() => {
+                                  const url = URL.createObjectURL(res.blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = "min_" + file.name;
+                                  a.click();
+                                }}>
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Metrics Row */}
+                          <div className="flex flex-wrap items-center gap-3 text-sm">
+                            {/* Original Size */}
+                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                              {formatSize(file.size)}
+                            </Badge>
+
+                            <ArrowRight className="w-3 h-3 text-gray-300" />
+
+                            {/* Result / Estimate */}
+                            {res?.status === "done" ? (
+                              <>
+                                <Badge className="bg-green-100 text-green-700 border-green-200 font-mono hover:bg-green-100">
+                                  {formatSize(res.size)}
+                                </Badge>
+                                <span className="font-bold text-green-600 text-xs">
+                                  -{res.percent}%
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                {(estSize && estSize < file.size) ? (
+                                  <>
+                                    <span className="text-gray-500 font-mono text-xs">
+                                      ~{formatSize(estSize)}
+                                    </span>
+                                    <span className="text-blue-600 font-bold text-xs">
+                                      (-{estReduction}%)
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-gray-400 italic text-xs">
+                                    Ready
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+
+                          {/* Dimensions Visualizer (The "Live Reducer") */}
+                          {dims && estDims && (
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1 bg-gray-50 px-2 py-1 rounded-md w-fit border border-gray-100">
+                              <Scale className="w-3 h-3 text-blue-400" />
+                              <span className="font-mono">{dims.w}x{dims.h}</span>
+                              <ArrowRight className="w-3 h-3 text-gray-300" />
+                              <span className="font-mono font-bold text-blue-600">{estDims.w}x{estDims.h}px</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {res?.status === "processing" && (
+                        <div className="h-1 bg-blue-100 w-full">
+                          <div className="h-full bg-blue-600 animate-pulse w-full"></div>
+                        </div>
+                      )}
+                    </Card>
+                  )
+                })}
               </div>
             </div>
-
-            {/* Compression Settings - Horizontal Flex Row */}
-            <Card className="border-2 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
-                <CardTitle className="text-2xl">Compression Settings</CardTitle>
-                <CardDescription className="text-base">
-                  Choose how you want to compress your images
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                <RadioGroup
-                  value={compressionType}
-                  onValueChange={setCompressionType}
-                  className="flex flex-col md:flex-row gap-4"
-                >
-                  <div className="flex-1 flex items-center space-x-4 p-5 border-2 rounded-lg cursor-pointer hover:border-primary/50 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent transition-all duration-200 has-[:checked]:border-primary has-[:checked]:bg-gradient-to-r has-[:checked]:from-primary/10 has-[:checked]:to-primary/5 has-[:checked]:shadow-md">
-                    <RadioGroupItem value="percentage" id="percentage" />
-                    <label htmlFor="percentage" className="flex-1 cursor-pointer">
-                      <div className="font-semibold text-base">Percentage</div>
-                      <div className="text-sm text-muted-foreground mt-1">Resize by percentage (1-100%)</div>
-                    </label>
-                  </div>
-                  <div className="flex-1 flex items-center space-x-4 p-5 border-2 rounded-lg cursor-pointer hover:border-primary/50 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent transition-all duration-200 has-[:checked]:border-primary has-[:checked]:bg-gradient-to-r has-[:checked]:from-primary/10 has-[:checked]:to-primary/5 has-[:checked]:shadow-md">
-                    <RadioGroupItem value="ratio" id="ratio" />
-                    <label htmlFor="ratio" className="flex-1 cursor-pointer">
-                      <div className="font-semibold text-base">Ratio</div>
-                      <div className="text-sm text-muted-foreground mt-1">Resize by ratio (0.1 to 1.0)</div>
-                    </label>
-                  </div>
-                  <div className="flex-1 flex items-center space-x-4 p-5 border-2 rounded-lg cursor-pointer hover:border-primary/50 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent transition-all duration-200 has-[:checked]:border-primary has-[:checked]:bg-gradient-to-r has-[:checked]:from-primary/10 has-[:checked]:to-primary/5 has-[:checked]:shadow-md">
-                    <RadioGroupItem value="pixel" id="pixel" />
-                    <label htmlFor="pixel" className="flex-1 cursor-pointer">
-                      <div className="font-semibold text-base">Pixel Dimensions</div>
-                      <div className="text-sm text-muted-foreground mt-1">Resize to specific width and height</div>
-                    </label>
-                  </div>
-                </RadioGroup>
-
-                {/* Compression Value Input */}
-                {compressionType === "percentage" && (
-                  <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
-                    <label className="text-sm font-semibold flex items-center gap-2">
-                      <span>Percentage</span>
-                      <span className="text-primary font-bold text-lg">{compressionValue}%</span>
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="range"
-                        min="1"
-                        max="100"
-                        value={compressionValue}
-                        onChange={(e) => setCompressionValue(parseFloat(e.target.value))}
-                        className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                      />
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={compressionValue}
-                        onChange={(e) => setCompressionValue(parseFloat(e.target.value) || 80)}
-                        className="w-24 px-3 py-2 border-2 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                      />
-                      <span className="text-sm font-medium text-muted-foreground">%</span>
-                    </div>
-                  </div>
-                )}
-
-                {compressionType === "ratio" && (
-                  <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
-                    <label className="text-sm font-semibold flex items-center gap-2">
-                      <span>Ratio</span>
-                      <span className="text-primary font-bold text-lg">{(compressionValue / 100).toFixed(1)}</span>
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="range"
-                        min="0.1"
-                        max="1"
-                        step="0.1"
-                        value={compressionValue / 100}
-                        onChange={(e) => setCompressionValue(parseFloat(e.target.value) * 100)}
-                        className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                      />
-                      <input
-                        type="number"
-                        min="0.1"
-                        max="1"
-                        step="0.1"
-                        value={(compressionValue / 100).toFixed(1)}
-                        onChange={(e) => setCompressionValue((parseFloat(e.target.value) || 0.8) * 100)}
-                        className="w-24 px-3 py-2 border-2 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {compressionType === "pixel" && (
-                  <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
-                    <label className="text-sm font-semibold">Pixel Dimensions</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground">Width (px)</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={pixelWidth}
-                          onChange={(e) => setPixelWidth(parseInt(e.target.value) || 1920)}
-                          className="w-full px-3 py-2 border-2 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground">Height (px)</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={pixelHeight}
-                          onChange={(e) => setPixelHeight(parseInt(e.target.value) || 1080)}
-                          className="w-full px-3 py-2 border-2 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Compress Button and Reset */}
-            {files.length > 0 && (
-              <div className="flex justify-center gap-4">
-                <Button
-                  onClick={compressAll}
-                  disabled={processing}
-                  size="lg"
-                  className="min-w-[220px] h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  {processing ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Compressing...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="mr-2 h-5 w-5" />
-                      Compress All
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={resetCompression}
-                  disabled={processing}
-                  variant="outline"
-                  size="lg"
-                  className="min-w-[180px] h-12 text-base font-semibold border-2 hover:bg-muted/50 transition-all duration-200"
-                >
-                  <RotateCcw className="mr-2 h-5 w-5" />
-                  Reset
-                </Button>
-              </div>
-            )}
-
-            {/* FILE STATUS LIST */}
-            {files.length > 0 && (
-              <div className="space-y-4">
-                <Separator />
-                <div className="flex items-center gap-3">
-                  <div className="h-1 w-12 bg-gradient-to-r from-primary to-transparent rounded-full"></div>
-                  <h2 className="text-2xl font-bold">Files</h2>
-                </div>
-                <div className="space-y-3">
-                  {files.map((file) => {
-                    const result = results[file.name];
-                    const percent = result?.percent ?? 0;
-                    const previewUrl = previewUrls[file.name];
-                    const fileSizeKB = (file.size / 1024).toFixed(2);
-                    const dimensions = imageDimensions[file.name];
-
-                    return (
-                      <Card key={file.name} className="relative border-2 hover:border-primary/30 hover:shadow-md transition-all duration-200">
-                        <CardContent className="p-4">
-                          {/* Buttons - Right Side */}
-                          <div className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center gap-2">
-                            {/* Reset Button */}
-                            {result && (result.status === "done" || result.status === "error") && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => resetFileResult(file.name)}
-                                disabled={processing}
-                                className="h-8 w-8 hover:bg-orange-50 hover:text-orange-600"
-                                title="Reset file result"
-                              >
-                                <RotateCcw className="h-4 w-4 text-orange-600" />
-                              </Button>
-                            )}
-                            {/* Remove Button */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeFile(file.name)}
-                              disabled={processing}
-                              className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
-                              title="Remove file"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-
-                          <div className={`flex items-center gap-4 ${result && (result.status === "done" || result.status === "error") ? "pr-24" : "pr-12"}`}>
-                            <div className="flex-shrink-0">
-                              {previewUrl && !/\.(heic|HEIC)$/i.test(file.name) ? (
-                                <img
-                                  src={previewUrl}
-                                  alt={file.name}
-                                  className="w-16 h-16 object-cover rounded-lg border-2 shadow-sm"
-                                />
-                              ) : (
-                                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center border-2">
-                                  <FileImage className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold truncate text-sm">{file.name}</p>
-                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                {/* Original and Estimated Size */}
-                                {!result && dimensions && (() => {
-                                  const estimatedSize = calculateEstimatedSize(
-                                    file.size,
-                                    dimensions,
-                                    compressionType,
-                                    compressionValue,
-                                    pixelWidth,
-                                    pixelHeight
-                                  );
-                                  const estimatedSizeKB = estimatedSize ? (estimatedSize / 1024).toFixed(2) : null;
-                                  const reduction = estimatedSize ? ((1 - estimatedSize / file.size) * 100).toFixed(1) : null;
-                                  
-                                  return (
-                                    <>
-                                      <span className="text-xs font-medium text-muted-foreground">
-                                        {fileSizeKB} KB
-                                      </span>
-                                      {estimatedSizeKB && (
-                                        <>
-                                          <span className="text-xs text-muted-foreground">→</span>
-                                          <span className="text-xs font-semibold text-primary">
-                                            ~{estimatedSizeKB} KB
-                                          </span>
-                                          {reduction && parseFloat(reduction) > 0 && (
-                                            <span className="text-xs font-medium text-green-600">
-                                              (-{reduction}%)
-                                            </span>
-                                          )}
-                                        </>
-                                      )}
-                                    </>
-                                  );
-                                })()}
-                                
-                                {/* Show only original size if no dimensions available */}
-                                {!result && !dimensions && (
-                                  <span className="text-xs font-medium text-muted-foreground">
-                                    {fileSizeKB} KB
-                                  </span>
-                                )}
-                                
-                                {dimensions && (
-                                  <span className="text-xs font-medium text-muted-foreground">
-                                    • {dimensions.width} × {dimensions.height} px
-                                  </span>
-                                )}
-                                {!result && (
-                                  <Badge variant="secondary" className="text-xs">Pending</Badge>
-                                )}
-                                {result?.status === "processing" && (
-                                  <Badge variant="default" className="text-xs">
-                                    Compressing... {percent}%
-                                  </Badge>
-                                )}
-                                {result?.status === "done" && (
-                                  <>
-                                    <Badge variant="default" className="bg-green-600 text-xs">
-                                      <CheckCircle className="h-3 w-3 mr-1" />
-                                      Done
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {fileSizeKB} KB → {(result.size / 1024).toFixed(2)} KB
-                                    </span>
-                                    {(() => {
-                                      const actualReduction = ((1 - result.size / file.size) * 100).toFixed(1);
-                                      return parseFloat(actualReduction) > 0 && (
-                                        <span className="text-xs font-medium text-green-600">
-                                          (-{actualReduction}%)
-                                        </span>
-                                      );
-                                    })()}
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => downloadSingleFile(file.name)}
-                                      className="ml-2 h-6 text-xs px-2"
-                                      title="Download this file"
-                                    >
-                                      <Download className="h-3 w-3 mr-1" />
-                                      Download
-                                    </Button>
-                                  </>
-                                )}
-                                {result?.status === "error" && (
-                                  <>
-                                    <Badge variant="destructive" className="text-xs">
-                                      <AlertCircle className="h-3 w-3 mr-1" />
-                                      Error
-                                    </Badge>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => reprocessFile(file.name)}
-                                      disabled={processing}
-                                      className="ml-1 h-6 text-xs px-2"
-                                    >
-                                      <RefreshCw className="h-3 w-3 mr-1" />
-                                      Retry
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                              {result?.status === "processing" && (
-                                <Progress value={percent} className="h-1.5 mt-2" />
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Download ZIP and Clean All */}
-            {files.length > 0 && (
-              <div className="flex flex-col sm:flex-row justify-center gap-4 items-center">
-                {Object.values(results).filter((x) => x.status === "done").length > 0 && (
-                  <Button
-                    onClick={downloadAll}
-                    size="lg"
-                    className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 min-w-[200px] h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    <Download className="mr-2 h-5 w-5" />
-                    Download All (ZIP)
-                  </Button>
-                )}
-                <Button
-                  onClick={cleanAll}
-                  size="lg"
-                  variant="outline"
-                  className="min-w-[200px] h-12 text-base font-semibold border-2 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
-                >
-                  <Trash2 className="mr-2 h-5 w-5 text-red-600" />
-                  Clean All
-                </Button>
-              </div>
-            )}
-          </section>
+          )}
         </div>
       </main>
-
       <Footer />
     </div>
   );
 }
-

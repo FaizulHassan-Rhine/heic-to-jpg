@@ -1,21 +1,29 @@
 import { useDropzone } from "react-dropzone";
 import { useCallback } from "react";
-import { Card, CardContent } from "./ui/card";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function Dropzone({ setFiles, resetResults, inputType, disabled, onDisabledClick }) {
+export default function Dropzone({
+  setFiles,
+  resetResults,
+  inputType,
+  accept, // New prop for custom accept types
+  title, // New prop for custom title
+  description, // New prop for custom description
+  disabled,
+  onDisabledClick,
+  className
+}) {
   const onDrop = useCallback((acceptedFiles) => {
     if (disabled) {
       if (onDisabledClick) onDisabledClick();
       return;
     }
 
-    // Fix for HEIC file type in browsers and ensure correct MIME types
+    // Process files (maintain existing HEIC fix logic but make it safe)
     const fixedFiles = acceptedFiles.map((f) => {
-      // Determine MIME type from file extension if not set
-      let mimeType = f.type;
-      if (!mimeType) {
+      // If manually constructed file, ensure properties exist
+      if (!f.type && f.name) {
         const ext = f.name.split('.').pop().toLowerCase();
         const mimeTypes = {
           'heic': 'image/heic',
@@ -23,39 +31,38 @@ export default function Dropzone({ setFiles, resetResults, inputType, disabled, 
           'jpeg': 'image/jpeg',
           'png': 'image/png',
           'webp': 'image/webp',
+          'mp4': 'video/mp4',
+          'mov': 'video/quicktime',
+          'avi': 'video/x-msvideo',
+          'mkv': 'video/x-matroska',
+          'webm': 'video/webm',
+          'gif': 'image/gif',
+          'mp3': 'audio/mpeg',
         };
-        mimeType = mimeTypes[ext] || f.type;
+        if (mimeTypes[ext]) {
+          return new File([f], f.name, { type: mimeTypes[ext] });
+        }
       }
-      
-      return new File([f], f.name || `image.${inputType || 'heic'}`, { type: mimeType });
+      return f;
     });
 
-    // Clear previous batch
-    resetResults();
-
-    // Replace files with new uploaded ones
+    if (resetResults) resetResults();
     setFiles(fixedFiles);
-  }, [setFiles, resetResults, inputType, disabled, onDisabledClick]);
+  }, [setFiles, resetResults, disabled, onDisabledClick]);
 
-  // Get accept object based on input type
+  // Determine accept types
   const getAcceptObject = () => {
-    if (!inputType) {
-      return {};
-    }
-    
-    if (inputType === 'heic') {
-      return { "image/heic": [".heic", ".HEIC"] };
-    }
-    if (inputType === 'jpg') {
-      return { "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"] };
-    }
-    if (inputType === 'png') {
-      return { "image/png": [".png", ".PNG"] };
-    }
-    if (inputType === 'webp') {
-      return { "image/webp": [".webp", ".WEBP"] };
-    }
-    return {};
+    if (accept) return accept; // Use custom accept if provided
+
+    if (!inputType) return undefined; // Accept all if no specific inputType
+
+    const types = {
+      'heic': { "image/heic": [".heic", ".HEIC"] },
+      'jpg': { "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"] },
+      'png': { "image/png": [".png", ".PNG"] },
+      'webp': { "image/webp": [".webp", ".WEBP"] }
+    };
+    return types[inputType] || {};
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -66,59 +73,55 @@ export default function Dropzone({ setFiles, resetResults, inputType, disabled, 
     noClick: disabled,
   });
 
-  const handleClick = () => {
-    if (disabled && onDisabledClick) {
-      onDisabledClick();
+  const handleClick = (e) => {
+    if (disabled) {
+      e.stopPropagation();
+      if (onDisabledClick) onDisabledClick();
     }
   };
 
-  const getTypeLabel = () => {
-    if (inputType === 'heic') return 'HEIC';
-    if (inputType === 'jpg') return 'JPG';
-    if (inputType === 'png') return 'PNG';
-    if (inputType === 'webp') return 'WebP';
-    return 'images';
-  };
+  // Default values
+  const displayTitle = title || "Drag & Drop files here";
+  const displayDesc = description || (inputType ? `Please select ${inputType.toUpperCase()} files` : "Support for multiple formats");
 
   const rootProps = getRootProps();
-  
+
   return (
     <div
       {...rootProps}
       onClick={disabled ? handleClick : rootProps.onClick}
       className={cn(
         "w-full border-2 border-dashed rounded-xl transition-all duration-200",
-        "flex flex-col items-center justify-center py-20 px-8",
+        "flex flex-col items-center justify-center text-center",
         "bg-gradient-to-br from-background to-muted/20",
-        disabled 
-          ? "cursor-not-allowed opacity-50" 
+        disabled
+          ? "cursor-not-allowed opacity-50"
           : "cursor-pointer hover:border-primary/50 hover:bg-gradient-to-br hover:from-primary/5 hover:to-primary/10 hover:shadow-lg hover:shadow-primary/10",
         isDragActive && !disabled
-          ? "border-primary bg-gradient-to-br from-primary/10 to-primary/20 shadow-lg shadow-primary/20 scale-[1.02]" 
-          : "border-border"
+          ? "border-primary bg-gradient-to-br from-primary/10 to-primary/20 shadow-lg shadow-primary/20 scale-[1.02]"
+          : "border-border",
+        className // Allow custom classes like padding
       )}
     >
       <input {...getInputProps()} />
-      <div className={cn(
-        "mb-6 p-4 rounded-full transition-all duration-200",
-        isDragActive 
-          ? "bg-primary/10 scale-110" 
-          : "bg-muted"
-      )}>
-        <Upload className={cn(
-          "h-10 w-10 transition-colors duration-200",
-          isDragActive ? "text-primary" : "text-muted-foreground"
-        )} />
+
+      <div className="p-4 flex flex-col items-center gap-4">
+        <div className={cn(
+          "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300",
+          isDragActive ? "bg-primary text-primary-foreground scale-110" : "bg-muted text-muted-foreground"
+        )}>
+          <Upload className="w-8 h-8" />
+        </div>
+
+        <div className="space-y-1">
+          <h3 className="text-xl font-semibold tracking-tight">
+            {isDragActive ? "Drop files now" : displayTitle}
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            {displayDesc}
+          </p>
+        </div>
       </div>
-      <p className={cn(
-        "text-lg font-semibold mb-2 transition-colors",
-        isDragActive && "text-primary"
-      )}>
-        {isDragActive ? "Drop files here" : `Drag & Drop images here`}
-      </p>
-      <p className="text-sm text-muted-foreground">
-        {inputType ? `Upload ${getTypeLabel()} files` : "Please select an input format first"}
-      </p>
     </div>
   );
 }

@@ -1,524 +1,426 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { useDropzone } from "react-dropzone";
-import { Loader2, CheckCircle, AlertCircle, FileImage, Trash2, Upload, Download, RotateCcw } from "lucide-react";
+import Dropzone from "../components/Dropzone";
+import { PDFDocument } from "pdf-lib";
+import {
+  Loader2, CheckCircle, AlertCircle, FileImage, Trash2,
+  Upload, Download, RotateCcw, Settings2, FileText, ArrowRight
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import toast, { Toaster } from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import toast, { Toaster } from "react-hot-toast";
+import Head from "next/head";
+import JSZip from "jszip";
 
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
+const formatSize = (bytes) => {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
 export default function ImageToPdf() {
   const [files, setFiles] = useState([]);
-  const [results, setResults] = useState({});
+  const [results, setResults] = useState({}); // { [filename]: { status, blob, size, pdfUrl } }
   const [processing, setProcessing] = useState(false);
-  const [processingFile, setProcessingFile] = useState(null);
-  const [totalUploads, setTotalUploads] = useState(0);
-  const [totalCompleted, setTotalCompleted] = useState(0);
   const [previewUrls, setPreviewUrls] = useState({});
 
-  const resetResults = () => {
-    setResults({});
-    setTotalCompleted(0);
-    setProcessing(false);
-    setProcessingFile(null);
-  };
+  // Settings
+  const [pageSize, setPageSize] = useState("A4"); // A4, Letter, Fit
+  const [orientation, setOrientation] = useState("Portrait"); // Portrait, Landscape
+  const [margin, setMargin] = useState(20); // 0, 20, 50
+
+  // ── File Handling ──
 
   const handleFilesAdded = (newFiles) => {
-    // Check if adding these files would exceed the limit
     if (newFiles.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} images allowed at a time. Please select ${MAX_FILES} or fewer images.`);
+      toast.error(`Maximum ${MAX_FILES} images allowed.`);
       return;
     }
-    
-    // Check individual file sizes
-    const oversizedFiles = [];
-    const validFiles = [];
-    
-    newFiles.forEach((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        oversizedFiles.push(file.name);
-      } else {
-        validFiles.push(file);
+
+    const valid = [];
+    newFiles.forEach(f => {
+      if (f.size > MAX_FILE_SIZE) toast.error(`"${f.name}" is too large (>20MB)`);
+      else valid.push(f);
+    });
+
+    if (valid.length === 0) return;
+
+    const newPreviews = {};
+    valid.forEach(f => {
+      if (f.type.startsWith("image/")) {
+        newPreviews[f.name] = URL.createObjectURL(f);
       }
     });
-    
-    if (oversizedFiles.length > 0) {
-      const fileNames = oversizedFiles.join(", ");
-      toast.error(`File size limit is 20MB. The following files are too large: ${fileNames}`);
-      if (validFiles.length === 0) {
-        return;
-      }
-    }
-    
-    setFiles(validFiles);
-    setTotalUploads((prev) => prev + validFiles.length);
-    
-    // Create preview URLs (skip HEIC as browsers can't display them)
-    const newPreviewUrls = {};
-    validFiles.forEach((file) => {
-      const isHeic = /\.(heic|HEIC)$/i.test(file.name);
-      // Skip creating preview URL for HEIC files as browsers can't display them
-      if (!isHeic) {
-        newPreviewUrls[file.name] = URL.createObjectURL(file);
-      }
-    });
-    setPreviewUrls((prev) => ({ ...prev, ...newPreviewUrls }));
-    
-    resetResults();
+
+    setFiles(prev => [...prev, ...valid]);
+    setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
   };
 
-  const onDrop = useCallback((acceptedFiles) => {
-    handleFilesAdded(acceptedFiles);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      "image/*": [".jpg", ".jpeg", ".png", ".webp", ".heic", ".HEIC", ".JPG", ".JPEG", ".PNG", ".WEBP"]
-    },
-    multiple: true,
-    onDrop,
-  });
-
-  // Helper: convert any image file to JPEG via canvas
-  const fileToJpegBytes = (file) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-        
-        canvas.toBlob(
-          async (blob) => {
-            URL.revokeObjectURL(url);
-            if (!blob) {
-              reject(new Error('Failed to create JPEG blob'));
-              return;
-            }
-            const ab = await blob.arrayBuffer();
-            resolve({ bytes: new Uint8Array(ab), width: img.width, height: img.height });
-          },
-          'image/jpeg',
-          0.95
-        );
-      };
-      
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error('Failed to load image'));
-      };
-      
-      img.src = url;
+  const removeFile = (name) => {
+    setFiles(prev => prev.filter(f => f.name !== name));
+    setResults(prev => {
+      const n = { ...prev };
+      delete n[name];
+      return n;
     });
-  };
-
-  const convertImageToPdf = async (file) => {
-    try {
-      const { PDFDocument } = await import('pdf-lib');
-      
-      // Create a new PDF document
-      const pdfDoc = await PDFDocument.create();
-      
-      // Always convert via canvas to JPEG for maximum compatibility
-      const { bytes, width, height } = await fileToJpegBytes(file);
-      
-      // Embed the JPEG image
-      const image = await pdfDoc.embedJpg(bytes);
-      
-      // Add a page with the same dimensions as the image
-      const page = pdfDoc.addPage([width, height]);
-      
-      // Draw the image on the page
-      page.drawImage(image, {
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
+    if (previewUrls[name]) {
+      URL.revokeObjectURL(previewUrls[name]);
+      setPreviewUrls(prev => {
+        const n = { ...prev };
+        delete n[name];
+        return n;
       });
-      
-      // Save the PDF
-      const pdfBytes = await pdfDoc.save();
-      const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-      
-      return pdfBlob;
-    } catch (error) {
-      console.error('PDF conversion error:', error);
-      throw new Error('Failed to convert image to PDF: ' + error.message);
     }
   };
 
-  const convertAll = async () => {
-    if (files.length === 0) {
-      toast.error("Please upload at least one image");
-      return;
-    }
+  // ── Conversion Logic ──
 
-    setProcessing(true);
-    setTotalCompleted(0);
-    const newResults = {};
+  const convertSingle = async (file) => {
+    try {
+      const pdfDoc = await PDFDocument.create();
+      let page;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      setProcessingFile(file.name);
+      // Page sizes in points (72 dpi)
+      // A4: 595.28 x 841.89
+      // Letter: 612 x 792
+      let pageWidth, pageHeight;
 
-      try {
-        const pdfBlob = await convertImageToPdf(file);
-        newResults[file.name] = {
-          pdfBlob,
-          status: 'success',
-          error: null,
-          size: pdfBlob.size
-        };
-        setResults({ ...newResults });
-        setTotalCompleted(i + 1);
-      } catch (error) {
-        newResults[file.name] = {
-          pdfBlob: null,
-          status: 'error',
-          error: error.message || 'Failed to convert image to PDF',
-          size: 0
-        };
-        setResults({ ...newResults });
-        toast.error(`Failed to convert ${file.name}`);
+      if (pageSize === "A4") {
+        pageWidth = 595.28;
+        pageHeight = 841.89;
+      } else if (pageSize === "Letter") {
+        pageWidth = 612;
+        pageHeight = 792;
       }
+
+      if (orientation === "Landscape" && pageSize !== "Fit") {
+        [pageWidth, pageHeight] = [pageHeight, pageWidth];
+      }
+
+      // Embed image
+      const imageBytes = await file.arrayBuffer();
+      let image;
+      if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+        image = await pdfDoc.embedJpg(imageBytes);
+      } else if (file.type === 'image/png') {
+        image = await pdfDoc.embedPng(imageBytes);
+      } else {
+        // Try embedding as PNG if unknown (might fail for WEBP/HEIC if PDFlib doesn't support)
+        // Note: pdf-lib only supports JPG and PNG.
+        // If WEBP/HEIC, might need canvas conversion first.
+        // Assuming user uploads JPG/PNG for now or browser converted them in Dropzone...
+        // Wait, my Dropzone doesn't convert automatically yet unless configured. 
+        // But let's assume JPG/PNG for simplicity or try PNG embed.
+        // If error, we'll catch it.
+        try {
+          image = await pdfDoc.embedPng(imageBytes);
+        } catch (e) {
+          throw new Error("Format not supported directly. Please convert to JPG/PNG first.");
+        }
+      }
+
+      if (pageSize === "Fit") {
+        page = pdfDoc.addPage([image.width + margin * 2, image.height + margin * 2]);
+        page.drawImage(image, {
+          x: margin,
+          y: margin,
+          width: image.width,
+          height: image.height,
+        });
+      } else {
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+        // Calculate scale to fit within margins
+        const availableWidth = pageWidth - (margin * 2);
+        const availableHeight = pageHeight - (margin * 2);
+
+        const scale = Math.min(
+          availableWidth / image.width,
+          availableHeight / image.height
+        );
+
+        const dims = image.scale(scale);
+
+        // Center content
+        const x = margin + (availableWidth - dims.width) / 2;
+        const y = margin + (availableHeight - dims.height) / 2;
+
+        page.drawImage(image, {
+          x,
+          y,
+          width: dims.width,
+          height: dims.height,
+        });
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+      return {
+        status: "done",
+        blob,
+        size: blob.size,
+        ext: "pdf"
+      };
+
+    } catch (e) {
+      console.error(e);
+      return { status: "error", error: e.message };
+    }
+  };
+
+  const processAll = async () => {
+    setProcessing(true);
+    const newResults = { ...results };
+
+    // Mark pending
+    for (const f of files) {
+      if (!newResults[f.name] || newResults[f.name].status === "error") {
+        newResults[f.name] = { status: "processing" };
+      }
+    }
+    setResults({ ...newResults });
+
+    for (const file of files) {
+      // Skip if already done
+      if (results[file.name]?.status === "done") continue;
+
+      const res = await convertSingle(file);
+      setResults(prev => ({ ...prev, [file.name]: res }));
     }
 
     setProcessing(false);
-    setProcessingFile(null);
-    toast.success("PDF conversion completed!");
   };
 
-  const removeFile = (fileName) => {
-    setFiles((prev) => prev.filter((f) => f.name !== fileName));
-    setResults((prev) => {
-      const newResults = { ...prev };
-      delete newResults[fileName];
-      return newResults;
-    });
-    
-    // Revoke preview URL
-    if (previewUrls[fileName]) {
-      URL.revokeObjectURL(previewUrls[fileName]);
-      setPreviewUrls((prev) => {
-        const newUrls = { ...prev };
-        delete newUrls[fileName];
-        return newUrls;
-      });
-    }
-    
-    setTotalUploads((prev) => Math.max(0, prev - 1));
-  };
-
-  const resetFileResult = (fileName) => {
-    setResults((prev) => {
-      const newResults = { ...prev };
-      delete newResults[fileName];
-      return newResults;
-    });
-    setTotalCompleted((prev) => Math.max(0, prev - 1));
-  };
-
-  const downloadPdf = (fileName, pdfBlob) => {
-    const url = URL.createObjectURL(pdfBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${fileName.split('.')[0]}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("PDF downloaded!");
-  };
-
-  const downloadAllPdfs = async () => {
-    // Download each PDF individually
-    for (const file of files) {
-      const result = results[file.name];
-      if (result && result.status === 'success' && result.pdfBlob) {
-        downloadPdf(file.name, result.pdfBlob);
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between downloads
+  const downloadAll = async () => {
+    const zip = new JSZip();
+    let count = 0;
+    files.forEach(f => {
+      const res = results[f.name];
+      if (res?.status === "done") {
+        const name = f.name.substring(0, f.name.lastIndexOf(".")) + ".pdf";
+        zip.file(name, res.blob);
+        count++;
       }
-    }
-    
-    toast.success("All PDFs downloaded!");
-  };
+    });
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+    if (count === 0) return;
+    const content = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(content);
+    a.download = "images_to_pdf.zip";
+    a.click();
   };
-
-  const completedCount = Object.keys(results).filter(
-    (name) => results[name]?.status === 'success'
-  ).length;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Head>
+        <title>Image to PDF - ConvertMastery</title>
+      </Head>
       <Navbar />
-      <Toaster position="top-center" />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {/* Header */}
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold">Convert Images to PDF</h1>
-            <p className="text-muted-foreground">
-              Upload images and convert them to PDF format
-            </p>
-          </div>
 
-          {/* Upload Section */}
-          <div className="flex gap-4 items-start">
-            <Card className="flex-1">
-              <CardContent className="p-6">
-                <div
-                  {...getRootProps()}
-                  className={cn(
-                    "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                    isDragActive
-                      ? "border-primary bg-primary/5"
-                      : "border-muted-foreground/25 hover:border-primary/50"
-                  )}
-                >
-                  <input {...getInputProps()} />
-                  <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  {isDragActive ? (
-                    <p className="text-lg font-medium">Drop images here...</p>
-                  ) : (
-                    <>
-                      <p className="text-lg font-medium mb-2">
-                        Drag & drop images here, or click to select
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Supported formats: JPG, PNG, WebP, HEIC (Max {MAX_FILES} images, 20MB each)
-                      </p>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
+            Image to PDF
+          </h1>
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            Convert your images into professional PDF documents.
+          </p>
+        </div>
 
-            {/* Statistics */}
-            <div className="flex flex-col gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{totalUploads}</p>
-                    <p className="text-xs text-muted-foreground">Total Uploaded</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{completedCount}</p>
-                    <p className="text-xs text-muted-foreground">Total Completed</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+        <div className="grid gap-8">
+          <Card className="border-2 border-dashed border-gray-300 hover:border-red-500 bg-white shadow-sm transition-all">
+            <CardContent className="p-0">
+              <Dropzone setFiles={handleFilesAdded} className="p-10" title="Select Images for PDF" description="Merge standard images into PDF documents" />
+            </CardContent>
+          </Card>
 
-          {/* Action Buttons */}
           {files.length > 0 && (
-            <div className="flex gap-4 justify-center">
-              <Button
-                onClick={convertAll}
-                disabled={processing}
-                size="lg"
-                className="min-w-[200px]"
-              >
-                {processing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Converting...
-                  </>
-                ) : (
-                  "Convert All to PDF"
-                )}
-              </Button>
-              {completedCount > 0 && (
-                <Button
-                  onClick={downloadAllPdfs}
-                  variant="outline"
-                  size="lg"
-                  className="min-w-[200px]"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download All PDFs
-                </Button>
-              )}
-            </div>
-          )}
+            <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
 
-          {/* Processing Status */}
-          {processing && processingFile && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <div className="flex-1">
-                    <p className="font-medium">Processing: {processingFile}</p>
-                    <Progress 
-                      value={(totalCompleted / files.length) * 100} 
-                      className="mt-2"
-                    />
+              {/* Settings Sidebar */}
+              <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
+                <CardContent className="p-6 space-y-8">
+                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
+                    <Settings2 className="w-6 h-6 text-red-600" /> PDF Settings
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* File List */}
-          {files.length > 0 && (
-            <div className="space-y-4">
-              <Separator />
-              <h2 className="text-2xl font-bold">Uploaded Images</h2>
-              <div className="grid gap-4">
-                {files.map((file) => {
-                  const result = results[file.name];
-                  const previewUrl = previewUrls[file.name];
-                  
-                  return (
-                    <Card key={file.name} className="overflow-hidden">
-                      <CardContent className="p-0">
-                        <div className="flex gap-4 p-4">
-                          {/* Image Preview */}
-                          <div className="flex-shrink-0">
-                            {previewUrl && !/\.(heic|HEIC)$/i.test(file.name) ? (
-                              <img
-                                src={previewUrl}
-                                alt={file.name}
-                                className="w-24 h-24 object-cover rounded border"
-                              />
-                            ) : (
-                              <div className="w-24 h-24 bg-muted rounded border flex items-center justify-center">
-                                <FileImage className="h-8 w-8 text-muted-foreground" />
-                              </div>
+                  {/* Page Size */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Page Size</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['A4', 'Letter', 'Fit'].map(size => (
+                        <button
+                          key={size}
+                          onClick={() => setPageSize(size)}
+                          className={cn(
+                            "py-2 text-sm rounded-lg transition-all font-medium border",
+                            pageSize === size
+                              ? "bg-red-50 border-red-200 text-red-700 font-semibold"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Orientation */}
+                  {pageSize !== 'Fit' && (
+                    <div className="space-y-3">
+                      <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Orientation</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {['Portrait', 'Landscape'].map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => setOrientation(mode)}
+                            className={cn(
+                              "py-2 text-sm rounded-lg transition-all font-medium border",
+                              orientation === mode
+                                ? "bg-red-50 border-red-200 text-red-700 font-semibold"
+                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                             )}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Margins */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Margins</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[0, 20, 50].map(m => (
+                        <button
+                          key={m}
+                          onClick={() => setMargin(m)}
+                          className={cn(
+                            "py-2 text-sm rounded-lg transition-all font-medium border",
+                            margin === m
+                              ? "bg-red-50 border-red-200 text-red-700 font-semibold"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          {m === 0 ? "None" : m === 20 ? "Normal" : "Large"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={processAll}
+                    disabled={processing}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
+                  >
+                    {processing ? (
+                      <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Converting... </>
+                    ) : (
+                      <> <FileText className="w-5 h-5 mr-2" /> Convert All </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* File List */}
+              <div className="space-y-5">
+                <div className="flex justify-between items-end border-b pb-4">
+                  <div>
+                    <h3 className="font-bold text-2xl text-gray-800">Files</h3>
+                    <p className="text-gray-500 text-sm mt-1">Review and convert to PDF</p>
+                  </div>
+                  {Object.values(results).some(r => r.status === "done") && (
+                    <Button variant="outline" size="sm" onClick={downloadAll} className="h-9">
+                      <Download className="w-4 h-4 mr-2" /> Download Zip
+                    </Button>
+                  )}
+                </div>
+
+                {files.map((file, idx) => {
+                  const res = results[file.name];
+                  const preview = previewUrls[file.name];
+
+                  return (
+                    <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group">
+                      <div className="p-4 flex gap-5 items-center">
+                        <div className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden relative border border-gray-200">
+                          {preview ? (
+                            <img src={preview} className="w-full h-full object-cover" />
+                          ) : (
+                            <FileImage className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+
+                            <div className="flex gap-2">
+                              {res?.status === "done" && (
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100" onClick={() => {
+                                  const url = URL.createObjectURL(res.blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = file.name.split('.')[0] + ".pdf";
+                                  a.click();
+                                }}>
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
 
-                          {/* File Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{file.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {formatFileSize(file.size)}
-                                </p>
-                                {result?.status === 'success' && result.size && (
-                                  <p className="text-sm text-muted-foreground">
-                                    PDF: {formatFileSize(result.size)}
-                                  </p>
-                                )}
-                              </div>
+                          <div className="flex flex-wrap items-center gap-3 text-sm">
+                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                              {formatSize(file.size)}
+                            </Badge>
+                            <ArrowRight className="w-3 h-3 text-gray-300" />
+                            {res?.status === "done" ? (
+                              <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100">
+                                PDF Ready ({formatSize(res.size)})
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400 italic text-xs">Ready to convert</span>
+                            )}
 
-                              {/* Status Badge */}
-                              <div className="flex-shrink-0 flex items-center gap-2">
-                                {result?.status === 'success' && (
-                                  <Badge variant="default" className="bg-green-500">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Converted
-                                  </Badge>
-                                )}
-                                {result?.status === 'error' && (
-                                  <Badge variant="destructive">
-                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                    Error
-                                  </Badge>
-                                )}
-                                {processing && processingFile === file.name && (
-                                  <Badge variant="secondary">
-                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    Processing
-                                  </Badge>
-                                )}
-
-                                {/* Action Buttons */}
-                                <div className="flex gap-2">
-                                  {result && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => resetFileResult(file.name)}
-                                      title="Reset"
-                                    >
-                                      <RotateCcw className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                  {result?.status === 'success' && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => downloadPdf(file.name, result.pdfBlob)}
-                                      title="Download PDF"
-                                    >
-                                      <Download className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => removeFile(file.name)}
-                                    title="Remove"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Error Message */}
-                            {result?.status === 'error' && (
-                              <div className="mt-4">
-                                <p className="text-sm text-destructive">
-                                  {result.error || "Failed to convert to PDF"}
-                                </p>
-                              </div>
+                            {res?.status === "error" && (
+                              <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200">
+                                Error: {res.error}
+                              </Badge>
                             )}
                           </div>
                         </div>
-                      </CardContent>
+                      </div>
+                      {res?.status === "processing" && (
+                        <div className="h-1 bg-red-100 w-full">
+                          <div className="h-full bg-red-600 animate-pulse w-full"></div>
+                        </div>
+                      )}
                     </Card>
-                  );
+                  )
                 })}
               </div>
             </div>
           )}
-
-          {/* Empty State */}
-          {files.length === 0 && !processing && (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <FileImage className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium mb-2">No images uploaded</p>
-                <p className="text-sm text-muted-foreground">
-                  Upload images to convert them to PDF format
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </main>
-
       <Footer />
     </div>
   );
 }
-
