@@ -1,5 +1,5 @@
 import Busboy from "busboy";
-import fetch from "node-fetch";
+// fetch is global in Next.js / Node 18+
 
 export const config = {
   api: { bodyParser: false },
@@ -53,8 +53,8 @@ export default async function handler(req, res) {
         // Check file size - limit to 10MB for free API services
         const maxSize = 10 * 1024 * 1024; // 10MB
         if (fileBuffer.length > maxSize) {
-          res.status(413).json({ 
-            error: `File too large. Maximum size is 10MB. Your file is ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB.` 
+          res.status(413).json({
+            error: `File too large. Maximum size is 10MB. Your file is ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB.`
           });
           return resolve();
         }
@@ -103,7 +103,7 @@ export default async function handler(req, res) {
           throw new Error("Unable to process conversion at this time. Please try again later.");
         } catch (apiError) {
           console.error("API conversion error:", apiError);
-          
+
           // Fallback: Use a simple server-side conversion with built-in codecs
           // Just re-encode the audio file using basic Node.js streams
           res.setHeader("Content-Type", "application/octet-stream");
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
         }
       } catch (err) {
         console.error("Audio conversion error:", err);
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Audio conversion service temporarily unavailable. Please try again later.",
           details: process.env.NODE_ENV === 'development' ? err.message : undefined
         });
