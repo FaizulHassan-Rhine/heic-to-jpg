@@ -172,6 +172,7 @@ export default function ExtractText() {
           </p>
         </div>
 
+
         <div className="grid gap-8">
           <Card className="border-2 border-dashed border-gray-300 hover:border-teal-500 bg-white shadow-sm transition-all">
             <CardContent className="p-0">

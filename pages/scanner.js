@@ -4,7 +4,6 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
-import jsPDF from "jspdf";
 import {
 	Upload,
 	RotateCw,
@@ -942,33 +941,58 @@ export default function Scanner() {
 		const quality = qualityMap[exportQuality];
 
 		if (exportFormat === "pdf") {
-			const doc = new jsPDF();
+			// Dynamically import pdf-lib
+			const { PDFDocument } = await import('pdf-lib');
+			const pdfDoc = await PDFDocument.create();
+
 			for (let i = 0; i < pages.length; i++) {
 				const canvas = pages[i].filteredCanvas || pages[i].croppedCanvas;
 				if (!canvas) continue;
-				const dataUrl = canvasToDataURL(canvas, "image/jpeg", quality);
-				const pageW = doc.internal.pageSize.getWidth();
-				const pageH = doc.internal.pageSize.getHeight();
-				const imgRatio = canvas.width / canvas.height;
-				const pageRatio = pageW / pageH;
 
-				let drawW, drawH, drawX, drawY;
+				// Convert canvas to blob, then to array buffer
+				const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+				const imageBytes = await blob.arrayBuffer();
+				const image = await pdfDoc.embedJpg(imageBytes);
+
+				// Get page dimensions (A4 size in points)
+				const pageWidth = 595.28;
+				const pageHeight = 841.89;
+				const imgRatio = image.width / image.height;
+				const pageRatio = pageWidth / pageHeight;
+
+				// Calculate dimensions to fit image on page
+				let drawWidth, drawHeight, drawX, drawY;
 				if (imgRatio > pageRatio) {
-					drawW = pageW;
-					drawH = pageW / imgRatio;
+					drawWidth = pageWidth;
+					drawHeight = pageWidth / imgRatio;
 					drawX = 0;
-					drawY = (pageH - drawH) / 2;
+					drawY = (pageHeight - drawHeight) / 2;
 				} else {
-					drawH = pageH;
-					drawW = pageH * imgRatio;
-					drawX = (pageW - drawW) / 2;
+					drawHeight = pageHeight;
+					drawWidth = pageHeight * imgRatio;
+					drawX = (pageWidth - drawWidth) / 2;
 					drawY = 0;
 				}
 
-				if (i > 0) doc.addPage();
-				doc.addImage(dataUrl, "JPEG", drawX, drawY, drawW, drawH);
+				// Add page and draw image
+				const page = pdfDoc.addPage([pageWidth, pageHeight]);
+				page.drawImage(image, {
+					x: drawX,
+					y: drawY,
+					width: drawWidth,
+					height: drawHeight,
+				});
 			}
-			doc.save("scanned-document.pdf");
+
+			// Save PDF
+			const pdfBytes = await pdfDoc.save();
+			const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = "scanned-document.pdf";
+			a.click();
+			URL.revokeObjectURL(url);
 		} else {
 			const mimeType = exportFormat === "png" ? "image/png" : "image/jpeg";
 			const ext = exportFormat === "png" ? "png" : "jpg";

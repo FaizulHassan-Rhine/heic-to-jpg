@@ -325,280 +325,190 @@ export default function TextToSpeech() {
         <Navbar />
         <Toaster position="top-center" />
 
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+        <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Text to Speech</h1>
-            <p className="text-gray-500">Convert your text to natural speech in 40+ languages</p>
+          <div className="text-center mb-10">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">Text to Speech</h1>
+            <p className="text-gray-500 text-lg max-w-2xl mx-auto">Convert your text to natural speech in 40+ languages.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Left: Text Input */}
-            <div className="md:col-span-2">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">Enter Text</label>
-                    <span className={cn(
-                      "text-xs",
-                      text.length > MAX_CHARS ? "text-red-500" : "text-gray-400"
-                    )}>
-                      {text.length} / {MAX_CHARS}
-                    </span>
-                  </div>
-                  <textarea
-                    value={text}
-                    onChange={(e) => {
-                      if (e.target.value.length <= MAX_CHARS) {
-                        setText(e.target.value);
-                      } else {
-                        toast.error(`Maximum ${MAX_CHARS} characters allowed`);
-                      }
-                    }}
-                    placeholder="Type or paste your text here..."
-                    className="w-full h-64 p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-800 text-base leading-relaxed"
-                  />
+          <div className="grid gap-8">
+            {/* Text Input Area (styled like dropzone) */}
+            <Card className="border-2 border-dashed border-gray-300 hover:border-orange-500 bg-white shadow-sm transition-all">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Enter Text</label>
+                  <span className={cn("text-xs", text.length > MAX_CHARS ? "text-red-500" : "text-gray-400")}>
+                    {text.length} / {MAX_CHARS}
+                  </span>
+                </div>
+                <textarea
+                  value={text}
+                  onChange={(e) => {
+                    if (e.target.value.length <= MAX_CHARS) setText(e.target.value);
+                    else toast.error(`Maximum ${MAX_CHARS} characters allowed`);
+                  }}
+                  placeholder="Type or paste your text here..."
+                  className="w-full h-48 p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-800 text-base leading-relaxed"
+                />
+              </CardContent>
+            </Card>
 
-                  {/* Playback Controls */}
-                  <div className="flex items-center gap-3 mt-4">
-                    {!isSpeaking ? (
-                      <Button
-                        onClick={speak}
-                        className="bg-green-700 hover:bg-green-800 text-white"
-                        disabled={!text.trim()}
-                      >
-                        <Play className="h-4 w-4 mr-2" />
-                        Play
-                      </Button>
-                    ) : (
-                      <>
-                        {isPaused ? (
-                          <Button onClick={resume} className="bg-green-700 hover:bg-green-800 text-white">
-                            <Play className="h-4 w-4 mr-2" />
-                            Resume
-                          </Button>
-                        ) : (
-                          <Button onClick={pause} variant="outline" className="border-yellow-500 text-yellow-600">
-                            <Pause className="h-4 w-4 mr-2" />
-                            Pause
-                          </Button>
-                        )}
-                        <Button onClick={stop} variant="outline" className="border-red-500 text-red-600">
-                          <Square className="h-4 w-4 mr-2" />
-                          Stop
-                        </Button>
-                      </>
-                    )}
+            {/* Sidebar + Content */}
+            {text.trim() && (
+              <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
 
-                    <div className="flex-1" />
-
-                    <Button
-                      onClick={downloadSpeech}
-                      variant="outline"
-                      size="sm"
-                      disabled={!text.trim() || isDownloading}
-                      className="border-green-600 text-green-700 hover:bg-green-50"
-                    >
-                      {isDownloading ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4 mr-1" />
-                      )}
-                      {isDownloading ? "Generating..." : "Download MP3"}
-                    </Button>
-                    <Button onClick={downloadText} variant="ghost" size="sm" disabled={!text.trim()}>
-                      <Download className="h-4 w-4 mr-1" />
-                      Save Text
-                    </Button>
-                    <Button onClick={resetAll} variant="ghost" size="sm">
-                      <RotateCcw className="h-4 w-4 mr-1" />
-                      Reset
-                    </Button>
-                  </div>
-
-                  {isSpeaking && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <div className="flex gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-1 bg-green-500 rounded-full animate-pulse"
-                            style={{
-                              height: `${12 + Math.random() * 16}px`,
-                              animationDelay: `${i * 0.15}s`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm text-green-600 font-medium">
-                        {isPaused ? "Paused" : "Speaking..."}
-                      </span>
+                {/* Settings Sidebar */}
+                <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
+                  <CardContent className="p-6 space-y-6">
+                    <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
+                      <Volume2 className="w-6 h-6 text-orange-600" /> Voice Settings
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
 
-            {/* Right: Settings */}
-            <div className="space-y-4">
-              {/* Language Selection */}
-              <Card>
-                <CardContent className="p-4">
-                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-3">
-                    <Languages className="h-4 w-4" />
-                    Language
-                  </label>
-                  <select
-                    value={selectedLang}
-                    onChange={(e) => {
-                      if (isSpeaking) stop();
-                      setSelectedLang(e.target.value);
-                    }}
-                    className="w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                  >
-                    {Object.entries(LANGUAGE_GROUPS).map(([group, langs]) => (
-                      <optgroup key={group} label={group}>
-                        {langs.map((lang) => (
-                          <option key={lang.code} value={lang.code}>
-                            {lang.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-
-                  {/* Voice Selection */}
-                  {filteredVoices.length > 0 && (
-                    <div className="mt-3">
-                      <label className="text-xs text-gray-500 mb-1 block">Voice</label>
+                    {/* Language */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                        <Languages className="h-4 w-4" /> Language
+                      </label>
                       <select
-                        value={selectedVoice || ""}
-                        onChange={(e) => {
-                          if (isSpeaking) stop();
-                          setSelectedVoice(e.target.value);
-                        }}
-                        className="w-full p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                        value={selectedLang}
+                        onChange={(e) => { if (isSpeaking) stop(); setSelectedLang(e.target.value); }}
+                        className="w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
                       >
-                        {filteredVoices.map((voice) => (
-                          <option key={voice.name} value={voice.name}>
-                            {voice.name} {voice.localService ? "(Local)" : "(Online)"}
-                          </option>
+                        {Object.entries(LANGUAGE_GROUPS).map(([group, langs]) => (
+                          <optgroup key={group} label={group}>
+                            {langs.map((lang) => (
+                              <option key={lang.code} value={lang.code}>{lang.name}</option>
+                            ))}
+                          </optgroup>
                         ))}
                       </select>
+
+                      {filteredVoices.length > 0 && (
+                        <div className="mt-2">
+                          <label className="text-xs text-gray-500 mb-1 block">Voice</label>
+                          <select
+                            value={selectedVoice || ""}
+                            onChange={(e) => { if (isSpeaking) stop(); setSelectedVoice(e.target.value); }}
+                            className="w-full p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                          >
+                            {filteredVoices.map((voice) => (
+                              <option key={voice.name} value={voice.name}>
+                                {voice.name} {voice.localService ? "(Local)" : "(Online)"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {filteredVoices.length === 0 && (
+                        <p className="text-xs text-yellow-600 mt-1">No voices found. Browser will use default.</p>
+                      )}
                     </div>
-                  )}
 
-                  {filteredVoices.length === 0 && (
-                    <p className="text-xs text-yellow-600 mt-2">
-                      No voices found for this language. The browser will use a default voice.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                    {/* Speed */}
+                    <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Gauge className="h-4 w-4" /> Speed</span>
+                        <span className="text-lg font-bold text-orange-600">{rate.toFixed(1)}x</span>
+                      </div>
+                      <input type="range" min="0.5" max="2" step="0.1" value={rate}
+                        onChange={(e) => setRate(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
 
-              {/* Speed */}
-              <Card>
-                <CardContent className="p-4">
-                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-3">
-                    <Gauge className="h-4 w-4" />
-                    Speed: {rate.toFixed(1)}x
-                  </label>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="2"
-                    step="0.1"
-                    value={rate}
-                    onChange={(e) => setRate(parseFloat(e.target.value))}
-                    className="w-full accent-green-600"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>0.5x</span>
-                    <span>1x</span>
-                    <span>2x</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Type className="h-4 w-4" /> Pitch</span>
+                        <span className="text-lg font-bold text-orange-600">{pitch.toFixed(1)}</span>
+                      </div>
+                      <input type="range" min="0.5" max="2" step="0.1" value={pitch}
+                        onChange={(e) => setPitch(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Volume2 className="h-4 w-4" /> Volume</span>
+                        <span className="text-lg font-bold text-orange-600">{Math.round(volume * 100)}%</span>
+                      </div>
+                      <input type="range" min="0" max="1" step="0.05" value={volume}
+                        onChange={(e) => setVolume(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+                    </div>
+
+                    <Button
+                      onClick={!isSpeaking ? speak : stop}
+                      className={cn(
+                        "w-full h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base",
+                        isSpeaking ? "bg-red-600 hover:bg-red-700 text-white" : "bg-orange-600 hover:bg-orange-700 text-white"
+                      )}
+                      disabled={!text.trim()}
+                    >
+                      {isSpeaking ? <><Square className="w-5 h-5 mr-2" /> Stop</> : <><Play className="w-5 h-5 mr-2" /> Play Speech</>}
+                    </Button>
+
+                    <Button onClick={resetAll} variant="outline" className="w-full text-gray-500">
+                      <RotateCcw className="w-4 h-4 mr-2" /> Reset All
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Playback Panel */}
+                <div className="space-y-5">
+                  <div className="flex justify-between items-end border-b pb-4">
+                    <div>
+                      <h3 className="font-bold text-2xl text-gray-800">Playback</h3>
+                      <p className="text-gray-500 text-sm mt-1">Listen and download your speech</p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
 
-              {/* Pitch */}
-              <Card>
-                <CardContent className="p-4">
-                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-3">
-                    <Type className="h-4 w-4" />
-                    Pitch: {pitch.toFixed(1)}
-                  </label>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="2"
-                    step="0.1"
-                    value={pitch}
-                    onChange={(e) => setPitch(parseFloat(e.target.value))}
-                    className="w-full accent-green-600"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>Low</span>
-                    <span>Normal</span>
-                    <span>High</span>
-                  </div>
-                </CardContent>
-              </Card>
+                  {/* Status Card */}
+                  <Card className="overflow-hidden border border-gray-200 shadow-sm">
+                    <div className="p-5">
+                      {isSpeaking && (
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="flex gap-1">
+                            {[...Array(8)].map((_, i) => (
+                              <div key={i} className="w-1 bg-orange-500 rounded-full animate-pulse"
+                                style={{ height: `${12 + Math.random() * 16}px`, animationDelay: `${i * 0.12}s` }} />
+                            ))}
+                          </div>
+                          <span className="text-sm text-orange-600 font-semibold">
+                            {isPaused ? "Paused" : "Speaking..."}
+                          </span>
+                          {isPaused ? (
+                            <Button onClick={resume} size="sm" className="ml-auto bg-orange-600 hover:bg-orange-700 text-white">
+                              <Play className="h-3 w-3 mr-1" /> Resume
+                            </Button>
+                          ) : (
+                            <Button onClick={pause} size="sm" variant="outline" className="ml-auto border-yellow-500 text-yellow-600">
+                              <Pause className="h-3 w-3 mr-1" /> Pause
+                            </Button>
+                          )}
+                        </div>
+                      )}
 
-              {/* Volume */}
-              <Card>
-                <CardContent className="p-4">
-                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-3">
-                    <Volume2 className="h-4 w-4" />
-                    Volume: {Math.round(volume * 100)}%
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={volume}
-                    onChange={(e) => setVolume(parseFloat(e.target.value))}
-                    className="w-full accent-green-600"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>Mute</span>
-                    <span>50%</span>
-                    <span>100%</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 max-h-48 overflow-y-auto">
+                        <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                          {text.slice(0, 600)}{text.length > 600 ? "..." : ""}
+                        </p>
+                      </div>
 
-          {/* Info Section */}
-          <div className="mt-12 grid md:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Languages className="h-8 w-8 mx-auto text-green-600 mb-3" />
-                <h3 className="font-semibold mb-2">40+ Languages</h3>
-                <p className="text-sm text-gray-500">
-                  Support for popular languages including Hindi, Arabic, Chinese, Spanish, and more
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Volume2 className="h-8 w-8 mx-auto text-blue-600 mb-3" />
-                <h3 className="font-semibold mb-2">Adjustable Controls</h3>
-                <p className="text-sm text-gray-500">
-                  Fine-tune speed, pitch, and volume for the perfect listening experience
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Play className="h-8 w-8 mx-auto text-purple-600 mb-3" />
-                <h3 className="font-semibold mb-2">Instant Playback</h3>
-                <p className="text-sm text-gray-500">
-                  Runs entirely in your browser — no uploads, no waiting, completely private
-                </p>
-              </CardContent>
-            </Card>
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        <Button
+                          onClick={downloadSpeech}
+                          variant="outline"
+                          disabled={!text.trim() || isDownloading}
+                          className="border-orange-600 text-orange-700 hover:bg-orange-50"
+                        >
+                          {isDownloading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                          {isDownloading ? "Generating..." : "Download MP3"}
+                        </Button>
+                        <Button onClick={downloadText} variant="outline" disabled={!text.trim()}>
+                          <Download className="h-4 w-4 mr-2" /> Save Text
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            )}
           </div>
         </main>
 

@@ -3,7 +3,7 @@ import Dropzone from "../components/Dropzone";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import JSZip from "jszip";
-import { Loader2, CheckCircle, Download, AlertCircle, Music, Trash2, Upload, RotateCcw } from "lucide-react";
+import { Loader2, CheckCircle, Download, AlertCircle, Music, Trash2, Upload, RotateCcw, Settings2, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
@@ -22,12 +22,41 @@ const audioFormats = [
   { id: 'aac', label: 'AAC', icon: '⠿' },
 ];
 
+// Helper function to detect audio format from file
+const detectAudioFormat = (file) => {
+  // Check MIME type first
+  const mimeType = file.type?.toLowerCase() || '';
+  
+  if (mimeType.includes('mpeg') || mimeType.includes('mp3')) return 'mp3';
+  if (mimeType.includes('wav') || mimeType.includes('wave')) return 'wav';
+  if (mimeType.includes('m4a') || mimeType.includes('mp4')) return 'm4a';
+  if (mimeType.includes('ogg') || mimeType.includes('vorbis') || mimeType.includes('opus')) return 'ogg';
+  if (mimeType.includes('flac')) return 'flac';
+  if (mimeType.includes('aac')) return 'aac';
+  if (mimeType.includes('webm')) return 'webm';
+  
+  // Fallback to file extension
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  const extMap = {
+    'mp3': 'mp3',
+    'wav': 'wav',
+    'wave': 'wav',
+    'm4a': 'm4a',
+    'ogg': 'ogg',
+    'flac': 'flac',
+    'aac': 'aac',
+    'webm': 'webm',
+  };
+  
+  return extMap[ext] || 'mp3'; // Default to mp3 if unknown
+};
+
 export default function AudioConvert() {
-  const [selectedInputType, setSelectedInputType] = useState(null);
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
-  const [format, setFormat] = useState("wav");
+  const [detectedInputFormat, setDetectedInputFormat] = useState(null);
+  const [outputFormat, setOutputFormat] = useState("wav");
   const [totalCompleted, setTotalCompleted] = useState(0);
 
   const handleFilesAdded = (newFiles) => {
@@ -36,23 +65,77 @@ export default function AudioConvert() {
       return;
     }
 
-    const validFiles = newFiles.filter(f => {
+    // Audio MIME types
+    const audioMimeTypes = [
+      'audio/mpeg', 'audio/mp3', 'audio/mpeg3', 'audio/x-mpeg-3',
+      'audio/wav', 'audio/wave', 'audio/x-wav',
+      'audio/mp4', 'audio/x-m4a', 'audio/m4a',
+      'audio/ogg', 'audio/vorbis', 'audio/opus',
+      'audio/flac', 'audio/x-flac',
+      'audio/aac', 'audio/aacp', 'audio/x-aac',
+      'audio/webm',
+    ];
+    
+    // Audio file extensions
+    const audioExtensions = ['mp3', 'wav', 'm4a', 'ogg', 'flac', 'aac', 'wma', 'opus', 'webm'];
+
+    const validFiles = [];
+    const rejectedFiles = [];
+
+    newFiles.forEach(f => {
+      // Check file size first
       const size = f.size / 1024 / 1024;
       if (size > 50) {
         toast.error(`${f.name} is too large (max 50MB)`);
-        return false;
+        rejectedFiles.push(f.name);
+        return;
       }
-      return true;
+
+      // Check MIME type
+      const fileMimeType = f.type?.toLowerCase() || '';
+      const isAudioMime = audioMimeTypes.some(mime => 
+        fileMimeType === mime.toLowerCase() || 
+        fileMimeType.startsWith('audio/')
+      );
+      
+      // Check file extension as fallback (in case MIME type is missing)
+      const fileExt = f.name.split('.').pop()?.toLowerCase();
+      const isAudioExt = fileExt && audioExtensions.includes(fileExt);
+
+      if (isAudioMime || isAudioExt) {
+        validFiles.push(f);
+      } else {
+        rejectedFiles.push(f.name);
+      }
     });
 
-    setFiles(validFiles);
-    setTotalCompleted(0);
-    setResults({});
+    // Show error for rejected files
+    if (rejectedFiles.length > 0) {
+      const fileList = rejectedFiles.slice(0, 3).join(', ');
+      const more = rejectedFiles.length > 3 ? ` and ${rejectedFiles.length - 3} more` : '';
+      toast.error(`${rejectedFiles.length} file(s) rejected: ${fileList}${more}. Only audio files (MP3, WAV, M4A, OGG, FLAC, AAC) are allowed.`);
+    }
+
+    if (validFiles.length > 0) {
+      setFiles(prev => {
+        const allFiles = [...prev, ...validFiles];
+        // Detect input format from all files
+        const detectedFormats = allFiles.map(detectAudioFormat);
+        // Use the most common format
+        const mostCommonFormat = detectedFormats.reduce((a, b, _, arr) => 
+          arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b
+        );
+        setDetectedInputFormat(mostCommonFormat);
+        return allFiles;
+      });
+      setTotalCompleted(0);
+      setResults({});
+    }
   };
 
   const handleConvert = async () => {
-    if (!selectedInputType || files.length === 0) {
-      toast.error("Select format and upload files first");
+    if (files.length === 0) {
+      toast.error("Upload files first");
       return;
     }
 
@@ -64,7 +147,7 @@ export default function AudioConvert() {
       try {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("outputFormat", format);
+        formData.append("outputFormat", outputFormat);
 
         const response = await fetch("/api/audio-convert", {
           method: "POST",
@@ -82,7 +165,7 @@ export default function AudioConvert() {
           status: "success",
           url,
           size: blob.size,
-          fileName: `${file.name.split('.')[0]}.${format}`,
+          fileName: `${file.name.split('.')[0]}.${outputFormat}`,
         };
 
         toast.success(`✓ ${file.name}`);
@@ -145,7 +228,20 @@ export default function AudioConvert() {
   };
 
   const removeFile = (name) => {
-    setFiles(files.filter(f => f.name !== name));
+    const updatedFiles = files.filter(f => f.name !== name);
+    setFiles(updatedFiles);
+    
+    // Re-detect format if files remain, otherwise clear
+    if (updatedFiles.length > 0) {
+      const detectedFormats = updatedFiles.map(detectAudioFormat);
+      const mostCommonFormat = detectedFormats.reduce((a, b, _, arr) => 
+        arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b
+      );
+      setDetectedInputFormat(mostCommonFormat);
+    } else {
+      setDetectedInputFormat(null);
+    }
+    
     const newResults = { ...results };
     delete newResults[name];
     setResults(newResults);
@@ -155,6 +251,8 @@ export default function AudioConvert() {
     setFiles([]);
     setResults({});
     setTotalCompleted(0);
+    setDetectedInputFormat(null);
+    setOutputFormat("wav");
   };
 
   const successCount = Object.values(results).filter(r => r.status === "success").length;
@@ -165,202 +263,215 @@ export default function AudioConvert() {
       <Toaster position="top-center" />
       <Navbar />
 
-      <main className="flex-1 py-12">
-        <div className="container max-w-4xl mx-auto px-4">
-          <div className="space-y-8">
-            {/* Header */}
-            <div className="text-center space-y-2">
-              <div className="flex justify-center gap-2 mb-4">
-                <Music className="h-8 w-8 text-primary" />
-              </div>
-              <h1 className="text-4xl font-bold">Audio Converter</h1>
-              <p className="text-muted-foreground">Convert audio between MP3, WAV, M4A, OGG, FLAC, AAC - all in your browser!</p>
-            </div>
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
+            Audio Converter
+          </h1>
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            Convert audio between MP3, WAV, M4A, OGG, FLAC, AAC formats.
+          </p>
+        </div>
 
-            {/* Status */}
+        <div className="grid gap-8">
+          {/* Dropzone */}
+          <Dropzone
+            setFiles={handleFilesAdded}
+            resetResults={() => { setResults({}); }}
+            accept={{
+              "audio/mpeg": [".mp3", ".MP3"],
+              "audio/wav": [".wav", ".WAV"],
+              "audio/wave": [".wave", ".WAVE"],
+              "audio/mp4": [".m4a", ".M4A"],
+              "audio/x-m4a": [".m4a", ".M4A"],
+              "audio/ogg": [".ogg", ".OGG"],
+              "audio/flac": [".flac", ".FLAC"],
+              "audio/x-flac": [".flac", ".FLAC"],
+              "audio/aac": [".aac", ".AAC"],
+              "audio/webm": [".webm", ".WEBM"],
+            }}
+            title="Drop audio files here"
+            description="or click to browse • MP3, WAV, M4A, OGG, FLAC, AAC"
+            disabled={processing}
+          />
 
-            {selectedInputType === null ? (
-              <div className="space-y-4">
-                <h2 className="font-semibold">Select Input Format</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {audioFormats.map((fmt) => (
-                    <Card
-                      key={fmt.id}
-                      className="cursor-pointer hover:border-primary hover:shadow-lg transition-all"
-                      onClick={() => setSelectedInputType(fmt.id)}
-                    >
-                      <CardContent className="pt-6 text-center space-y-2">
-                        <div className="flex justify-center">
-                          <Music className="h-8 w-8 text-primary stroke-[1.5]" />
-                        </div>
-                        <div className="font-semibold">{fmt.label}</div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Selected format info */}
-                <div className="bg-accent p-4 rounded-lg flex justify-between items-center">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Input Format</p>
-                    <p className="font-bold text-lg">{selectedInputType.toUpperCase()}</p>
+          {/* Settings and File List */}
+          {files.length > 0 && (
+            <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
+              {/* Settings Sidebar */}
+              <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
+                <CardContent className="p-6 space-y-6">
+                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
+                    <Settings2 className="w-6 h-6 text-violet-600" />
+                    Settings
                   </div>
-                  <Button variant="ghost" onClick={() => {
-                    setSelectedInputType(null);
-                    clearAll();
-                  }}>
-                    Change
-                  </Button>
-                </div>
 
-                {/* Output format */}
-                <div className="space-y-3">
-                  <label className="font-semibold">Output Format</label>
-                  <RadioGroup value={format} onValueChange={setFormat}>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {audioFormats.filter(f => f.id !== selectedInputType).map((fmt) => (
-                        <div key={fmt.id} className="flex items-center gap-2">
-                          <RadioGroupItem value={fmt.id} id={fmt.id} />
-                          <label htmlFor={fmt.id} className="cursor-pointer">{fmt.label}</label>
-                        </div>
-                      ))}
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <Separator />
-
-                {/* File upload */}
-                <div>
-                  <label className="font-semibold mb-3 block">Upload Files</label>
-                  <Dropzone
-                    setFiles={handleFilesAdded}
-                    resetResults={() => { setResults({}); }}
-                    inputType={selectedInputType}
-                    disabled={processing}
-                  />
-                </div>
-
-                {/* File list */}
-                {files.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold">Files ({files.length})</h3>
-                    <div className="space-y-2">
-                      {files.map((file) => (
-                        <div key={file.name} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium truncate">{file.name}</p>
-                            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  {/* Input Format (Auto-detected, Read-only) */}
+                  {detectedInputFormat && (
+                    <>
+                      <div className="space-y-3">
+                        <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Input Format</label>
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2">
+                            <Music className="w-5 h-5 text-violet-600" />
+                            <span className="font-semibold text-gray-900">
+                              {detectedInputFormat.toUpperCase()}
+                            </span>
+                            <Badge variant="secondary" className="ml-auto bg-violet-100 text-violet-700 text-xs">
+                              Auto-detected
+                            </Badge>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile(file.name)}
-                            disabled={processing}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
 
-                {/* Progress */}
-                {processing && (
+                      <Separator />
+                    </>
+                  )}
+
+                  {/* Output Format */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Output Format</label>
+                    <RadioGroup value={outputFormat} onValueChange={setOutputFormat}>
+                      <div className="grid grid-cols-2 gap-2">
+                        {audioFormats.filter(f => f.id !== detectedInputFormat).map((fmt) => (
+                          <div key={fmt.id} className="flex items-center gap-2">
+                            <RadioGroupItem value={fmt.id} id={`output-${fmt.id}`} />
+                            <label htmlFor={`output-${fmt.id}`} className="cursor-pointer text-sm">{fmt.label}</label>
+                          </div>
+                        ))}
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <Separator />
+
+                  {/* Actions */}
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Converting...</span>
-                      <span>{totalCompleted}/{files.length}</span>
-                    </div>
-                    <Progress value={(totalCompleted / files.length) * 100} />
-                  </div>
-                )}
-
-                {/* Results */}
-                {Object.keys(results).length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-semibold">Results</h3>
-                      {successCount > 0 && (
-                        <Badge>{successCount} ✓ {errorCount > 0 && `${errorCount} ✗`}</Badge>
+                    <Button
+                      onClick={handleConvert}
+                      disabled={processing || files.length === 0}
+                      className="w-full bg-violet-600 hover:bg-violet-700 text-white h-11 shadow-md hover:shadow-lg transition-all font-semibold"
+                    >
+                      {processing ? (
+                        <>
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Converting ({totalCompleted}/{files.length})
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-5 w-5 mr-2" />
+                          Convert All
+                        </>
                       )}
-                    </div>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {Object.entries(results).map(([name, result]) => (
-                        <div key={name} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex-1 min-w-0 flex items-center gap-2">
-                            {result.status === "success" ? (
-                              <>
-                                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate">{result.fileName}</p>
-                                  <p className="text-xs text-muted-foreground">{(result.size / 1024).toFixed(0)} KB</p>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate">{name}</p>
-                                  <p className="text-xs text-red-500">{result.error}</p>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                          {result.status === "success" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => downloadFile(name)}
-                              className="flex-shrink-0 ml-2"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex gap-3 flex-wrap justify-end">
-                  {Object.keys(results).length > 0 && (
+                    </Button>
+                    {successCount > 1 && (
+                      <Button
+                        variant="outline"
+                        onClick={downloadAllZip}
+                        disabled={processing}
+                        className="w-full"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download All ZIP
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       onClick={clearAll}
                       disabled={processing}
+                      className="w-full text-gray-500"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
-                      Clear All
+                      Reset All
                     </Button>
+                  </div>
+
+                  {/* Progress */}
+                  {processing && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Progress</span>
+                        <span>{totalCompleted}/{files.length}</span>
+                      </div>
+                      <Progress value={(totalCompleted / files.length) * 100} />
+                    </div>
                   )}
-                  {files.length > 0 && (
-                    <Button
-                      onClick={handleConvert}
-                      disabled={processing}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {processing ? `Converting (${totalCompleted}/${files.length})` : "Convert"}
-                    </Button>
-                  )}
-                  {successCount > 1 && (
-                    <Button
-                      variant="outline"
-                      onClick={downloadAllZip}
-                      disabled={processing}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download ZIP
-                    </Button>
+                </CardContent>
+              </Card>
+
+              {/* File List */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-xl text-gray-800">Files ({files.length})</h3>
+                  {Object.keys(results).length > 0 && (
+                    <Badge className="bg-violet-100 text-violet-700">
+                      {successCount} ✓ {errorCount > 0 && `${errorCount} ✗`}
+                    </Badge>
                   )}
                 </div>
+
+                <div className="space-y-3">
+                  {files.map((file) => {
+                    const result = results[file.name];
+                    return (
+                      <Card key={file.name} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group">
+                        <div className="p-4 flex gap-5 items-center">
+                          <div className="w-16 h-16 bg-violet-100 rounded-xl flex-shrink-0 flex items-center justify-center border border-violet-200">
+                            <Music className="w-8 h-8 text-violet-600" />
+                          </div>
+
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+                              <div className="flex gap-2">
+                                {result?.status === "success" && (
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-violet-600 bg-violet-50 hover:bg-violet-100" onClick={() => downloadFile(file.name)}>
+                                    <Download className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3 text-sm">
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </Badge>
+                              {result?.status === "success" && (
+                                <>
+                                  <ArrowRight className="w-3 h-3 text-gray-300" />
+                                  <Badge className="bg-violet-100 text-violet-700 border-violet-200 hover:bg-violet-100">
+                                    {outputFormat.toUpperCase()} Ready ({(result.size / 1024).toFixed(0)} KB)
+                                  </Badge>
+                                </>
+                              )}
+                              {result?.status === "error" && (
+                                <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200">
+                                  Error: {result.error}
+                                </Badge>
+                              )}
+                              {!result && (
+                                <span className="text-gray-400 italic text-xs">Ready to convert</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {result?.status === "processing" && (
+                          <div className="h-1 bg-violet-100 w-full">
+                            <div className="h-full bg-violet-600 animate-pulse w-full"></div>
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
         </div>
       </main>
 
