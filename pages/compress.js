@@ -6,7 +6,7 @@ import JSZip from "jszip";
 import {
   Loader2, CheckCircle, Download, AlertCircle, FileImage,
   Zap, RefreshCw, Trash2, Upload, RotateCcw, Image as ImageIcon,
-  Settings2, ArrowRight, Minimize2, Scale
+  Settings2, ArrowRight, Minimize2, Scale, Eye, X
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -52,6 +52,7 @@ export default function CompressImage() {
   const [processing, setProcessing] = useState(false);
   const [previewUrls, setPreviewUrls] = useState({});
   const [dimensions, setDimensions] = useState({}); // { [filename]: { w, h } }
+  const [viewingFile, setViewingFile] = useState(null); // { file, result, beforeUrl, afterUrl, beforeDimensions, afterDimensions }
 
   // Settings
   const [resizeMode, setResizeMode] = useState("percentage"); // percentage, pixel, ratio
@@ -154,7 +155,7 @@ export default function CompressImage() {
 
   // ── Compression Logic ──
 
-  const compressSingle = async (file) => {
+  const compressSingle = async (file, onProgress) => {
     const formData = new FormData();
     formData.append("file", file);
 
@@ -182,10 +183,28 @@ export default function CompressImage() {
     }
 
     try {
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        if (onProgress) {
+          const current = onProgress.current || 0;
+          if (current < 90) {
+            onProgress.current = Math.min(current + Math.random() * 15, 90);
+            onProgress.callback(onProgress.current);
+          }
+        }
+      }, 150);
+
       const res = await fetch("/api/compress-single", {
         method: "POST",
         body: formData
       });
+
+      clearInterval(progressInterval);
+      
+      if (onProgress) {
+        onProgress.current = 100;
+        onProgress.callback(100);
+      }
 
       if (!res.ok) throw new Error("Failed");
 
@@ -217,14 +236,23 @@ export default function CompressImage() {
 
     // Mark all as processing
     for (const f of files) {
-      newResults[f.name] = { status: "processing" };
+      newResults[f.name] = { status: "processing", progress: 0 };
     }
     setResults({ ...newResults });
 
     for (let i = 0; i < pending.length; i += 3) {
       const batch = pending.slice(i, i + 3);
       await Promise.all(batch.map(async (file) => {
-        const res = await compressSingle(file);
+        const progressTracker = {
+          current: 0,
+          callback: (progress) => {
+            setResults(prev => ({
+              ...prev,
+              [file.name]: { ...prev[file.name], progress: Math.round(progress) }
+            }));
+          }
+        };
+        const res = await compressSingle(file, progressTracker);
         setResults(prev => ({ ...prev, [file.name]: res }));
       }));
     }
@@ -244,12 +272,73 @@ export default function CompressImage() {
       }
     });
 
-    if (count === 0) return;
+    if (count === 0) {
+      toast.error("No completed files to download");
+      return;
+    }
     const content = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(content);
     a.download = "compressed_images.zip";
     a.click();
+    toast.success(`Downloaded ${count} file${count > 1 ? 's' : ''}`);
+  };
+
+  const clearAll = () => {
+    // Revoke all preview URLs
+    Object.values(previewUrls).forEach(url => URL.revokeObjectURL(url));
+    setFiles([]);
+    setResults({});
+    setPreviewUrls({});
+    setDimensions({});
+    setViewingFile(null);
+    toast.success("All files cleared");
+  };
+
+  const getImageDimensions = (url) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+      };
+      img.onerror = () => {
+        resolve(null);
+      };
+      img.src = url;
+    });
+  };
+
+  const openViewModal = async (file, result) => {
+    const hasPreview = !!previewUrls[file.name];
+    const beforeUrl = previewUrls[file.name] || URL.createObjectURL(file);
+    const afterUrl = URL.createObjectURL(result.blob);
+    
+    const beforeDims = await getImageDimensions(beforeUrl);
+    const afterDims = await getImageDimensions(afterUrl);
+
+    setViewingFile({
+      file,
+      result,
+      beforeUrl,
+      afterUrl,
+      beforeDimensions: beforeDims,
+      afterDimensions: afterDims,
+      createdBeforeUrl: !hasPreview // Track if we created the before URL
+    });
+  };
+
+  const closeViewModal = () => {
+    if (viewingFile) {
+      // Revoke the after URL (compressed image) as it's created here
+      if (viewingFile.afterUrl) {
+        URL.revokeObjectURL(viewingFile.afterUrl);
+      }
+      // Only revoke before URL if we created it (not from previewUrls)
+      if (viewingFile.createdBeforeUrl && viewingFile.beforeUrl) {
+        URL.revokeObjectURL(viewingFile.beforeUrl);
+      }
+    }
+    setViewingFile(null);
   };
 
   return (
@@ -412,18 +501,49 @@ export default function CompressImage() {
 
               {/* File List */}
               <div className="space-y-5">
-                <div className="flex justify-between items-end border-b pb-4">
-                  <div>
-                    <h3 className="font-bold text-2xl text-gray-800">Files</h3>
-                    <p className="text-gray-500 text-sm mt-1">Review size estimation and compress</p>
-                  </div>
-
-                  {Object.values(results).some(r => r.status === "done") && (
-                    <Button variant="outline" size="sm" onClick={downloadAll} className="h-9">
-                      <Download className="w-4 h-4 mr-2" /> Download Zip
-                    </Button>
-                  )}
-                </div>
+                {/* Header with Stats and Actions */}
+                <Card className="border border-gray-200">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
+                        <ImageIcon className="w-5 h-5 text-gray-400" />
+                        Files
+                      </h3>
+                      <div className="flex gap-2">
+                        {Object.values(results).some(r => r.status === "done") && (
+                          <Button variant="outline" size="sm" onClick={downloadAll}>
+                            <Download className="w-4 h-4 mr-2" /> Download All
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={clearAll} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                          <Trash2 className="w-4 h-4 mr-2" /> Clear All
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Stats */}
+                    <div className="flex gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-600 font-medium">Total:</span>
+                        <Badge variant="secondary" className="font-semibold">
+                          {files.length}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-600 font-medium">Completed:</span>
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 font-semibold">
+                          {Object.values(results).filter(r => r.status === "done").length}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-600 font-medium">Processing:</span>
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 font-semibold">
+                          {Object.values(results).filter(r => r.status === "processing").length}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {files.map((file, idx) => {
                   const res = results[file.name];
@@ -452,17 +572,34 @@ export default function CompressImage() {
 
                             <div className="flex gap-2">
                               {res?.status === "done" && (
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" onClick={() => {
-                                  const url = URL.createObjectURL(res.blob);
-                                  const a = document.createElement("a");
-                                  a.href = url;
-                                  a.download = "min_" + file.name;
-                                  a.click();
-                                }}>
-                                  <Download className="w-4 h-4" />
-                                </Button>
+                                <>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-8 w-8 text-blue-600 hover:text-blue-700" 
+                                    onClick={() => openViewModal(file, res)}
+                                    title="View before/after"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" 
+                                    onClick={() => {
+                                      const url = URL.createObjectURL(res.blob);
+                                      const a = document.createElement("a");
+                                      a.href = url;
+                                      a.download = "min_" + file.name;
+                                      a.click();
+                                    }}
+                                    title="Download"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </Button>
+                                </>
                               )}
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)} title="Remove">
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
@@ -520,8 +657,17 @@ export default function CompressImage() {
                       </div>
 
                       {res?.status === "processing" && (
-                        <div className="h-1 bg-blue-100 w-full">
-                          <div className="h-full bg-blue-600 animate-pulse w-full"></div>
+                        <div className="px-4 pb-4 space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-blue-600 font-medium">Processing...</span>
+                            <span className="text-blue-600 font-bold">{res.progress || 0}%</span>
+                          </div>
+                          <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-600 transition-all duration-300 ease-out"
+                              style={{ width: `${res.progress || 0}%` }}
+                            />
+                          </div>
                         </div>
                       )}
                     </Card>
@@ -533,6 +679,129 @@ export default function CompressImage() {
         </div>
       </main>
       <Footer />
+
+      {/* View Modal - Before/After Comparison */}
+      {viewingFile && (
+        <div 
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={closeViewModal}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{viewingFile.file.name}</h3>
+                <p className="text-sm text-gray-500 mt-1">Before & After Compression Comparison</p>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={closeViewModal}
+                className="h-8 w-8"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                {/* Before Image */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-gray-100">BEFORE</Badge>
+                    </h4>
+                  </div>
+                  <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                    <img 
+                      src={viewingFile.beforeUrl} 
+                      alt="Before" 
+                      className="w-full h-auto max-h-96 object-contain mx-auto"
+                    />
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Size:</span>
+                      <span className="font-medium">{formatSize(viewingFile.file.size)}</span>
+                    </div>
+                    {viewingFile.beforeDimensions && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Dimensions:</span>
+                        <span className="font-medium">
+                          {viewingFile.beforeDimensions.width} × {viewingFile.beforeDimensions.height}px
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* After Image */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <Badge className="bg-blue-100 text-blue-700 border-blue-200">AFTER</Badge>
+                    </h4>
+                  </div>
+                  <div className="border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50">
+                    <img 
+                      src={viewingFile.afterUrl} 
+                      alt="After" 
+                      className="w-full h-auto max-h-96 object-contain mx-auto"
+                    />
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Size:</span>
+                      <span className="font-medium text-green-600">
+                        {formatSize(viewingFile.result.size)}
+                        {viewingFile.result.percent > 0 && (
+                          <span className="ml-2 text-green-600">(-{viewingFile.result.percent}%)</span>
+                        )}
+                      </span>
+                    </div>
+                    {viewingFile.afterDimensions && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Dimensions:</span>
+                        <span className="font-medium">
+                          {viewingFile.afterDimensions.width} × {viewingFile.afterDimensions.height}px
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary Stats */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-500 mb-1">Size Reduction</div>
+                    <div className="text-lg font-bold text-green-600">
+                      {viewingFile.result.percent > 0 ? `-${viewingFile.result.percent}%` : '0%'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-500 mb-1">Saved</div>
+                    <div className="text-lg font-bold text-green-600">
+                      {formatSize(viewingFile.result.saved)}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-500 mb-1">Compression Mode</div>
+                    <div className="text-lg font-bold text-blue-600 capitalize">
+                      {resizeMode}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
