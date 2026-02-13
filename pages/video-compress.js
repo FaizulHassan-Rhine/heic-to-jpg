@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
   Loader2, CheckCircle, AlertCircle, Film, Trash2, Upload,
   Download, RotateCcw, Minimize2, FileVideo, Gauge, Monitor,
@@ -120,8 +121,11 @@ export default function VideoCompress() {
     }
   };
 
-  const compressSingle = async (file) => {
-    const ffmpeg = await getFFmpeg((p) => setCompressProgress(p));
+  const compressSingle = async (file, onProgress) => {
+    const ffmpeg = await getFFmpeg((p) => {
+      if (onProgress) onProgress.callback(p);
+      else setCompressProgress(p);
+    });
     const { fetchFile } = await import("@ffmpeg/util");
     const inputName = `input_${Date.now()}.${file.name.split('.').pop()}`;
     const outputName = `output_${Date.now()}.mp4`;
@@ -181,10 +185,20 @@ export default function VideoCompress() {
       if (results[file.name]?.status === "done") continue;
 
       setProcessingFile(file.name);
-      setResults(prev => ({ ...prev, [file.name]: { status: "processing" } }));
+      setResults(prev => ({ ...prev, [file.name]: { status: "processing", progress: 0 } }));
 
       try {
-        const res = await compressSingle(file);
+        const progressTracker = {
+          current: 0,
+          callback: (progress) => {
+            setResults(prev => ({
+              ...prev,
+              [file.name]: { ...prev[file.name], progress: Math.round(progress) }
+            }));
+            setCompressProgress(progress);
+          }
+        };
+        const res = await compressSingle(file, progressTracker);
         setResults(prev => ({ ...prev, [file.name]: res }));
       } catch (e) {
         console.error(e);
@@ -214,11 +228,15 @@ export default function VideoCompress() {
         </div>
 
         <div className="grid gap-8">
-          <Card className="border-2 border-dashed border-gray-300 hover:border-blue-500 bg-white shadow-sm transition-all">
-            <CardContent className="p-0">
-              <Dropzone setFiles={handleFilesAdded} className="p-10" accept={{ 'video/*': [] }} title="Upload Video to Compress" description="MP4, MOV, MKV, WebM • Max 500MB" />
-            </CardContent>
-          </Card>
+          <CollapsibleDropzone
+            files={files}
+            setFiles={handleFilesAdded}
+            title="Upload Video to Compress"
+            description="MP4, MOV, MKV, WebM • Max 500MB"
+            accept={{ 'video/*': [] }}
+            borderColor="border-gray-300"
+            hoverColor="hover:border-blue-500"
+          />
 
           {files.length > 0 && (
             <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
@@ -365,11 +383,17 @@ export default function VideoCompress() {
                         </div>
                       </div>
                       {res?.status === "processing" && (
-                        <div className="relative h-1 bg-gray-100 w-full mt-0">
-                          <div
-                            className="absolute top-0 left-0 h-full bg-blue-600 transition-all duration-300"
-                            style={{ width: `${compressProgress}%` }}
-                          />
+                        <div className="px-4 pb-4 space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-blue-600 font-medium">Processing...</span>
+                            <span className="text-blue-600 font-bold">{res.progress || 0}%</span>
+                          </div>
+                          <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-600 transition-all duration-300 ease-out"
+                              style={{ width: `${res.progress || 0}%` }}
+                            />
+                          </div>
                         </div>
                       )}
                     </Card>

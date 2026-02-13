@@ -32,12 +32,40 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
+// Parse page range string like "1-5,10-15" into array of page numbers
+function parsePageRange(rangeStr, maxPages) {
+    if (!rangeStr || rangeStr.trim() === "") {
+        return Array.from({ length: maxPages }, (_, i) => i + 1);
+    }
+    const pages = new Set();
+    const parts = rangeStr.split(",");
+    for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed.includes("-")) {
+            const [start, end] = trimmed.split("-").map((s) => parseInt(s.trim()));
+            if (!isNaN(start) && !isNaN(end)) {
+                for (let i = Math.max(1, start); i <= Math.min(maxPages, end); i++) {
+                    pages.add(i);
+                }
+            }
+        } else {
+            const page = parseInt(trimmed);
+            if (!isNaN(page) && page >= 1 && page <= maxPages) {
+                pages.add(page);
+            }
+        }
+    }
+    return Array.from(pages).sort((a, b) => a - b);
+}
+
 export default function CompressPdf() {
     const [file, setFile] = useState(null);
     const [result, setResult] = useState(null);
     const [processing, setProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [level, setLevel] = useState("recommended");
+    const [pageRange, setPageRange] = useState(""); // e.g., "1-5,10-15"
+    const [removeMetadata, setRemoveMetadata] = useState(false);
     const fileInputRef = useRef(null);
 
     const compressionSettings = {
@@ -94,12 +122,16 @@ export default function CompressPdf() {
             const { PDFDocument } = await import("pdf-lib");
             const newPdf = await PDFDocument.create();
 
-            // 3. Process Pages
-            for (let i = 1; i <= numPages; i++) {
+            // 3. Parse page range
+            const pagesToCompress = parsePageRange(pageRange, numPages);
+            
+            // 4. Process Pages
+            for (let idx = 0; idx < pagesToCompress.length; idx++) {
+                const pageNum = pagesToCompress[idx];
                 // Update progress
-                setProgress(Math.round(((i - 1) / numPages) * 100));
+                setProgress(Math.round((idx / pagesToCompress.length) * 100));
 
-                const page = await pdf.getPage(i);
+                const page = await pdf.getPage(pageNum);
                 const viewport = page.getViewport({ scale: settings.scale });
 
                 // Render to canvas
@@ -129,7 +161,17 @@ export default function CompressPdf() {
                 });
             }
 
-            // 4. Save
+            // 5. Remove metadata if requested
+            if (removeMetadata) {
+                newPdf.setTitle("");
+                newPdf.setAuthor("");
+                newPdf.setSubject("");
+                newPdf.setKeywords([]);
+                newPdf.setProducer("");
+                newPdf.setCreator("");
+            }
+
+            // 6. Save
             const pdfBytes = await newPdf.save();
             const resultBlob = new Blob([pdfBytes], { type: "application/pdf" });
 
@@ -243,33 +285,69 @@ export default function CompressPdf() {
 
                                 {/* Settings */}
                                 <Card>
-                                    <CardContent className="p-6">
+                                    <CardContent className="p-6 space-y-6">
                                         <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800">
                                             <Settings2 className="w-5 h-5 text-gray-500" />
-                                            Compression Intensity
+                                            Compression Settings
                                         </h3>
-                                        <div className="grid md:grid-cols-3 gap-4">
-                                            {Object.entries(compressionSettings).map(([key, setting]) => (
-                                                <div
-                                                    key={key}
-                                                    onClick={() => !processing && setLevel(key)}
-                                                    className={cn(
-                                                        "cursor-pointer rounded-xl border-2 p-4 transition-all hover:bg-gray-50",
-                                                        level === key
-                                                            ? "border-green-500 bg-green-50/50 shadow-sm"
-                                                            : "border-gray-200"
-                                                    )}
-                                                >
-                                                    <div className={cn(
-                                                        "w-full h-2 rounded-full mb-3",
-                                                        key === "recommended" ? "bg-green-400" : key === "quality" ? "bg-blue-400" : "bg-orange-400"
-                                                    )} />
-                                                    <div className="font-semibold text-gray-900 mb-1">
-                                                        {setting.label}
+                                        
+                                        {/* Compression Intensity */}
+                                        <div>
+                                            <label className="text-sm font-semibold text-gray-700 mb-3 block">Compression Intensity</label>
+                                            <div className="grid md:grid-cols-3 gap-4">
+                                                {Object.entries(compressionSettings).map(([key, setting]) => (
+                                                    <div
+                                                        key={key}
+                                                        onClick={() => !processing && setLevel(key)}
+                                                        className={cn(
+                                                            "cursor-pointer rounded-xl border-2 p-4 transition-all hover:bg-gray-50",
+                                                            level === key
+                                                                ? "border-green-500 bg-green-50/50 shadow-sm"
+                                                                : "border-gray-200"
+                                                        )}
+                                                    >
+                                                        <div className={cn(
+                                                            "w-full h-2 rounded-full mb-3",
+                                                            key === "recommended" ? "bg-green-400" : key === "quality" ? "bg-blue-400" : "bg-orange-400"
+                                                        )} />
+                                                        <div className="font-semibold text-gray-900 mb-1">
+                                                            {setting.label}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500">{setting.desc}</div>
                                                     </div>
-                                                    <div className="text-xs text-gray-500">{setting.desc}</div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Page Range */}
+                                        <div>
+                                            <label className="text-sm font-semibold text-gray-700 mb-2 block">Page Range (Optional)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="All pages (e.g., 1-5,10-15)"
+                                                value={pageRange}
+                                                onChange={(e) => setPageRange(e.target.value)}
+                                                disabled={processing}
+                                                className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">Leave empty to compress all pages</p>
+                                        </div>
+
+                                        {/* Metadata Removal */}
+                                        <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all"
+                                            onClick={() => !processing && setRemoveMetadata(!removeMetadata)}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={removeMetadata}
+                                                onChange={(e) => setRemoveMetadata(e.target.checked)}
+                                                disabled={processing}
+                                                className="w-5 h-5 accent-green-600"
+                                            />
+                                            <div>
+                                                <span className="font-semibold text-gray-800 block text-sm">Remove Metadata</span>
+                                                <span className="text-xs text-gray-500">Remove title, author, and other metadata</span>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>

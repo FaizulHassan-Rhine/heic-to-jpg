@@ -752,6 +752,8 @@ export default function Scanner() {
 	// Export settings
 	const [exportFormat, setExportFormat] = useState("pdf"); // pdf, jpg, png
 	const [exportQuality, setExportQuality] = useState("high"); // high, medium, low
+	const [watermarkText, setWatermarkText] = useState(""); // Watermark text
+	const [watermarkEnabled, setWatermarkEnabled] = useState(false);
 
 	const cropContainerRef = useRef(null);
 	const fileInputRef = useRef(null);
@@ -946,8 +948,31 @@ export default function Scanner() {
 			const pdfDoc = await PDFDocument.create();
 
 			for (let i = 0; i < pages.length; i++) {
-				const canvas = pages[i].filteredCanvas || pages[i].croppedCanvas;
+				let canvas = pages[i].filteredCanvas || pages[i].croppedCanvas;
 				if (!canvas) continue;
+
+				// Apply watermark if enabled
+				if (watermarkEnabled && watermarkText) {
+					const watermarkedCanvas = document.createElement("canvas");
+					watermarkedCanvas.width = canvas.width;
+					watermarkedCanvas.height = canvas.height;
+					const ctx = watermarkedCanvas.getContext("2d");
+					ctx.drawImage(canvas, 0, 0);
+					
+					// Draw watermark
+					ctx.save();
+					ctx.globalAlpha = 0.3;
+					ctx.font = "bold 48px Arial";
+					ctx.fillStyle = "#000000";
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+					ctx.translate(canvas.width / 2, canvas.height / 2);
+					ctx.rotate(-Math.PI / 4);
+					ctx.fillText(watermarkText, 0, 0);
+					ctx.restore();
+					
+					canvas = watermarkedCanvas;
+				}
 
 				// Convert canvas to blob, then to array buffer
 				const blob = await canvasToBlob(canvas, "image/jpeg", quality);
@@ -997,8 +1022,32 @@ export default function Scanner() {
 			const mimeType = exportFormat === "png" ? "image/png" : "image/jpeg";
 			const ext = exportFormat === "png" ? "png" : "jpg";
 			for (let i = 0; i < pages.length; i++) {
-				const canvas = pages[i].filteredCanvas || pages[i].croppedCanvas;
+				let canvas = pages[i].filteredCanvas || pages[i].croppedCanvas;
 				if (!canvas) continue;
+				
+				// Apply watermark if enabled
+				if (watermarkEnabled && watermarkText) {
+					const watermarkedCanvas = document.createElement("canvas");
+					watermarkedCanvas.width = canvas.width;
+					watermarkedCanvas.height = canvas.height;
+					const ctx = watermarkedCanvas.getContext("2d");
+					ctx.drawImage(canvas, 0, 0);
+					
+					// Draw watermark
+					ctx.save();
+					ctx.globalAlpha = 0.3;
+					ctx.font = "bold 48px Arial";
+					ctx.fillStyle = "#000000";
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+					ctx.translate(canvas.width / 2, canvas.height / 2);
+					ctx.rotate(-Math.PI / 4);
+					ctx.fillText(watermarkText, 0, 0);
+					ctx.restore();
+					
+					canvas = watermarkedCanvas;
+				}
+				
 				const blob = await canvasToBlob(canvas, mimeType, quality);
 				const url = URL.createObjectURL(blob);
 				const a = document.createElement("a");
@@ -1470,9 +1519,40 @@ export default function Scanner() {
 			</div>
 
 			{/* Export Options */}
-			<div className="grid md:grid-cols-2 gap-5">
-				{/* Format */}
+			<div className="space-y-5">
+				{/* Watermark */}
 				<div className="bg-muted/30 rounded-2xl p-5 border space-y-3">
+					<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+						Watermark
+					</h3>
+					<div className="space-y-3">
+						<label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-all">
+							<input
+								type="checkbox"
+								checked={watermarkEnabled}
+								onChange={(e) => setWatermarkEnabled(e.target.checked)}
+								className="w-5 h-5 accent-primary"
+							/>
+							<div>
+								<span className="font-semibold text-foreground block text-sm">Add Watermark</span>
+								<span className="text-xs text-muted-foreground">Add text watermark to scanned pages</span>
+							</div>
+						</label>
+						{watermarkEnabled && (
+							<input
+								type="text"
+								placeholder="Enter watermark text"
+								value={watermarkText}
+								onChange={(e) => setWatermarkText(e.target.value)}
+								className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+							/>
+						)}
+					</div>
+				</div>
+
+				<div className="grid md:grid-cols-2 gap-5">
+					{/* Format */}
+					<div className="bg-muted/30 rounded-2xl p-5 border space-y-3">
 					<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
 						Format
 					</h3>
@@ -1524,55 +1604,56 @@ export default function Scanner() {
 					</div>
 				</div>
 
-				{/* Quality */}
-				<div className="bg-muted/30 rounded-2xl p-5 border space-y-3">
-					<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-						Quality
-					</h3>
-					<div className="space-y-2">
-						{[
-							{ id: "high", label: "High Quality", desc: "Best for printing", size: "Larger file" },
-							{ id: "medium", label: "Medium", desc: "Good balance", size: "Medium file" },
-							{ id: "low", label: "Low", desc: "Quick sharing", size: "Smaller file" },
-						].map((q) => (
-							<button
-								key={q.id}
-								onClick={() => setExportQuality(q.id)}
-								className={cn(
-									"w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left",
-									exportQuality === q.id
-										? "border-primary bg-primary/5"
-										: "border-border hover:border-primary/30"
-								)}
-							>
-								<div
+					{/* Quality */}
+					<div className="bg-muted/30 rounded-2xl p-5 border space-y-3">
+						<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+							Quality
+						</h3>
+						<div className="space-y-2">
+							{[
+								{ id: "high", label: "High Quality", desc: "Best for printing", size: "Larger file" },
+								{ id: "medium", label: "Medium", desc: "Good balance", size: "Medium file" },
+								{ id: "low", label: "Low", desc: "Quick sharing", size: "Smaller file" },
+							].map((q) => (
+								<button
+									key={q.id}
+									onClick={() => setExportQuality(q.id)}
 									className={cn(
-										"w-9 h-9 rounded-lg flex items-center justify-center",
+										"w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left",
 										exportQuality === q.id
-											? "bg-primary text-primary-foreground"
-											: "bg-muted text-muted-foreground"
+											? "border-primary bg-primary/5"
+											: "border-border hover:border-primary/30"
 									)}
 								>
-									<Sparkles className="w-4 h-4" />
-								</div>
-								<div>
-									<p
+									<div
 										className={cn(
-											"text-sm font-medium",
-											exportQuality === q.id && "text-primary"
+											"w-9 h-9 rounded-lg flex items-center justify-center",
+											exportQuality === q.id
+												? "bg-primary text-primary-foreground"
+												: "bg-muted text-muted-foreground"
 										)}
 									>
-										{q.label}
-									</p>
-									<p className="text-xs text-muted-foreground">
-										{q.desc} • {q.size}
-									</p>
-								</div>
-								{exportQuality === q.id && (
-									<Check className="w-4 h-4 text-primary ml-auto" />
-								)}
-							</button>
-						))}
+										<Sparkles className="w-4 h-4" />
+									</div>
+									<div>
+										<p
+											className={cn(
+												"text-sm font-medium",
+												exportQuality === q.id && "text-primary"
+											)}
+										>
+											{q.label}
+										</p>
+										<p className="text-xs text-muted-foreground">
+											{q.desc} • {q.size}
+										</p>
+									</div>
+									{exportQuality === q.id && (
+										<Check className="w-4 h-4 text-primary ml-auto" />
+									)}
+								</button>
+							))}
+						</div>
 					</div>
 				</div>
 			</div>

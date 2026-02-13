@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import JSZip from "jszip";
@@ -144,6 +145,27 @@ export default function AudioConvert() {
     const newResults = {};
 
     for (const file of files) {
+      // Initialize with processing status
+      newResults[file.name] = {
+        status: "processing",
+        progress: 0
+      };
+      setResults({ ...newResults });
+
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setResults(prev => {
+          const current = prev[file.name]?.progress || 0;
+          if (current < 90 && prev[file.name]?.status === "processing") {
+            return {
+              ...prev,
+              [file.name]: { ...prev[file.name], progress: Math.min(current + Math.random() * 20, 90) }
+            };
+          }
+          return prev;
+        });
+      }, 200);
+
       try {
         const formData = new FormData();
         formData.append("file", file);
@@ -153,6 +175,8 @@ export default function AudioConvert() {
           method: "POST",
           body: formData,
         });
+
+        clearInterval(progressInterval);
 
         if (!response.ok) {
           throw new Error(`Server error: ${response.status}`);
@@ -166,10 +190,12 @@ export default function AudioConvert() {
           url,
           size: blob.size,
           fileName: `${file.name.split('.')[0]}.${outputFormat}`,
+          progress: 100,
         };
 
         toast.success(`✓ ${file.name}`);
       } catch (error) {
+        clearInterval(progressInterval);
         console.error(`Conversion error for ${file.name}:`, error);
         newResults[file.name] = {
           status: "error",
@@ -180,6 +206,16 @@ export default function AudioConvert() {
 
       setTotalCompleted(prev => prev + 1);
       setResults({ ...newResults });
+      
+      // Reset progress after showing 100%
+      if (newResults[file.name]?.status === "success") {
+        setTimeout(() => {
+          setResults(prev => ({
+            ...prev,
+            [file.name]: { ...prev[file.name], progress: undefined }
+          }));
+        }, 300);
+      }
     }
 
     setProcessing(false);
@@ -276,7 +312,8 @@ export default function AudioConvert() {
 
         <div className="grid gap-8">
           {/* Dropzone */}
-          <Dropzone
+          <CollapsibleDropzone
+            files={files}
             setFiles={handleFilesAdded}
             resetResults={() => { setResults({}); }}
             accept={{
@@ -294,6 +331,8 @@ export default function AudioConvert() {
             title="Drop audio files here"
             description="or click to browse • MP3, WAV, M4A, OGG, FLAC, AAC"
             disabled={processing}
+            borderColor="border-gray-300"
+            hoverColor="hover:border-violet-500"
           />
 
           {/* Settings and File List */}
@@ -460,8 +499,17 @@ export default function AudioConvert() {
                           </div>
                         </div>
                         {result?.status === "processing" && (
-                          <div className="h-1 bg-violet-100 w-full">
-                            <div className="h-full bg-violet-600 animate-pulse w-full"></div>
+                          <div className="px-4 pb-4 space-y-1">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-violet-600 font-medium">Processing...</span>
+                              <span className="text-violet-600 font-bold">{Math.round(result.progress || 0)}%</span>
+                            </div>
+                            <div className="h-2 bg-violet-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-violet-600 transition-all duration-300 ease-out"
+                                style={{ width: `${result.progress || 0}%` }}
+                              />
+                            </div>
                           </div>
                         )}
                       </Card>

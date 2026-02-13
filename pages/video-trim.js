@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
   Loader2, CheckCircle, AlertCircle, Scissors, Upload,
   Download, RotateCcw, Play, Pause, FileVideo, Volume2, VolumeX,
@@ -262,11 +263,22 @@ export default function VideoTrim() {
         </div>
 
         {!file ? (
-          <Card className="border-2 border-dashed border-gray-300 hover:border-rose-500 bg-white shadow-sm transition-all max-w-3xl mx-auto">
-            <CardContent className="p-0">
-              <Dropzone setFiles={handleFilesAdded} className="p-16" />
-            </CardContent>
-          </Card>
+          <CollapsibleDropzone
+            files={file ? [file] : []}
+            setFiles={handleFilesAdded}
+            title="Upload Video to Trim"
+            description="MP4, MOV, AVI, MKV, WebM • Max 500MB"
+            accept={{
+              "video/mp4": [".mp4", ".MP4"],
+              "video/quicktime": [".mov", ".MOV"],
+              "video/x-msvideo": [".avi", ".AVI"],
+              "video/x-matroska": [".mkv", ".MKV"],
+              "video/webm": [".webm", ".WEBM"]
+            }}
+            borderColor="border-gray-300"
+            hoverColor="hover:border-rose-500"
+            className="max-w-3xl mx-auto"
+          />
         ) : (
           <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
             {/* Main Player Area */}

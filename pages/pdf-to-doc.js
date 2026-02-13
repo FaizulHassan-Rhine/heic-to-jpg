@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
   Loader2, CheckCircle, AlertCircle, FileText, Trash2, Upload,
   Download, RotateCcw, Eye, EyeOff, FileType, Copy, ArrowRight,
@@ -45,6 +46,7 @@ export default function PdfToDoc() {
   const [outputFormat, setOutputFormat] = useState("docx");
   const [parsedDocs, setParsedDocs] = useState({});
   const [previewOpen, setPreviewOpen] = useState({});
+  const [pageRanges, setPageRanges] = useState({}); // { [fileKey]: "1-5,10-15" }
 
   const getFileKey = (file) => file.name + file.size + file.lastModified;
 
@@ -137,12 +139,69 @@ export default function PdfToDoc() {
   };
 
   // ─── Convert to TXT ───
-  const convertToTxt = (file) => {
+  const convertToTxt = async (file) => {
     const key = getFileKey(file);
     const parsed = parsedDocs[key];
     if (!parsed || parsed.error) throw new Error(parsed?.error || "Not parsed yet");
+    
+    // If page range is specified, extract only those pages
+    const rangeStr = pageRanges[key] || "";
+    if (rangeStr.trim() !== "") {
+      const pdfjs = await getPdfJs();
+      const freshBuffer = await file.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data: new Uint8Array(freshBuffer) }).promise;
+      const numPages = pdf.numPages;
+      const pagesToConvert = parsePageRange(rangeStr, numPages);
+      
+      let extractedText = "";
+      for (const pageNum of pagesToConvert) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const lines = {};
+        textContent.items.forEach((item) => {
+          const y = Math.round(item.transform[5]);
+          if (!lines[y]) lines[y] = [];
+          lines[y].push({ x: item.transform[4], str: item.str });
+        });
+        const sortedYs = Object.keys(lines).sort((a, b) => b - a);
+        for (const y of sortedYs) {
+          const lineItems = lines[y].sort((a, b) => a.x - b.x);
+          extractedText += lineItems.map((item) => item.str).join(" ") + "\n";
+        }
+        extractedText += "\n";
+      }
+      const blob = new Blob([extractedText.trim()], { type: "text/plain;charset=utf-8" });
+      return { blob, name: file.name.replace(/\.pdf$/i, "") + ".txt" };
+    }
+    
     const blob = new Blob([parsed.text || ""], { type: "text/plain;charset=utf-8" });
     return { blob, name: file.name.replace(/\.pdf$/i, "") + ".txt" };
+  };
+
+  // Parse page range string like "1-5,10-15" into array of page numbers
+  const parsePageRange = (rangeStr, maxPages) => {
+    if (!rangeStr || rangeStr.trim() === "") {
+      return Array.from({ length: maxPages }, (_, i) => i + 1);
+    }
+    const pages = new Set();
+    const parts = rangeStr.split(",");
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (trimmed.includes("-")) {
+        const [start, end] = trimmed.split("-").map((s) => parseInt(s.trim()));
+        if (!isNaN(start) && !isNaN(end)) {
+          for (let i = Math.max(1, start); i <= Math.min(maxPages, end); i++) {
+            pages.add(i);
+          }
+        }
+      } else {
+        const page = parseInt(trimmed);
+        if (!isNaN(page) && page >= 1 && page <= maxPages) {
+          pages.add(page);
+        }
+      }
+    }
+    return Array.from(pages).sort((a, b) => a - b);
   };
 
   // ─── Convert to DOCX with page images ───
@@ -155,25 +214,30 @@ export default function PdfToDoc() {
     const freshBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: new Uint8Array(freshBuffer) }).promise;
     const numPages = pdf.numPages;
+    
+    // Get page range for this file
+    const rangeStr = pageRanges[key] || "";
+    const pagesToConvert = parsePageRange(rangeStr, numPages);
 
     const { default: JSZip } = await import("jszip");
     const zip = new JSZip();
     const imageRels = [];
     const bodyXml = [];
 
-    for (let i = 1; i <= numPages; i++) {
-      toast.loading(`Rendering page ${i}/${numPages}...`, { id: "render-progress" });
-      const img = await renderPageToImage(pdf, i);
-      const imgFileName = `image${i}.jpeg`;
-      const rId = `rId${i + 1}`;
+    for (let idx = 0; idx < pagesToConvert.length; idx++) {
+      const pageNum = pagesToConvert[idx];
+      toast.loading(`Rendering page ${idx + 1}/${pagesToConvert.length}...`, { id: "render-progress" });
+      const img = await renderPageToImage(pdf, pageNum);
+      const imgFileName = `image${idx + 1}.jpeg`;
+      const rId = `rId${idx + 2}`;
       zip.folder("word").folder("media").file(imgFileName, img.data);
       imageRels.push(`<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFileName}"/>`);
       const maxWidthEmu = 5486400;
       const aspectRatio = img.height / img.width;
       const cxEmu = maxWidthEmu;
       const cyEmu = Math.round(maxWidthEmu * aspectRatio);
-      bodyXml.push(`<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cxEmu}" cy="${cyEmu}"/><wp:docPr id="${i}" name="Page ${i}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${i}" name="Page ${i}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cxEmu}" cy="${cyEmu}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`);
-      if (i < numPages) {
+      bodyXml.push(`<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cxEmu}" cy="${cyEmu}"/><wp:docPr id="${idx + 1}" name="Page ${pageNum}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${idx + 1}" name="Page ${pageNum}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cxEmu}" cy="${cyEmu}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`);
+      if (idx < pagesToConvert.length - 1) {
         bodyXml.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
       }
     }
@@ -211,20 +275,56 @@ export default function PdfToDoc() {
       if (results[key]?.status === "done") continue;
 
       setProcessingFile(file.name);
-      setResults((prev) => ({ ...prev, [key]: { status: "processing" } }));
+      setResults((prev) => ({ ...prev, [key]: { status: "processing", progress: 0 } }));
 
       try {
         let result;
         if (outputFormat === "txt") {
-          result = convertToTxt(file);
+          // Simulate progress for TXT
+          const progressInterval = setInterval(() => {
+            setResults(prev => {
+              const current = prev[key]?.progress || 0;
+              if (current < 90) {
+                return {
+                  ...prev,
+                  [key]: { ...prev[key], progress: Math.min(current + Math.random() * 20, 90) }
+                };
+              }
+              return prev;
+            });
+          }, 100);
+          result = await convertToTxt(file);
+          clearInterval(progressInterval);
         } else {
+          // For DOCX, update progress during page rendering
+          const progressInterval = setInterval(() => {
+            setResults(prev => {
+              const current = prev[key]?.progress || 0;
+              if (current < 90) {
+                return {
+                  ...prev,
+                  [key]: { ...prev[key], progress: Math.min(current + Math.random() * 10, 90) }
+                };
+              }
+              return prev;
+            });
+          }, 200);
           result = await convertToDocx(file);
+          clearInterval(progressInterval);
         }
 
         setResults((prev) => ({
           ...prev,
-          [key]: { status: "done", blob: result.blob, size: result.blob.size, name: result.name },
+          [key]: { status: "done", blob: result.blob, size: result.blob.size, name: result.name, progress: 100 },
         }));
+        
+        // Reset progress after showing 100%
+        setTimeout(() => {
+          setResults(prev => ({
+            ...prev,
+            [key]: { ...prev[key], progress: undefined }
+          }));
+        }, 300);
       } catch (error) {
         console.error("Convert error:", error);
         setResults((prev) => ({ ...prev, [key]: { status: "error", error: error.message } }));
@@ -298,17 +398,15 @@ export default function PdfToDoc() {
 
         <div className="grid gap-8">
           {/* Upload Dropzone */}
-          <Card className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white shadow-sm transition-all">
-            <CardContent className="p-0">
-              <Dropzone
-                setFiles={handleFilesAdded}
-                className="p-10"
-                accept={{ "application/pdf": [".pdf"] }}
-                title="Upload PDF Files"
-                description="PDF only • Max 10 files • Max 20MB each"
-              />
-            </CardContent>
-          </Card>
+          <CollapsibleDropzone
+            files={files}
+            setFiles={handleFilesAdded}
+            accept={{ "application/pdf": [".pdf"] }}
+            title="Upload PDF Files"
+            description="PDF only • Max 10 files • Max 20MB each"
+            borderColor="border-gray-300"
+            hoverColor="hover:border-emerald-500"
+          />
 
           {/* Workspace: Sidebar + File List */}
           {files.length > 0 && (
@@ -448,9 +546,21 @@ export default function PdfToDoc() {
                             )}
 
                             {parsed && !parsed.error && (
-                              <Badge variant="outline" className="text-emerald-600 border-emerald-200">
-                                {parsed.numPages} page{parsed.numPages !== 1 ? "s" : ""}
-                              </Badge>
+                              <>
+                                <Badge variant="outline" className="text-emerald-600 border-emerald-200">
+                                  {parsed.numPages} page{parsed.numPages !== 1 ? "s" : ""}
+                                </Badge>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <input
+                                    type="text"
+                                    placeholder="All pages (e.g., 1-5,10-15)"
+                                    value={pageRanges[key] || ""}
+                                    onChange={(e) => setPageRanges((prev) => ({ ...prev, [key]: e.target.value }))}
+                                    disabled={processing}
+                                    className="flex-1 px-2 py-1 text-xs border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  />
+                                </div>
+                              </>
                             )}
 
                             {res?.status === "done" && (
@@ -487,8 +597,17 @@ export default function PdfToDoc() {
 
                       {/* Processing bar */}
                       {res?.status === "processing" && (
-                        <div className="relative h-1 bg-gray-100 w-full">
-                          <div className="absolute top-0 left-0 h-full bg-emerald-600 animate-pulse w-full" />
+                        <div className="px-4 pb-4 space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-emerald-600 font-medium">Processing...</span>
+                            <span className="text-emerald-600 font-bold">{Math.round(res.progress || 0)}%</span>
+                          </div>
+                          <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-600 transition-all duration-300 ease-out"
+                              style={{ width: `${res.progress || 0}%` }}
+                            />
+                          </div>
                         </div>
                       )}
                     </Card>

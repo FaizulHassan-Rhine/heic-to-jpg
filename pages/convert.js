@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import JSZip from "jszip";
@@ -47,7 +48,22 @@ export default function ConvertImage() {
 
   // Settings
   const [targetFormat, setTargetFormat] = useState("jpg"); // jpg, png, webp
-  const [quality, setQuality] = useState("high"); // high, balanced
+  const [quality, setQuality] = useState(85); // 0-100 slider
+  const [preserveMetadata, setPreserveMetadata] = useState(false);
+  const [rotation, setRotation] = useState(0); // 0, 90, 180, 270
+  const [resizeEnabled, setResizeEnabled] = useState(false);
+  const [resizeWidth, setResizeWidth] = useState(1920);
+  const [resizeHeight, setResizeHeight] = useState(1080);
+  const [resizeMode, setResizeMode] = useState("fit"); // fit, fill, exact
+  const [preserveTransparency, setPreserveTransparency] = useState(true); // For PNG
+  const [progressiveJpeg, setProgressiveJpeg] = useState(false); // For JPG
+  const [formatPreset, setFormatPreset] = useState("custom"); // custom, web, print, social
+  const [batchRename, setBatchRename] = useState(false);
+  const [renamePattern, setRenamePattern] = useState("{original}");
+  const [watermarkEnabled, setWatermarkEnabled] = useState(false);
+  const [watermarkText, setWatermarkText] = useState("");
+  const [watermarkPosition, setWatermarkPosition] = useState("bottom-right");
+  const [showPreview, setShowPreview] = useState(false);
 
   // ── File Handling ──
 
@@ -98,17 +114,27 @@ export default function ConvertImage() {
     const formData = new FormData();
     formData.append("file", file);
 
-    // Construct format string expected by API (e.g., "jpg-high")
-    // Previous API uses "jpg-high", "webp-balanced" etc.
-    // PNG doesn't typically have quality suffix in the previous code map, but "png" is enough.
-
-    let formatString = targetFormat;
-    if (targetFormat !== 'png') {
-      formatString = `${targetFormat}-${quality}`;
+    // Send format and quality separately for better API handling
+    formData.append("format", targetFormat);
+    formData.append("quality", quality.toString());
+    formData.append("inputType", getFileType(file.name));
+    formData.append("preserveMetadata", preserveMetadata.toString());
+    formData.append("rotation", rotation.toString());
+    formData.append("preserveTransparency", preserveTransparency.toString());
+    formData.append("progressiveJpeg", progressiveJpeg.toString());
+    
+    if (resizeEnabled) {
+      formData.append("resizeEnabled", "true");
+      formData.append("resizeWidth", resizeWidth.toString());
+      formData.append("resizeHeight", resizeHeight.toString());
+      formData.append("resizeMode", resizeMode);
     }
 
-    formData.append("format", formatString);
-    formData.append("inputType", getFileType(file.name));
+    if (watermarkEnabled && watermarkText) {
+      formData.append("watermarkEnabled", "true");
+      formData.append("watermarkText", watermarkText);
+      formData.append("watermarkPosition", watermarkPosition);
+    }
 
     try {
       // Simulate progress
@@ -192,10 +218,19 @@ export default function ConvertImage() {
   const downloadAll = async () => {
     const zip = new JSZip();
     let count = 0;
-    files.forEach(f => {
+    files.forEach((f, index) => {
       const res = results[f.name];
       if (res?.status === "done") {
-        const name = f.name.substring(0, f.name.lastIndexOf(".")) + "." + res.ext;
+        let name;
+        if (batchRename && renamePattern) {
+          const originalName = f.name.substring(0, f.name.lastIndexOf("."));
+          name = renamePattern
+            .replace(/{original}/g, originalName)
+            .replace(/{index}/g, (index + 1).toString())
+            .replace(/{format}/g, res.ext) + "." + res.ext;
+        } else {
+          name = f.name.substring(0, f.name.lastIndexOf(".")) + "." + res.ext;
+        }
         zip.file(name, res.blob);
         count++;
       }
@@ -292,17 +327,23 @@ export default function ConvertImage() {
         <div className="grid gap-8">
 
           {/* 1. Upload */}
-          <Card className="border-2 border-dashed border-gray-300 hover:border-purple-500 bg-white shadow-sm transition-all">
-            <CardContent className="p-0">
-              <Dropzone
-                setFiles={handleFilesAdded}
-                className="p-10"
-                title="Upload Images to Convert"
-                description="JPG, PNG, WebP, HEIC, TIFF • Max 10MB each"
-              // Removed inputType restriction to allow any image
-              />
-            </CardContent>
-          </Card>
+          <CollapsibleDropzone
+            files={files}
+            setFiles={handleFilesAdded}
+            title="Upload Images to Convert"
+            description="JPG, PNG, WebP, HEIC, TIFF • Max 10MB each"
+            accept={{
+              "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
+              "image/png": [".png", ".PNG"],
+              "image/webp": [".webp", ".WEBP"],
+              "image/heic": [".heic", ".HEIC"],
+              "image/gif": [".gif", ".GIF"],
+              "image/bmp": [".bmp", ".BMP"],
+              "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
+            }}
+            borderColor="border-gray-300"
+            hoverColor="hover:border-purple-500"
+          />
 
           {/* 2. Controls & List */}
           {files.length > 0 && (
@@ -315,6 +356,52 @@ export default function ConvertImage() {
                     <Settings2 className="w-5 h-5" /> Output Settings
                   </div>
 
+                  {/* Format Presets */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-600">Format Preset</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: "custom", label: "Custom", icon: "⚙️" },
+                        { id: "web", label: "Web", icon: "🌐" },
+                        { id: "print", label: "Print", icon: "🖨️" },
+                        { id: "social", label: "Social", icon: "📱" },
+                      ].map(preset => (
+                        <button
+                          key={preset.id}
+                          onClick={() => {
+                            setFormatPreset(preset.id);
+                            if (preset.id === "web") {
+                              setTargetFormat("webp");
+                              setQuality(80);
+                              setResizeEnabled(true);
+                              setResizeWidth(1920);
+                              setResizeMode("fit");
+                            } else if (preset.id === "print") {
+                              setTargetFormat("jpg");
+                              setQuality(95);
+                              setResizeEnabled(false);
+                            } else if (preset.id === "social") {
+                              setTargetFormat("jpg");
+                              setQuality(85);
+                              setResizeEnabled(true);
+                              setResizeWidth(1080);
+                              setResizeMode("fit");
+                            }
+                          }}
+                          className={cn(
+                            "p-2 rounded-lg border-2 transition-all text-center text-xs",
+                            formatPreset === preset.id
+                              ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm"
+                              : "border-gray-200 hover:border-gray-300 text-gray-600"
+                          )}
+                        >
+                          <div className="text-lg mb-1">{preset.icon}</div>
+                          <div className="font-medium">{preset.label}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Format Selection */}
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-600">Target Format</label>
@@ -322,7 +409,10 @@ export default function ConvertImage() {
                       {['jpg', 'png', 'webp'].map(fmt => (
                         <button
                           key={fmt}
-                          onClick={() => setTargetFormat(fmt)}
+                          onClick={() => {
+                            setTargetFormat(fmt);
+                            setFormatPreset("custom");
+                          }}
                           className={cn(
                             "flex items-center justify-between px-3 py-3 text-sm rounded-lg border-2 transition-all uppercase font-medium",
                             targetFormat === fmt ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm" : "border-gray-200 hover:border-gray-300 text-gray-600"
@@ -335,26 +425,217 @@ export default function ConvertImage() {
                     </div>
                   </div>
 
-                  {/* Quality Selection */}
-                  {targetFormat !== 'png' && (
-                    <div className="space-y-3">
+                  {/* Quality Slider */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
                       <label className="text-sm font-medium text-gray-600">Quality</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => setQuality("high")}
-                          className={cn("px-2 py-2 text-sm rounded-lg border-2 transition-all", quality === "high" ? "border-purple-500 bg-purple-50 text-purple-700 font-medium" : "border-gray-200 hover:border-gray-300")}
-                        >
-                          High
-                        </button>
-                        <button
-                          onClick={() => setQuality("balanced")}
-                          className={cn("px-2 py-2 text-sm rounded-lg border-2 transition-all", quality === "balanced" ? "border-purple-500 bg-purple-50 text-purple-700 font-medium" : "border-gray-200 hover:border-gray-300")}
-                        >
-                          Balanced
-                        </button>
-                      </div>
+                      <span className="text-sm font-bold text-purple-600">{quality}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="100"
+                      value={quality}
+                      onChange={(e) => setQuality(Number(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Low</span>
+                      <span>High</span>
+                    </div>
+                    {targetFormat === 'png' && (
+                      <p className="text-xs text-gray-500 italic">PNG uses lossless compression</p>
+                    )}
+                  </div>
+
+                  {/* Format-Specific Options */}
+                  {targetFormat === 'png' && (
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                        <input
+                          type="checkbox"
+                          checked={preserveTransparency}
+                          onChange={(e) => setPreserveTransparency(e.target.checked)}
+                          className="w-4 h-4 accent-purple-600"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Preserve Transparency</span>
+                      </label>
                     </div>
                   )}
+
+                  {targetFormat === 'jpg' && (
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                        <input
+                          type="checkbox"
+                          checked={progressiveJpeg}
+                          onChange={(e) => setProgressiveJpeg(e.target.checked)}
+                          className="w-4 h-4 accent-purple-600"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Rotation */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-600">Rotation</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[0, 90, 180, 270].map((angle) => (
+                        <button
+                          key={angle}
+                          onClick={() => setRotation(angle)}
+                          className={cn(
+                            "px-3 py-2 text-sm rounded-lg border-2 transition-all font-medium",
+                            rotation === angle
+                              ? "border-purple-500 bg-purple-50 text-purple-700"
+                              : "border-gray-200 hover:border-gray-300 text-gray-600"
+                          )}
+                        >
+                          {angle}°
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Resize Option */}
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={resizeEnabled}
+                        onChange={(e) => setResizeEnabled(e.target.checked)}
+                        className="w-4 h-4 accent-purple-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Resize During Conversion</span>
+                    </label>
+                    {resizeEnabled && (
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-3 border border-gray-200">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Width (px)</label>
+                            <input
+                              type="number"
+                              value={resizeWidth}
+                              onChange={(e) => setResizeWidth(Number(e.target.value))}
+                              className="w-full px-2 py-1 text-sm border rounded-md"
+                              min="1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Height (px)</label>
+                            <input
+                              type="number"
+                              value={resizeHeight}
+                              onChange={(e) => setResizeHeight(Number(e.target.value))}
+                              className="w-full px-2 py-1 text-sm border rounded-md"
+                              min="1"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Resize Mode</label>
+                          <select
+                            value={resizeMode}
+                            onChange={(e) => setResizeMode(e.target.value)}
+                            className="w-full px-2 py-1 text-sm border rounded-md"
+                          >
+                            <option value="fit">Fit (maintain aspect)</option>
+                            <option value="fill">Fill (crop to fit)</option>
+                            <option value="exact">Exact (may distort)</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Metadata Option */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={preserveMetadata}
+                        onChange={(e) => setPreserveMetadata(e.target.checked)}
+                        className="w-4 h-4 accent-purple-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Preserve EXIF Metadata</span>
+                    </label>
+                  </div>
+
+                  {/* Watermark */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={watermarkEnabled}
+                        onChange={(e) => setWatermarkEnabled(e.target.checked)}
+                        className="w-4 h-4 accent-purple-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Add Watermark</span>
+                    </label>
+                    {watermarkEnabled && (
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
+                        <input
+                          type="text"
+                          placeholder="Watermark text"
+                          value={watermarkText}
+                          onChange={(e) => setWatermarkText(e.target.value)}
+                          className="w-full px-2 py-1 text-sm border rounded-md"
+                        />
+                        <select
+                          value={watermarkPosition}
+                          onChange={(e) => setWatermarkPosition(e.target.value)}
+                          className="w-full px-2 py-1 text-sm border rounded-md"
+                        >
+                          <option value="top-left">Top Left</option>
+                          <option value="top-right">Top Right</option>
+                          <option value="bottom-left">Bottom Left</option>
+                          <option value="bottom-right">Bottom Right</option>
+                          <option value="center">Center</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Batch Rename */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={batchRename}
+                        onChange={(e) => setBatchRename(e.target.checked)}
+                        className="w-4 h-4 accent-purple-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Custom File Names</span>
+                    </label>
+                    {batchRename && (
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
+                        <input
+                          type="text"
+                          placeholder="{original} or image_{index}"
+                          value={renamePattern}
+                          onChange={(e) => setRenamePattern(e.target.value)}
+                          className="w-full px-2 py-1 text-sm border rounded-md font-mono text-xs"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Use {"{original}"} for original name, {"{index}"} for number
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preview Toggle */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={showPreview}
+                        onChange={(e) => setShowPreview(e.target.checked)}
+                        className="w-4 h-4 accent-purple-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Show Preview Before Conversion</span>
+                    </label>
+                  </div>
 
                   <Separator />
 
@@ -462,8 +743,20 @@ export default function ConvertImage() {
                                       const url = URL.createObjectURL(res.blob);
                                       const a = document.createElement("a");
                                       a.href = url;
-                                      a.download = file.name.substring(0, file.name.lastIndexOf(".")) + "." + res.ext;
+                                      let downloadName;
+                                      if (batchRename && renamePattern) {
+                                        const originalName = file.name.substring(0, file.name.lastIndexOf("."));
+                                        const fileIndex = files.findIndex(f => f.name === file.name);
+                                        downloadName = renamePattern
+                                          .replace(/{original}/g, originalName)
+                                          .replace(/{index}/g, (fileIndex + 1).toString())
+                                          .replace(/{format}/g, res.ext) + "." + res.ext;
+                                      } else {
+                                        downloadName = file.name.substring(0, file.name.lastIndexOf(".")) + "." + res.ext;
+                                      }
+                                      a.download = downloadName;
                                       a.click();
+                                      URL.revokeObjectURL(url);
                                     }}
                                     title="Download"
                                   >

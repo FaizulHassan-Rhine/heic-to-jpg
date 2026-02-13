@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import JSZip from "jszip";
@@ -56,6 +57,18 @@ export default function CompressImage() {
 
   // Settings
   const [resizeMode, setResizeMode] = useState("percentage"); // percentage, pixel, ratio
+  const [compressionPreset, setCompressionPreset] = useState("balanced"); // maximum, balanced, high
+  const [quality, setQuality] = useState(85); // 0-100 for JPEG/WebP quality
+  const [targetFileSize, setTargetFileSize] = useState(""); // Target size in KB/MB
+  const [useTargetSize, setUseTargetSize] = useState(false);
+  const [progressiveJpeg, setProgressiveJpeg] = useState(false);
+  const [optimizePalette, setOptimizePalette] = useState(true); // For PNG
+  const [stripMetadata, setStripMetadata] = useState(false);
+  const [losslessCompression, setLosslessCompression] = useState(false);
+  const [convertFormat, setConvertFormat] = useState(false);
+  const [targetFormat, setTargetFormat] = useState("jpg"); // jpg, png, webp
+  const [smartCrop, setSmartCrop] = useState(false);
+  const [comparisonMode, setComparisonMode] = useState(false);
 
   // Mode: Percentage
   const [percentageValue, setPercentageValue] = useState(80);
@@ -161,19 +174,24 @@ export default function CompressImage() {
 
     // API expects: compressionType (percentage|ratio|pixel), compressionValue, pixelWidth, pixelHeight
 
+    // Apply preset if selected
+    let finalQuality = quality;
+    if (compressionPreset === "maximum") {
+      finalQuality = 60;
+      if (resizeMode === "percentage" && percentageValue > 50) {
+        // Will be handled by preset
+      }
+    } else if (compressionPreset === "balanced") {
+      finalQuality = 85;
+    } else if (compressionPreset === "high") {
+      finalQuality = 95;
+    }
+
     if (resizeMode === "percentage") {
       formData.append("compressionType", "percentage");
       formData.append("compressionValue", percentageValue);
     } else if (resizeMode === "ratio") {
       formData.append("compressionType", "ratio");
-      formData.append("compressionValue", ratioValue * 100); // API ratio logic often expects similar scale or just use percentage mapped
-      // Wait, checking original `compress.js`: "percentage" used 1-100. "ratio" used 1-100 in input but logic was `value/100`.
-      // Let's assume API handles `compressionType: ratio` with `compressionValue` as 0-1 or 0-100?
-      // Original code: `if (compressionType === "ratio") areaRatio = (compressionValue/100) * (compressionValue/100)` -> Wait, that's area. 
-      // The API actually supports 'percentage', 'ratio', 'pixel'.
-      // I will send `compressionValue` as percentage (0-100) for Ratio mode too if API treats them similarly, 
-      // or just map Ratio to Percentage for robustness if API is simple.
-      // Let's try sending as percentage (0-100) since standard Ratio usually 0.5 = 50%.
       formData.append("compressionValue", Math.round(ratioValue * 100));
     } else if (resizeMode === "pixel") {
       formData.append("compressionType", "pixel");
@@ -181,6 +199,20 @@ export default function CompressImage() {
       formData.append("pixelWidth", dims.w);
       formData.append("pixelHeight", dims.h);
     }
+
+    formData.append("quality", finalQuality.toString());
+    formData.append("progressiveJpeg", progressiveJpeg.toString());
+    formData.append("optimizePalette", optimizePalette.toString());
+    formData.append("stripMetadata", stripMetadata.toString());
+    formData.append("losslessCompression", losslessCompression.toString());
+    if (useTargetSize && targetFileSize) {
+      formData.append("targetFileSize", targetFileSize);
+    }
+    formData.append("convertFormat", convertFormat.toString());
+    if (convertFormat) {
+      formData.append("targetFormat", targetFormat);
+    }
+    formData.append("smartCrop", smartCrop.toString());
 
     try {
       // Simulate progress
@@ -206,7 +238,11 @@ export default function CompressImage() {
         onProgress.callback(100);
       }
 
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Compression failed:", res.status, errorText);
+        throw new Error(errorText || "Compression failed");
+      }
 
       const blob = await res.blob();
       const ext = res.headers.get("X-Output-Extension") || "jpg";
@@ -221,8 +257,8 @@ export default function CompressImage() {
       };
 
     } catch (e) {
-      console.error(e);
-      return { status: "error" };
+      console.error("Compression error:", e);
+      return { status: "error", error: e.message || "Compression failed" };
     }
   };
 
@@ -362,11 +398,22 @@ export default function CompressImage() {
         <div className="grid gap-8">
 
           {/* Upload */}
-          <Card className="border-2 border-dashed border-gray-300 hover:border-blue-500 bg-white shadow-sm transition-all">
-            <CardContent className="p-0">
-              <Dropzone setFiles={handleFilesAdded} className="p-10" title="Upload Images to Compress" description="JPG, PNG, WebP • Max 10MB each" />
-            </CardContent>
-          </Card>
+          <CollapsibleDropzone
+            files={files}
+            setFiles={handleFilesAdded}
+            title="Upload Images to Compress"
+            description="JPG, PNG, WebP • Max 10MB each"
+            accept={{
+              "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
+              "image/png": [".png", ".PNG"],
+              "image/webp": [".webp", ".WEBP"],
+              "image/gif": [".gif", ".GIF"],
+              "image/bmp": [".bmp", ".BMP"],
+              "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
+            }}
+            borderColor="border-gray-300"
+            hoverColor="hover:border-blue-500"
+          />
 
           {/* Workspace */}
           {files.length > 0 && (
@@ -377,6 +424,77 @@ export default function CompressImage() {
                 <CardContent className="p-6 space-y-8">
                   <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
                     <Settings2 className="w-6 h-6 text-blue-600" /> Settings
+                  </div>
+
+                  {/* Compression Presets */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Compression Preset</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: "maximum", label: "Maximum", desc: "Smallest size", quality: 60 },
+                        { id: "balanced", label: "Balanced", desc: "Recommended", quality: 85 },
+                        { id: "high", label: "High Quality", desc: "Best quality", quality: 95 },
+                      ].map(preset => (
+                        <button
+                          key={preset.id}
+                          onClick={() => {
+                            setCompressionPreset(preset.id);
+                            setQuality(preset.quality);
+                          }}
+                          className={cn(
+                            "p-3 rounded-lg border-2 transition-all text-center",
+                            compressionPreset === preset.id
+                              ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                              : "border-gray-200 hover:border-gray-300 text-gray-600"
+                          )}
+                        >
+                          <div className="font-semibold text-sm">{preset.label}</div>
+                          <div className="text-xs opacity-70">{preset.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Quality Slider */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-semibold text-gray-700">Quality</label>
+                      <span className="text-sm font-bold text-blue-600">{quality}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="100"
+                      value={quality}
+                      onChange={(e) => setQuality(Number(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Low</span>
+                      <span>High</span>
+                    </div>
+                  </div>
+
+                  {/* Target File Size */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={useTargetSize}
+                        onChange={(e) => setUseTargetSize(e.target.checked)}
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Target File Size</span>
+                    </label>
+                    {useTargetSize && (
+                      <input
+                        type="text"
+                        placeholder="e.g., 500KB or 2MB"
+                        value={targetFileSize}
+                        onChange={(e) => setTargetFileSize(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
                   </div>
 
                   {/* Mode Tabs */}
@@ -485,6 +603,98 @@ export default function CompressImage() {
                     )}
                   </div>
 
+                  {/* Advanced Options */}
+                  <div className="space-y-2 border-t pt-4">
+                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Advanced Options</label>
+                    
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={progressiveJpeg}
+                        onChange={(e) => setProgressiveJpeg(e.target.checked)}
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={optimizePalette}
+                        onChange={(e) => setOptimizePalette(e.target.checked)}
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Optimize Palette (PNG)</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={stripMetadata}
+                        onChange={(e) => setStripMetadata(e.target.checked)}
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Strip Metadata</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={losslessCompression}
+                        onChange={(e) => setLosslessCompression(e.target.checked)}
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Lossless Compression</span>
+                    </label>
+                  </div>
+
+                  {/* Format Conversion */}
+                  <div className="space-y-2 border-t pt-4">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={convertFormat}
+                        onChange={(e) => setConvertFormat(e.target.checked)}
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Convert Format</span>
+                    </label>
+                    {convertFormat && (
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Target Format</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {['jpg', 'png', 'webp'].map(fmt => (
+                            <button
+                              key={fmt}
+                              onClick={() => setTargetFormat(fmt)}
+                              className={cn(
+                                "px-2 py-2 text-xs rounded-lg border-2 transition-all uppercase font-medium",
+                                targetFormat === fmt
+                                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                                  : "border-gray-200 hover:border-gray-300 text-gray-600"
+                              )}
+                            >
+                              {fmt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Smart Crop */}
+                  <div className="space-y-2 border-t pt-4">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <input
+                        type="checkbox"
+                        checked={smartCrop}
+                        onChange={(e) => setSmartCrop(e.target.checked)}
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Smart Crop (Auto-remove whitespace)</span>
+                    </label>
+                  </div>
+
                   <Button
                     onClick={processAll}
                     disabled={processing}
@@ -510,6 +720,15 @@ export default function CompressImage() {
                         Files
                       </h3>
                       <div className="flex gap-2">
+                        <label className="flex items-center gap-2 px-3 py-1.5 border rounded-md hover:bg-gray-50 cursor-pointer transition-all text-sm">
+                          <input
+                            type="checkbox"
+                            checked={comparisonMode}
+                            onChange={(e) => setComparisonMode(e.target.checked)}
+                            className="w-4 h-4 accent-blue-600"
+                          />
+                          <span>Comparison Grid</span>
+                        </label>
                         {Object.values(results).some(r => r.status === "done") && (
                           <Button variant="outline" size="sm" onClick={downloadAll}>
                             <Download className="w-4 h-4 mr-2" /> Download All
@@ -544,6 +763,54 @@ export default function CompressImage() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Comparison Grid View */}
+                {comparisonMode && Object.values(results).some(r => r.status === "done") && (
+                  <Card className="border border-gray-200 mb-5">
+                    <CardContent className="p-4">
+                      <h3 className="font-bold text-lg text-gray-800 mb-4">Before & After Comparison</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {files.map((file, idx) => {
+                          const res = results[file.name];
+                          const preview = previewUrls[file.name];
+                          if (res?.status !== "done") return null;
+                          
+                          const afterUrl = URL.createObjectURL(res.blob);
+                          
+                          return (
+                            <div key={file.name + idx} className="space-y-2">
+                              <div className="relative aspect-square border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                                {preview && (
+                                  <img src={preview} alt="Before" className="w-full h-full object-cover" />
+                                )}
+                                <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                  BEFORE
+                                </div>
+                              </div>
+                              <div className="relative aspect-square border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50">
+                                <img 
+                                  src={afterUrl} 
+                                  alt="After" 
+                                  className="w-full h-full object-cover" 
+                                  onLoad={() => {
+                                    // URL will be cleaned up when component unmounts
+                                  }}
+                                />
+                                <div className="absolute top-1 left-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                  AFTER
+                                </div>
+                              </div>
+                              <div className="text-center text-xs">
+                                <div className="font-semibold text-green-600">-{res.percent}%</div>
+                                <div className="text-gray-500">{formatSize(res.size)}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {files.map((file, idx) => {
                   const res = results[file.name];
@@ -624,6 +891,10 @@ export default function CompressImage() {
                                   -{res.percent}%
                                 </span>
                               </>
+                            ) : res?.status === "error" ? (
+                              <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200">
+                                Error: {res.error || "Compression failed"}
+                              </Badge>
                             ) : (
                               <>
                                 {(estSize && estSize < file.size) ? (

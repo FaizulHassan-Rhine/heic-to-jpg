@@ -11,8 +11,8 @@ const TOOL_CATEGORIES = [
     label: "Image Tools",
     paths: ["/convert", "/compress", "/image-to-pdf", "/extract-text"],
     items: [
-      { href: "/convert", label: "Image Converter" },
-      { href: "/compress", label: "Image Compressor" },
+      { href: "/convert", label: "Image Converter", popular: true },
+      { href: "/compress", label: "Image Compressor", popular: true },
       { href: "/image-to-pdf", label: "Image to PDF" },
       { href: "/extract-text", label: "Extract Text (OCR)" },
     ],
@@ -121,13 +121,18 @@ export default function Navbar() {
                       {category.items.map((item) => (
                         <Link key={item.href} href={item.href}>
                           <div
-                            className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm ${currentPath === item.href
+                            className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm flex items-center justify-between ${currentPath === item.href
                               ? "bg-accent font-medium"
                               : ""
                               }`}
                             onClick={() => setOpenDropdown(null)}
                           >
-                            {item.label}
+                            <span>{item.label}</span>
+                            {item.popular && (
+                              <span className="ml-2 px-1.5 py-0.5 text-[10px] font-semibold bg-orange-500 text-white rounded">
+                                Popular
+                              </span>
+                            )}
                           </div>
                         </Link>
                       ))}
@@ -190,13 +195,18 @@ export default function Navbar() {
                       {category.items.map((item) => (
                         <Link key={item.href} href={item.href} className="block">
                           <div
-                            className={`px-4 py-2.5 text-sm transition-colors ${currentPath === item.href
+                            className={`px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${currentPath === item.href
                               ? "text-primary font-medium bg-accent/40"
                               : "text-muted-foreground hover:text-foreground hover:bg-accent/20"
                               }`}
                             onClick={() => setIsMenuOpen(false)}
                           >
-                            {item.label}
+                            <span>{item.label}</span>
+                            {item.popular && (
+                              <span className="ml-2 px-1.5 py-0.5 text-[10px] font-semibold bg-orange-500 text-white rounded">
+                                Popular
+                              </span>
+                            )}
                           </div>
                         </Link>
                       ))}

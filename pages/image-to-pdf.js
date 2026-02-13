@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import { PDFDocument } from "pdf-lib";
 import {
   Loader2, CheckCircle, AlertCircle, FileImage, Trash2,
@@ -186,7 +187,7 @@ export default function ImageToPdf() {
     // Mark pending
     for (const f of files) {
       if (!newResults[f.name] || newResults[f.name].status === "error") {
-        newResults[f.name] = { status: "processing" };
+        newResults[f.name] = { status: "processing", progress: 0 };
       }
     }
     setResults({ ...newResults });
@@ -195,8 +196,35 @@ export default function ImageToPdf() {
       // Skip if already done
       if (results[file.name]?.status === "done") continue;
 
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setResults(prev => {
+          const current = prev[file.name]?.progress || 0;
+          if (current < 90) {
+            return {
+              ...prev,
+              [file.name]: { ...prev[file.name], progress: Math.min(current + Math.random() * 15, 90) }
+            };
+          }
+          return prev;
+        });
+      }, 150);
+
       const res = await convertSingle(file);
-      setResults(prev => ({ ...prev, [file.name]: res }));
+      
+      clearInterval(progressInterval);
+      setResults(prev => ({ 
+        ...prev, 
+        [file.name]: { ...res, progress: 100 } 
+      }));
+      
+      // Reset to done status after showing 100%
+      setTimeout(() => {
+        setResults(prev => ({ 
+          ...prev, 
+          [file.name]: res 
+        }));
+      }, 300);
     }
 
     setProcessing(false);
@@ -240,11 +268,22 @@ export default function ImageToPdf() {
         </div>
 
         <div className="grid gap-8">
-          <Card className="border-2 border-dashed border-gray-300 hover:border-red-500 bg-white shadow-sm transition-all">
-            <CardContent className="p-0">
-              <Dropzone setFiles={handleFilesAdded} className="p-10" title="Select Images for PDF" description="Merge standard images into PDF documents" />
-            </CardContent>
-          </Card>
+          <CollapsibleDropzone
+            files={files}
+            setFiles={handleFilesAdded}
+            title="Select Images for PDF"
+            description="Merge standard images into PDF documents"
+            accept={{
+              "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
+              "image/png": [".png", ".PNG"],
+              "image/webp": [".webp", ".WEBP"],
+              "image/gif": [".gif", ".GIF"],
+              "image/bmp": [".bmp", ".BMP"],
+              "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
+            }}
+            borderColor="border-gray-300"
+            hoverColor="hover:border-red-500"
+          />
 
           {files.length > 0 && (
             <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
@@ -408,8 +447,17 @@ export default function ImageToPdf() {
                         </div>
                       </div>
                       {res?.status === "processing" && (
-                        <div className="h-1 bg-red-100 w-full">
-                          <div className="h-full bg-red-600 animate-pulse w-full"></div>
+                        <div className="px-4 pb-4 space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-red-600 font-medium">Processing...</span>
+                            <span className="text-red-600 font-bold">{Math.round(res.progress || 0)}%</span>
+                          </div>
+                          <div className="h-2 bg-red-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-red-600 transition-all duration-300 ease-out"
+                              style={{ width: `${res.progress || 0}%` }}
+                            />
+                          </div>
                         </div>
                       )}
                     </Card>

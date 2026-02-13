@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
   Loader2, CheckCircle, AlertCircle, Film, Trash2, Upload,
   Download, RotateCcw, FileVideo, FileAudio, FileImage,
@@ -32,10 +33,22 @@ const FORMATS = [
 let ffmpegInstance = null;
 let ffmpegLoadingState = false;
 
+// Store current progress callback
+let currentProgressCallback = null;
+
 const getFFmpeg = async (onProgress) => {
-  if (ffmpegInstance && ffmpegInstance.loaded) return ffmpegInstance;
+  if (ffmpegInstance && ffmpegInstance.loaded) {
+    // Store the callback for this conversion
+    if (onProgress) {
+      currentProgressCallback = onProgress;
+    }
+    return ffmpegInstance;
+  }
   if (ffmpegLoadingState) {
     while (ffmpegLoadingState) await new Promise((r) => setTimeout(r, 100));
+    if (onProgress) {
+      currentProgressCallback = onProgress;
+    }
     return ffmpegInstance;
   }
   ffmpegLoadingState = true;
@@ -43,19 +56,32 @@ const getFFmpeg = async (onProgress) => {
     const { FFmpeg } = await import("@ffmpeg/ffmpeg");
     const { toBlobURL } = await import("@ffmpeg/util");
     const ffmpeg = new FFmpeg();
+    
+    // Set up progress handler
     ffmpeg.on("progress", ({ progress }) => {
-      if (onProgress) onProgress(Math.round(progress * 100));
+      const progressPercent = Math.round(progress * 100);
+      if (currentProgressCallback) {
+        try {
+          currentProgressCallback(progressPercent);
+        } catch (e) {
+          console.error("Progress callback error:", e);
+        }
+      }
     });
+    
     const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
     await ffmpeg.load({
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
       wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
     });
     ffmpegInstance = ffmpeg;
+    if (onProgress) {
+      currentProgressCallback = onProgress;
+    }
     return ffmpeg;
   } catch (error) {
-    console.error(error);
-    throw new Error("Failed to load video processor.");
+    console.error("FFmpeg load error:", error);
+    throw new Error("Failed to load video processor. Please refresh the page and try again.");
   } finally {
     ffmpegLoadingState = false;
   }
@@ -117,67 +143,96 @@ export default function VideoConvert() {
     }
   };
 
-  const convertSingle = async (file) => {
-    const ffmpeg = await getFFmpeg((p) => setProgress(p));
-    const { fetchFile } = await import("@ffmpeg/util");
-
-    // Determine extensions
-    const ext = targetFormat.toLowerCase();
-    const inputExt = file.name.split('.').pop();
-    const inputName = `input_${Date.now()}.${inputExt}`;
-    const outputName = `output_${Date.now()}.${ext}`;
-
-    await ffmpeg.writeFile(inputName, await fetchFile(file));
-
-    // Build Arguments
-    let args = ["-i", inputName];
-
-    if (ext === "mp3") {
-      // Audio extraction
-      args.push("-vn", "-acodec", "libmp3lame", "-q:a", "2");
-    } else if (ext === "gif") {
-      // GIF conversion
-      args.push("-vf", "fps=10,scale=320:-1:flags=lanczos", "-c:v", "gif");
-    } else {
-      // Video conversion
-      if (muteAudio) args.push("-an");
-      else args.push("-c:a", "aac"); // Standard AAC for most containers
-
-      // Target Codecs defaults
-      if (ext === "mp4") args.push("-c:v", "libx264", "-preset", "fast", "-movflags", "+faststart");
-      else if (ext === "webm") args.push("-c:v", "libvpx-vp9", "-c:a", "libvorbis");
-      else if (ext === "mkv") args.push("-c:v", "libx264"); // MKV supports almost anything
-      else if (ext === "avi") args.push("-c:v", "libx264"); // AVI with H264
-      else if (ext === "mov") args.push("-c:v", "libx264");
-    }
-
-    args.push(outputName);
-
-    await ffmpeg.exec(args);
-
-    // Read result
-    const data = await ffmpeg.readFile(outputName);
-
-    // Determine MIME type
-    const mimeMap = {
-      mp4: "video/mp4", webm: "video/webm", avi: "video/x-msvideo",
-      mkv: "video/x-matroska", mov: "video/quicktime", gif: "image/gif", mp3: "audio/mpeg"
-    };
-
-    const blob = new Blob([data.buffer], { type: mimeMap[ext] || "application/octet-stream" });
-
-    // Cleanup
+  const convertSingle = async (file, onProgress) => {
     try {
-      await ffmpeg.deleteFile(inputName);
-      await ffmpeg.deleteFile(outputName);
-    } catch (e) { } // ignore cleanup errors
+      // Set up progress callback
+      const progressHandler = onProgress ? onProgress.callback : null;
+      const ffmpeg = await getFFmpeg(progressHandler);
+      const { fetchFile } = await import("@ffmpeg/util");
 
-    return {
-      status: "done",
-      blob,
-      size: blob.size,
-      ext: ext
-    };
+      // Determine extensions
+      const ext = targetFormat.toLowerCase();
+      const inputExt = file.name.split('.').pop();
+      const inputName = `input_${Date.now()}.${inputExt}`;
+      const outputName = `output_${Date.now()}.${ext}`;
+
+      // Write input file
+      await ffmpeg.writeFile(inputName, await fetchFile(file));
+
+      // Build Arguments
+      let args = ["-i", inputName];
+
+      if (ext === "mp3") {
+        // Audio extraction
+        args.push("-vn", "-acodec", "libmp3lame", "-q:a", "2", "-b:a", "192k");
+      } else if (ext === "gif") {
+        // GIF conversion - simpler approach for browser FFmpeg
+        args.push("-vf", "fps=10,scale=320:-1:flags=lanczos", "-c:v", "gif");
+      } else {
+        // Video conversion
+        if (muteAudio) {
+          args.push("-an");
+        } else {
+          // Audio codec selection
+          if (ext === "webm") {
+            args.push("-c:a", "libopus", "-b:a", "128k");
+          } else {
+            args.push("-c:a", "aac", "-b:a", "128k");
+          }
+        }
+
+        // Video codec selection - use codecs available in browser FFmpeg
+        if (ext === "mp4") {
+          args.push("-c:v", "libx264", "-preset", "fast", "-crf", "23", "-movflags", "+faststart");
+        } else if (ext === "webm") {
+          // Use libvpx (VP8) instead of VP9 for better browser compatibility
+          args.push("-c:v", "libvpx", "-crf", "30", "-b:v", "1M");
+        } else if (ext === "mkv") {
+          args.push("-c:v", "libx264", "-preset", "fast", "-crf", "23");
+        } else if (ext === "avi") {
+          args.push("-c:v", "libx264", "-preset", "fast", "-crf", "23");
+        } else if (ext === "mov") {
+          args.push("-c:v", "libx264", "-preset", "fast", "-crf", "23", "-movflags", "+faststart");
+        }
+      }
+
+      args.push(outputName);
+
+      // Execute conversion
+      await ffmpeg.exec(args);
+
+      // Read result
+      const data = await ffmpeg.readFile(outputName);
+
+      // Determine MIME type
+      const mimeMap = {
+        mp4: "video/mp4", webm: "video/webm", avi: "video/x-msvideo",
+        mkv: "video/x-matroska", mov: "video/quicktime", gif: "image/gif", mp3: "audio/mpeg"
+      };
+
+      const blob = new Blob([data.buffer], { type: mimeMap[ext] || "application/octet-stream" });
+
+      // Cleanup
+      try {
+        await ffmpeg.deleteFile(inputName);
+        await ffmpeg.deleteFile(outputName);
+      } catch (e) { } // ignore cleanup errors
+
+      // Clear progress callback
+      currentProgressCallback = null;
+
+      return {
+        status: "done",
+        blob,
+        size: blob.size,
+        ext: ext
+      };
+    } catch (error) {
+      // Clear progress callback on error
+      currentProgressCallback = null;
+      console.error("Conversion error:", error);
+      throw new Error(error.message || "Conversion failed. Please try a different format or check the file.");
+    }
   };
 
   const processAll = async () => {
@@ -199,15 +254,41 @@ export default function VideoConvert() {
       if (results[file.name]?.status === "done") continue;
 
       setProcessingFile(file.name);
-      setResults(prev => ({ ...prev, [file.name]: { status: "processing" } }));
+      setResults(prev => ({ ...prev, [file.name]: { status: "processing", progress: 0 } }));
       setProgress(0);
 
       try {
-        const res = await convertSingle(file);
-        setResults(prev => ({ ...prev, [file.name]: res }));
+        const progressTracker = {
+          current: 0,
+          callback: (progress) => {
+            setResults(prev => ({
+              ...prev,
+              [file.name]: { ...prev[file.name], progress: Math.round(progress) }
+            }));
+            setProgress(progress);
+          }
+        };
+        const res = await convertSingle(file, progressTracker);
+        setResults(prev => ({ ...prev, [file.name]: { ...res, progress: 100 } }));
+        
+        // Reset progress after showing 100%
+        setTimeout(() => {
+          setResults(prev => ({ 
+            ...prev, 
+            [file.name]: res 
+          }));
+        }, 300);
       } catch (e) {
-        console.error(e);
-        setResults(prev => ({ ...prev, [file.name]: { status: "error", error: "Failed" } }));
+        console.error("Conversion error for", file.name, ":", e);
+        const errorMessage = e.message || "Conversion failed. The file might be corrupted or the format is not supported.";
+        setResults(prev => ({ 
+          ...prev, 
+          [file.name]: { 
+            status: "error", 
+            error: errorMessage.length > 50 ? errorMessage.substring(0, 50) + "..." : errorMessage
+          } 
+        }));
+        toast.error(`${file.name}: ${errorMessage}`);
       }
     }
     setProcessing(false);
@@ -233,11 +314,21 @@ export default function VideoConvert() {
         </div>
 
         <div className="grid gap-8">
-          <Card className="border-2 border-dashed border-gray-300 hover:border-purple-500 bg-white shadow-sm transition-all">
-            <CardContent className="p-0">
-              <Dropzone setFiles={handleFilesAdded} className="p-10" />
-            </CardContent>
-          </Card>
+          <CollapsibleDropzone
+            files={files}
+            setFiles={handleFilesAdded}
+            title="Upload Videos to Convert"
+            description="MP4, MOV, AVI, MKV, WebM • Max 500MB each"
+            accept={{
+              "video/mp4": [".mp4", ".MP4"],
+              "video/quicktime": [".mov", ".MOV"],
+              "video/x-msvideo": [".avi", ".AVI"],
+              "video/x-matroska": [".mkv", ".MKV"],
+              "video/webm": [".webm", ".WEBM"]
+            }}
+            borderColor="border-gray-300"
+            hoverColor="hover:border-purple-500"
+          />
 
           {files.length > 0 && (
             <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
@@ -374,17 +465,25 @@ export default function VideoConvert() {
                             )}
 
                             {res?.status === "error" && (
-                              <Badge variant="destructive">Error</Badge>
+                              <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200">
+                                {res.error || "Error"}
+                              </Badge>
                             )}
                           </div>
                         </div>
                       </div>
                       {res?.status === "processing" && (
-                        <div className="relative h-1 bg-gray-100 w-full mt-0">
-                          <div
-                            className="absolute top-0 left-0 h-full bg-purple-600 transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                          />
+                        <div className="px-4 pb-4 space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-purple-600 font-medium">Processing...</span>
+                            <span className="text-purple-600 font-bold">{res.progress || 0}%</span>
+                          </div>
+                          <div className="h-2 bg-purple-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-purple-600 transition-all duration-300 ease-out"
+                              style={{ width: `${res.progress || 0}%` }}
+                            />
+                          </div>
                         </div>
                       )}
                     </Card>

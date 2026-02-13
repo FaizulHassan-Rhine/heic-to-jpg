@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
   Loader2, CheckCircle, Copy, AlertCircle, FileText, Trash2,
   Upload, Download, RotateCcw, ScanText, ArrowRight
@@ -32,6 +33,8 @@ export default function ExtractText() {
   const [processing, setProcessing] = useState(false);
   const [previewUrls, setPreviewUrls] = useState({});
   const [useProOCR, setUseProOCR] = useState(false); // Toggle for engine
+  const [ocrLanguage, setOcrLanguage] = useState("eng"); // OCR language
+  const [exportFormat, setExportFormat] = useState("txt"); // Export format: txt, docx, json
 
   // ── File Handling ──
 
@@ -79,12 +82,120 @@ export default function ExtractText() {
 
   // ── OCR Logic ──
 
+  // Compress image if it's too large for OCR API (1MB limit for free tier)
+  const compressImageForOCR = async (file) => {
+    if (file.size <= 1024 * 1024) return file; // Already under 1MB
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // Start with more aggressive compression to ensure under 1MB
+        let quality = 0.7;
+        let maxDimension = 1800;
+        
+        // Calculate new dimensions
+        if (width > maxDimension || height > maxDimension) {
+          const ratio = Math.min(maxDimension / width, maxDimension / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        // Fill white background (important for OCR)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Try to compress, reducing quality if needed
+        const tryCompress = (q) => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Compression failed'));
+              return;
+            }
+            
+            // If still too large, reduce quality further
+            if (blob.size > 1024 * 1024 && q > 0.3) {
+              tryCompress(q - 0.1);
+            } else if (blob.size > 1024 * 1024) {
+              // Last resort: reduce dimensions
+              maxDimension = Math.floor(maxDimension * 0.8);
+              const newRatio = Math.min(maxDimension / img.width, maxDimension / img.height);
+              width = Math.floor(img.width * newRatio);
+              height = Math.floor(img.height * newRatio);
+              canvas.width = width;
+              canvas.height = height;
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+              canvas.toBlob((finalBlob) => {
+                const compressedFile = new File([finalBlob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+                resolve(compressedFile);
+              }, 'image/jpeg', 0.5);
+            } else {
+              const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+              resolve(compressedFile);
+            }
+          }, 'image/jpeg', q);
+        };
+        
+        tryCompress(quality);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load image for compression'));
+      };
+      img.src = url;
+    });
+  };
+
   const extractTextFromImage = async (file) => {
     try {
+      // Compress if needed (OCR.space free tier has 1MB limit)
+      let fileToProcess = file;
+      if (file.size > 1024 * 1024) {
+        try {
+          fileToProcess = await compressImageForOCR(file);
+          // Double-check the compressed file size
+          if (fileToProcess.size > 1024 * 1024) {
+            // If compression still results in > 1MB, show a more helpful error
+            return { 
+              status: "error", 
+              error: `File too large. After compression, file is still ${(fileToProcess.size / 1024 / 1024).toFixed(2)}MB. Please use a smaller image or reduce its resolution.` 
+            };
+          }
+          console.log(`Compressed ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(fileToProcess.size / 1024 / 1024).toFixed(2)}MB`);
+        } catch (compressionError) {
+          console.error('Compression error:', compressionError);
+          return { 
+            status: "error", 
+            error: `Failed to compress image: ${compressionError.message}. Please use an image under 1MB.` 
+          };
+        }
+      }
+      
+      // Final check before sending
+      if (fileToProcess.size > 1024 * 1024) {
+        return {
+          status: "error",
+          error: `File size (${(fileToProcess.size / 1024 / 1024).toFixed(2)}MB) exceeds OCR API limit of 1MB. Please use a smaller image.`
+        };
+      }
+      
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', fileToProcess);
       // OCR.space parameters
-      formData.append('language', 'eng');
+      formData.append('language', ocrLanguage);
       formData.append('isOverlayRequired', 'false');
       formData.append('scale', 'true');
       if (useProOCR) formData.append('OCREngine', '2'); // 2 is better for numbers/special chars
@@ -101,18 +212,31 @@ export default function ExtractText() {
       const data = await response.json();
 
       if (data.OCRExitCode !== 1) {
-        // Handle error code 3/4 (file size/type) specifically if needed
-        throw new Error(data.ErrorMessage?.[0] || 'OCR Failed');
+        // Handle error code 3/4 (file size/type) specifically
+        const errorMsg = data.ErrorMessage?.[0] || 'OCR Failed';
+        // If it's a file size error, provide a more helpful message
+        if (errorMsg.toLowerCase().includes('file size') || errorMsg.toLowerCase().includes('1024')) {
+          throw new Error(`File too large for OCR API. The image was compressed but still exceeds the 1MB limit. Please try a smaller image or reduce its resolution.`);
+        }
+        throw new Error(errorMsg);
       }
 
       let text = '';
+      let confidence = 0;
       if (data.ParsedResults?.length > 0) {
         text = data.ParsedResults.map(r => r.ParsedText).join('\n\n').trim();
+        // Calculate average confidence if available
+        const confidences = data.ParsedResults
+          .map(r => r.TextOverlay?.HasOverlay ? parseFloat(r.TextOverlay.Message?.replace(/[^0-9.]/g, '') || '0') : 0)
+          .filter(c => c > 0);
+        if (confidences.length > 0) {
+          confidence = Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length);
+        }
       }
 
       if (!text) return { status: "error", error: "No text detected" };
 
-      return { status: "done", text };
+      return { status: "done", text, confidence };
 
     } catch (e) {
       console.error(e);
@@ -126,15 +250,43 @@ export default function ExtractText() {
 
     for (const f of files) {
       if (!newResults[f.name] || newResults[f.name].status === "error") {
-        newResults[f.name] = { status: "processing" };
+        newResults[f.name] = { status: "processing", progress: 0 };
       }
     }
     setResults({ ...newResults });
 
     for (const file of files) {
       if (results[file.name]?.status === "done") continue;
+      
+      // Simulate progress for OCR
+      const progressInterval = setInterval(() => {
+        setResults(prev => {
+          const current = prev[file.name]?.progress || 0;
+          if (current < 90) {
+            return {
+              ...prev,
+              [file.name]: { ...prev[file.name], progress: Math.min(current + Math.random() * 20, 90) }
+            };
+          }
+          return prev;
+        });
+      }, 200);
+      
       const res = await extractTextFromImage(file);
-      setResults(prev => ({ ...prev, [file.name]: res }));
+      
+      clearInterval(progressInterval);
+      setResults(prev => ({ 
+        ...prev, 
+        [file.name]: { ...res, progress: 100 } 
+      }));
+      
+      // Reset to done status after showing 100%
+      setTimeout(() => {
+        setResults(prev => ({ 
+          ...prev, 
+          [file.name]: res 
+        }));
+      }, 300);
     }
 
     setProcessing(false);
@@ -145,14 +297,62 @@ export default function ExtractText() {
     toast.success("Copied to clipboard");
   };
 
-  const downloadText = (filename, text) => {
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename.split('.')[0] + ".txt";
-    a.click();
-    URL.revokeObjectURL(url);
+  const downloadText = async (filename, text, confidence) => {
+    const baseName = filename.split('.')[0];
+    
+    if (exportFormat === "json") {
+      const jsonData = {
+        text,
+        confidence: confidence || null,
+        filename,
+        extractedAt: new Date().toISOString(),
+      };
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = baseName + ".json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (exportFormat === "docx") {
+      // Create simple DOCX
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const paragraphs = text.split('\n\n').filter(p => p.trim());
+      const bodyXml = paragraphs.map(p => 
+        `<w:p><w:r><w:t xml:space="preserve">${escapeXml(p.trim())}</w:t></w:r></w:p>`
+      ).join('');
+      
+      zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+      zip.folder("_rels").file(".rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+      zip.folder("word").folder("_rels").file("document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+      zip.folder("word").file("document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml}</w:body></w:document>`);
+      
+      const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = baseName + ".docx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = baseName + ".txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+  
+  const escapeXml = (str) => {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
   };
 
   return (
@@ -174,11 +374,22 @@ export default function ExtractText() {
 
 
         <div className="grid gap-8">
-          <Card className="border-2 border-dashed border-gray-300 hover:border-teal-500 bg-white shadow-sm transition-all">
-            <CardContent className="p-0">
-              <Dropzone setFiles={handleFilesAdded} className="p-10" title="Upload Images for OCR" description="Extract text from scanned docs & screenshots" />
-            </CardContent>
-          </Card>
+          <CollapsibleDropzone
+            files={files}
+            setFiles={handleFilesAdded}
+            title="Upload Images for OCR"
+            description="Extract text from scanned docs & screenshots • Max 10MB each"
+            accept={{
+              "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
+              "image/png": [".png", ".PNG"],
+              "image/webp": [".webp", ".WEBP"],
+              "image/gif": [".gif", ".GIF"],
+              "image/bmp": [".bmp", ".BMP"],
+              "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
+            }}
+            borderColor="border-gray-300"
+            hoverColor="hover:border-teal-500"
+          />
 
           {files.length > 0 && (
             <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
@@ -203,6 +414,56 @@ export default function ExtractText() {
                         <span className="text-xs text-gray-500">Better for numbers & tables (Slower)</span>
                       </div>
                     </label>
+                  </div>
+
+                  {/* Language Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">OCR Language</label>
+                    <select
+                      value={ocrLanguage}
+                      onChange={(e) => setOcrLanguage(e.target.value)}
+                      disabled={processing}
+                      className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    >
+                      <option value="eng">English</option>
+                      <option value="spa">Spanish</option>
+                      <option value="fra">French</option>
+                      <option value="deu">German</option>
+                      <option value="ita">Italian</option>
+                      <option value="por">Portuguese</option>
+                      <option value="chi_sim">Chinese (Simplified)</option>
+                      <option value="chi_tra">Chinese (Traditional)</option>
+                      <option value="jpn">Japanese</option>
+                      <option value="kor">Korean</option>
+                      <option value="ara">Arabic</option>
+                      <option value="rus">Russian</option>
+                    </select>
+                  </div>
+
+                  {/* Export Format */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">Export Format</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: "txt", label: "TXT" },
+                        { id: "docx", label: "DOCX" },
+                        { id: "json", label: "JSON" },
+                      ].map((fmt) => (
+                        <button
+                          key={fmt.id}
+                          onClick={() => setExportFormat(fmt.id)}
+                          disabled={processing}
+                          className={cn(
+                            "p-2 rounded-lg border text-xs font-medium transition-all",
+                            exportFormat === fmt.id
+                              ? "bg-teal-50 border-teal-200 text-teal-700 ring-1 ring-teal-200"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          {fmt.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <Button
@@ -255,7 +516,7 @@ export default function ExtractText() {
                                   <Button size="icon" variant="ghost" className="h-8 w-8 text-teal-600 bg-teal-50 hover:bg-teal-100" onClick={() => copyText(res.text)} title="Copy Text">
                                     <Copy className="w-4 h-4" />
                                   </Button>
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-teal-600 bg-teal-50 hover:bg-teal-100" onClick={() => downloadText(file.name, res.text)} title="Download Text">
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-teal-600 bg-teal-50 hover:bg-teal-100" onClick={() => downloadText(file.name, res.text, res.confidence)} title="Download Text">
                                     <Download className="w-4 h-4" />
                                   </Button>
                                 </>
@@ -268,8 +529,23 @@ export default function ExtractText() {
 
                           {/* Status / Result */}
                           {res?.status === "done" ? (
-                            <div className="mt-2 text-sm bg-gray-50 p-3 rounded-lg border border-gray-100 font-mono text-gray-700 max-h-40 overflow-y-auto whitespace-pre-wrap">
-                              {res.text.slice(0, 300) + (res.text.length > 300 ? "..." : "")}
+                            <div className="mt-2 space-y-2">
+                              {res.confidence && (
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-gray-500">Confidence:</span>
+                                  <Badge variant="outline" className={cn(
+                                    "text-xs",
+                                    res.confidence >= 80 ? "border-green-500 text-green-700" :
+                                    res.confidence >= 60 ? "border-yellow-500 text-yellow-700" :
+                                    "border-red-500 text-red-700"
+                                  )}>
+                                    {res.confidence}%
+                                  </Badge>
+                                </div>
+                              )}
+                              <div className="text-sm bg-gray-50 p-3 rounded-lg border border-gray-100 font-mono text-gray-700 max-h-40 overflow-y-auto whitespace-pre-wrap">
+                                {res.text.slice(0, 300) + (res.text.length > 300 ? "..." : "")}
+                              </div>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -289,8 +565,17 @@ export default function ExtractText() {
                         </div>
                       </div>
                       {res?.status === "processing" && (
-                        <div className="h-1 bg-teal-100 w-full">
-                          <div className="h-full bg-teal-600 animate-pulse w-full"></div>
+                        <div className="px-4 pb-4 space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-teal-600 font-medium">Processing...</span>
+                            <span className="text-teal-600 font-bold">{Math.round(res.progress || 0)}%</span>
+                          </div>
+                          <div className="h-2 bg-teal-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-teal-600 transition-all duration-300 ease-out"
+                              style={{ width: `${res.progress || 0}%` }}
+                            />
+                          </div>
                         </div>
                       )}
                     </Card>

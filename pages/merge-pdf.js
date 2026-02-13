@@ -40,6 +40,32 @@ function formatFileSize(bytes) {
     return (bytes / Math.pow(k, i)).toFixed(1) + " " + sizes[i];
 }
 
+// Parse page range string like "1-5,10-15" into array of page numbers
+function parsePageRange(rangeStr, maxPages) {
+    if (!rangeStr || rangeStr.trim() === "") {
+        return Array.from({ length: maxPages }, (_, i) => i);
+    }
+    const pages = new Set();
+    const parts = rangeStr.split(",");
+    for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed.includes("-")) {
+            const [start, end] = trimmed.split("-").map((s) => parseInt(s.trim()));
+            if (!isNaN(start) && !isNaN(end)) {
+                for (let i = Math.max(1, start); i <= Math.min(maxPages, end); i++) {
+                    pages.add(i - 1); // Convert to 0-based index
+                }
+            }
+        } else {
+            const page = parseInt(trimmed);
+            if (!isNaN(page) && page >= 1 && page <= maxPages) {
+                pages.add(page - 1); // Convert to 0-based index
+            }
+        }
+    }
+    return Array.from(pages).sort((a, b) => a - b);
+}
+
 // Render a single PDF page to a canvas and return a data URL thumbnail
 async function renderPdfPageThumbnail(pdfDoc, pageNum, scale = 0.4) {
     const page = await pdfDoc.getPage(pageNum);
@@ -65,6 +91,10 @@ export default function MergePdf() {
     const fileInputRef = useRef(null);
     const [dragOverIndex, setDragOverIndex] = useState(null);
     const [dragSourceIndex, setDragSourceIndex] = useState(null);
+    const [pageRanges, setPageRanges] = useState({}); // { [entryId]: "1-5,10-15" }
+    const [rotations, setRotations] = useState({}); // { [entryId]: 0, 90, 180, 270 }
+    const [addPageNumbers, setAddPageNumbers] = useState(false);
+    const [splitMode, setSplitMode] = useState(false); // Split instead of merge
 
     // Total page count
     const totalPages = pdfEntries.reduce((sum, e) => sum + (e.pageCount || 0), 0);
@@ -224,6 +254,11 @@ export default function MergePdf() {
 
     // ── Merge ──
     const handleMerge = async () => {
+        if (splitMode) {
+            handleSplit();
+            return;
+        }
+
         if (pdfEntries.length < 2) {
             toast.error("Please add at least 2 PDF files to merge");
             return;
@@ -234,8 +269,9 @@ export default function MergePdf() {
         setMergedBlob(null);
 
         try {
-            const { PDFDocument } = await import("pdf-lib");
+            const { PDFDocument, rgb } = await import("pdf-lib");
             const mergedPdf = await PDFDocument.create();
+            let pageNumber = 1;
 
             for (let i = 0; i < pdfEntries.length; i++) {
                 const entry = pdfEntries[i];
@@ -243,11 +279,32 @@ export default function MergePdf() {
                 const sourcePdf = await PDFDocument.load(arrayBuffer, {
                     ignoreEncryption: true,
                 });
-                const pages = await mergedPdf.copyPages(
-                    sourcePdf,
-                    sourcePdf.getPageIndices()
-                );
-                pages.forEach((page) => mergedPdf.addPage(page));
+                
+                // Get page range for this entry
+                const rangeStr = pageRanges[entry.id] || "";
+                const pageIndices = parsePageRange(rangeStr, entry.pageCount);
+                const pages = await mergedPdf.copyPages(sourcePdf, pageIndices);
+                
+                pages.forEach((page, idx) => {
+                    const addedPage = mergedPdf.addPage(page);
+                    const rotation = rotations[entry.id] || 0;
+                    if (rotation !== 0) {
+                        addedPage.setRotation(addedPage.getRotation().angle + rotation);
+                    }
+                    
+                    // Add page numbers if requested
+                    if (addPageNumbers) {
+                        const { width, height } = addedPage.getSize();
+                        addedPage.drawText(`${pageNumber}`, {
+                            x: width - 30,
+                            y: 20,
+                            size: 10,
+                            color: rgb(0.5, 0.5, 0.5),
+                        });
+                    }
+                    pageNumber++;
+                });
+                
                 setMergeProgress(Math.round(((i + 1) / pdfEntries.length) * 100));
             }
 
@@ -259,6 +316,56 @@ export default function MergePdf() {
         } catch (err) {
             console.error("Merge error:", err);
             toast.error("Failed to merge PDFs: " + (err.message || "Unknown error"));
+        }
+
+        setMerging(false);
+    };
+
+    // ── Split PDF ──
+    const handleSplit = async () => {
+        if (pdfEntries.length === 0) {
+            toast.error("Please add a PDF file to split");
+            return;
+        }
+
+        setMerging(true);
+        setMergeProgress(0);
+
+        try {
+            const { PDFDocument } = await import("pdf-lib");
+            let processed = 0;
+
+            for (const entry of pdfEntries) {
+                const arrayBuffer = await entry.file.arrayBuffer();
+                const sourcePdf = await PDFDocument.load(arrayBuffer, {
+                    ignoreEncryption: true,
+                });
+
+                // Split each page into separate PDF
+                for (let i = 0; i < entry.pageCount; i++) {
+                    const newPdf = await PDFDocument.create();
+                    const [copiedPage] = await newPdf.copyPages(sourcePdf, [i]);
+                    newPdf.addPage(copiedPage);
+                    const pdfBytes = await newPdf.save();
+                    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+                    
+                    // Download immediately
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${entry.name.replace(/\.pdf$/i, "")}-page-${i + 1}.pdf`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+
+                processed++;
+                setMergeProgress(Math.round((processed / pdfEntries.length) * 100));
+            }
+
+            toast.success(`Split ${pdfEntries.length} PDF${pdfEntries.length > 1 ? "s" : ""} into individual pages!`);
+        } catch (err) {
+            console.error("Split error:", err);
+            toast.error("Failed to split PDFs: " + (err.message || "Unknown error"));
         }
 
         setMerging(false);
@@ -446,6 +553,11 @@ export default function MergePdf() {
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-sm truncate">
                                                 {entry.name}
+                                                {rotations[entry.id] && rotations[entry.id] !== 0 && (
+                                                    <span className="ml-2 text-xs text-muted-foreground">
+                                                        ({rotations[entry.id]}°)
+                                                    </span>
+                                                )}
                                             </p>
                                             <div className="flex items-center gap-3 mt-0.5">
                                                 <span className="text-xs text-muted-foreground">
@@ -456,6 +568,20 @@ export default function MergePdf() {
                                                 <span className="text-xs text-muted-foreground">
                                                     {formatFileSize(entry.size)}
                                                 </span>
+                                            </div>
+                                            {/* Page Range Input */}
+                                            <div className="mt-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="All pages (e.g., 1-5,10-15)"
+                                                    value={pageRanges[entry.id] || ""}
+                                                    onChange={(e) => setPageRanges(prev => ({
+                                                        ...prev,
+                                                        [entry.id]: e.target.value
+                                                    }))}
+                                                    disabled={merging}
+                                                    className="w-full px-2 py-1 text-xs border rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                                                />
                                             </div>
                                         </div>
 
@@ -484,6 +610,18 @@ export default function MergePdf() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => setRotations(prev => ({
+                                                    ...prev,
+                                                    [entry.id]: ((prev[entry.id] || 0) + 90) % 360
+                                                }))}
+                                                title="Rotate"
+                                            >
+                                                <RotateCw className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
                                                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                 onClick={() => removeEntry(idx)}
                                                 title="Remove"
@@ -496,8 +634,42 @@ export default function MergePdf() {
                             </div>
                         )}
 
-                        {/* Merge Button */}
-                        {pdfEntries.length >= 2 && (
+                        {/* Options */}
+                        {pdfEntries.length > 0 && (
+                            <Card className="mb-6">
+                                <CardContent className="p-4 space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={splitMode}
+                                                onChange={(e) => setSplitMode(e.target.checked)}
+                                                disabled={merging}
+                                                className="w-4 h-4 accent-primary"
+                                            />
+                                            <span className="text-sm font-medium">Split Mode (One PDF per page)</span>
+                                        </label>
+                                    </div>
+                                    {!splitMode && (
+                                        <div className="flex items-center gap-3">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={addPageNumbers}
+                                                    onChange={(e) => setAddPageNumbers(e.target.checked)}
+                                                    disabled={merging}
+                                                    className="w-4 h-4 accent-primary"
+                                                />
+                                                <span className="text-sm font-medium">Add Page Numbers</span>
+                                            </label>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Merge/Split Button */}
+                        {pdfEntries.length >= (splitMode ? 1 : 2) && (
                             <div className="flex flex-col items-center gap-4 mb-8">
                                 {/* Progress */}
                                 {merging && (
@@ -505,7 +677,7 @@ export default function MergePdf() {
                                         <div className="flex items-center gap-3 mb-2">
                                             <Loader2 className="w-4 h-4 animate-spin text-primary" />
                                             <span className="text-sm font-medium">
-                                                Merging PDFs... {mergeProgress}%
+                                                {splitMode ? "Splitting PDFs..." : "Merging PDFs..."} {mergeProgress}%
                                             </span>
                                         </div>
                                         <Progress value={mergeProgress} className="h-2" />
@@ -522,12 +694,21 @@ export default function MergePdf() {
                                         {merging ? (
                                             <>
                                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                                Merging...
+                                                {splitMode ? "Splitting..." : "Merging..."}
                                             </>
                                         ) : (
                                             <>
-                                                <Merge className="w-4 h-4" />
-                                                Merge {pdfEntries.length} PDFs into One
+                                                {splitMode ? (
+                                                    <>
+                                                        <FileText className="w-4 h-4" />
+                                                        Split {pdfEntries.length} PDF{pdfEntries.length > 1 ? "s" : ""}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Merge className="w-4 h-4" />
+                                                        Merge {pdfEntries.length} PDFs into One
+                                                    </>
+                                                )}
                                             </>
                                         )}
                                     </Button>

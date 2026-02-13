@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { useDropzone } from "react-dropzone";
+import Dropzone from "../components/Dropzone";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
-  Loader2, CheckCircle, AlertCircle, FileText, Trash2, Upload,
-  Download, RotateCcw, Eye, EyeOff, FileType
+  Loader2, CheckCircle, AlertCircle, FileText, Trash2,
+  Download, RotateCcw, Eye, EyeOff, FileType, Settings2, ArrowRight, Image as ImageIcon
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -48,6 +49,11 @@ export default function DocToPdf() {
   const [parsedDocs, setParsedDocs] = useState({});
   const [previewOpen, setPreviewOpen] = useState({});
   const previewRefs = useRef({});
+  
+  // PDF Settings
+  const [pageSize, setPageSize] = useState("a4"); // a4, letter, legal
+  const [orientation, setOrientation] = useState("portrait"); // portrait, landscape
+  const [margins, setMargins] = useState({ top: 15, right: 15, bottom: 15, left: 15 }); // in mm
 
   // Preload html2pdf
   useEffect(() => {
@@ -164,8 +170,19 @@ export default function DocToPdf() {
       // Wait for DOM to render
       await new Promise((resolve) => setTimeout(resolve, 300));
 
+      // Page size mapping
+      const pageSizeMap = {
+        a4: [210, 297],
+        letter: [216, 279],
+        legal: [216, 356],
+      };
+      
+      const [width, height] = pageSizeMap[pageSize] || pageSizeMap.a4;
+      const finalWidth = orientation === "landscape" ? height : width;
+      const finalHeight = orientation === "landscape" ? width : height;
+
       const opt = {
-        margin: [10, 15, 10, 15],
+        margin: [margins.top, margins.right, margins.bottom, margins.left],
         filename: file.name.replace(/\.[^.]+$/, "") + ".pdf",
         image: { type: "jpeg", quality: 0.95 },
         html2canvas: {
@@ -176,7 +193,11 @@ export default function DocToPdf() {
           width: container.scrollWidth,
           height: container.scrollHeight,
         },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        jsPDF: { 
+          unit: "mm", 
+          format: [finalWidth, finalHeight], 
+          orientation: orientation 
+        },
         pagebreak: { mode: ["css", "legacy"] },
       };
 
@@ -223,11 +244,26 @@ export default function DocToPdf() {
       setProcessingFile(file.name);
       setResults((prev) => ({
         ...prev,
-        [key]: { status: "processing" },
+        [key]: { status: "processing", progress: 0 },
       }));
+
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setResults(prev => {
+          const current = prev[key]?.progress || 0;
+          if (current < 90) {
+            return {
+              ...prev,
+              [key]: { ...prev[key], progress: Math.min(current + Math.random() * 15, 90) }
+            };
+          }
+          return prev;
+        });
+      }, 150);
 
       try {
         const pdfBlob = await convertToPdf(file);
+        clearInterval(progressInterval);
         completed++;
         setTotalCompleted(completed);
         setResults((prev) => ({
@@ -237,8 +273,17 @@ export default function DocToPdf() {
             blob: pdfBlob,
             size: pdfBlob.size,
             name: file.name.replace(/\.[^.]+$/, "") + ".pdf",
+            progress: 100,
           },
         }));
+        
+        // Reset progress after showing 100%
+        setTimeout(() => {
+          setResults(prev => ({
+            ...prev,
+            [key]: { ...prev[key], progress: undefined }
+          }));
+        }, 300);
       } catch (error) {
         setResults((prev) => ({
           ...prev,
@@ -312,18 +357,13 @@ export default function DocToPdf() {
     setPreviewOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const getFileIcon = (fileName) => {
-    const ext = fileName.toLowerCase().split(".").pop();
-    if (ext === "docx" || ext === "doc") return "📄";
-    if (ext === "txt") return "📝";
-    return "📁";
+  const formatSize = (bytes) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: handleFilesAdded,
-    accept: ACCEPTED_TYPES,
-    maxFiles: MAX_FILES,
-  });
 
   const completedResults = Object.values(results).filter((r) => r.status === "done").length;
   const progress = files.length > 0 ? (completedResults / files.length) * 100 : 0;
@@ -336,293 +376,342 @@ export default function DocToPdf() {
       </Head>
 
       <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Head>
+          <title>Document to PDF - ConvertMastery</title>
+          <meta name="description" content="Convert TXT and DOCX documents to PDF for free. Fast, accurate, and easy to use." />
+        </Head>
         <Navbar />
         <Toaster position="top-center" />
 
         <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Document to PDF Converter
+          <div className="text-center mb-10">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
+              Document to PDF
             </h1>
-            <p className="text-gray-500">
-              Convert your TXT and DOCX files to PDF format with preserved formatting
+            <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+              Convert your TXT and DOCX files to PDF format with preserved formatting.
             </p>
           </div>
 
-          {/* Upload + Stats Row */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            {/* Upload Zone */}
-            <div className="flex-1">
-              <div
-                {...getRootProps()}
-                className={cn(
-                  "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200",
-                  isDragActive
-                    ? "border-green-500 bg-green-50"
-                    : "border-gray-300 hover:border-green-400 hover:bg-green-50/50"
-                )}
-              >
-                <input {...getInputProps()} />
-                <Upload className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-                <p className="text-lg font-medium text-gray-600">
-                  {isDragActive ? "Drop documents here..." : "Drag & drop documents here"}
-                </p>
-                <p className="text-sm text-gray-400 mt-1">or click to browse</p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Supported: TXT, DOCX • Max {MAX_FILES} files • Max 20MB each
-                </p>
-              </div>
-            </div>
+          <div className="grid gap-8">
+            {/* Upload */}
+            <CollapsibleDropzone
+              files={files}
+              setFiles={handleFilesAdded}
+              title="Upload Documents to Convert"
+              description="TXT, DOCX • Max 10 files • Max 20MB each"
+              accept={ACCEPTED_TYPES}
+              borderColor="border-gray-300"
+              hoverColor="hover:border-green-500"
+            />
 
-            {/* Stats */}
-            <div className="flex flex-row md:flex-col gap-3 md:w-48">
-              <Card className="flex-1">
-                <CardContent className="p-4 text-center">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Uploaded</p>
-                  <p className="text-2xl font-bold text-gray-800">{totalUploads}</p>
-                </CardContent>
-              </Card>
-              <Card className="flex-1">
-                <CardContent className="p-4 text-center">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Completed</p>
-                  <p className="text-2xl font-bold text-green-600">{totalCompleted}</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+            {/* Workspace */}
+            {files.length > 0 && (
+              <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
 
-          {/* Action Buttons */}
-          {files.length > 0 && (
-            <div className="flex flex-wrap gap-3 mb-6">
-              <Button
-                onClick={convertAll}
-                disabled={processing || files.length === 0}
-                className="bg-green-700 hover:bg-green-800 text-white px-6"
-              >
-                {processing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Converting {processingFile}...
-                  </>
-                ) : (
-                  "Convert All to PDF"
-                )}
-              </Button>
+                {/* Sidebar: Settings */}
+                <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
+                  <CardContent className="p-6 space-y-6">
+                    <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
+                      <Settings2 className="w-6 h-6 text-green-600" /> Settings
+                    </div>
 
-              {completedResults > 0 && (
-                <Button
-                  onClick={downloadAll}
-                  variant="outline"
-                  className="border-green-600 text-green-700 hover:bg-green-50"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download All ({completedResults})
-                </Button>
-              )}
+                    {/* Page Size */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Page Size</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: "a4", label: "A4" },
+                          { id: "letter", label: "Letter" },
+                          { id: "legal", label: "Legal" },
+                        ].map((size) => (
+                          <button
+                            key={size.id}
+                            onClick={() => setPageSize(size.id)}
+                            disabled={processing}
+                            className={cn(
+                              "p-2 rounded-lg border text-sm font-medium transition-all",
+                              pageSize === size.id
+                                ? "bg-green-50 border-green-200 text-green-700 ring-1 ring-green-200"
+                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                            )}
+                          >
+                            {size.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-              <Button onClick={resetAll} variant="outline" className="text-gray-600">
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset All
-              </Button>
-            </div>
-          )}
+                    {/* Orientation */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Orientation</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: "portrait", label: "Portrait", icon: "📄" },
+                          { id: "landscape", label: "Landscape", icon: "📄" },
+                        ].map((orient) => (
+                          <button
+                            key={orient.id}
+                            onClick={() => setOrientation(orient.id)}
+                            disabled={processing}
+                            className={cn(
+                              "p-3 rounded-lg border text-sm font-medium transition-all",
+                              orientation === orient.id
+                                ? "bg-green-50 border-green-200 text-green-700 ring-1 ring-green-200"
+                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                            )}
+                          >
+                            <div className="text-lg mb-1">{orient.icon}</div>
+                            {orient.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-          {/* Progress Bar */}
-          {processing && (
-            <div className="mb-6">
-              <Progress value={progress} className="h-2" />
-              <p className="text-sm text-gray-500 mt-1 text-center">
-                {completedResults} of {files.length} completed
-              </p>
-            </div>
-          )}
+                    {/* Margins */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Margins (mm)</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { key: "top", label: "Top" },
+                          { key: "right", label: "Right" },
+                          { key: "bottom", label: "Bottom" },
+                          { key: "left", label: "Left" },
+                        ].map(({ key, label }) => (
+                          <div key={key} className="space-y-1">
+                            <label className="text-xs text-gray-500">{label}</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="50"
+                              value={margins[key]}
+                              onChange={(e) =>
+                                setMargins((prev) => ({
+                                  ...prev,
+                                  [key]: parseInt(e.target.value) || 0,
+                                }))
+                              }
+                              disabled={processing}
+                              className="w-full px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-          {/* File List */}
-          {files.length > 0 && (
-            <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Uploaded Documents</h2>
-              <div className="space-y-3">
-                {files.map((file, index) => {
-                  const key = getFileKey(file);
-                  const result = results[key];
-                  const parsed = parsedDocs[key];
-                  const isPreviewOpen = previewOpen[key];
+                    <Separator />
 
-                  return (
-                    <Card
-                      key={key}
-                      className={cn(
-                        "overflow-hidden transition-all",
-                        result?.status === "done" && "border-green-200 bg-green-50/30",
-                        result?.status === "error" && "border-red-200 bg-red-50/30",
-                        result?.status === "processing" && "border-blue-200 bg-blue-50/30"
-                      )}
+                    <Button
+                      onClick={convertAll}
+                      disabled={processing || files.length === 0}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
+                      {processing ? (
+                        <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Converting... </>
+                      ) : (
+                        <> <FileText className="w-5 h-5 mr-2" /> Convert All </>
+                      )}
+                    </Button>
+
+                    {completedResults > 0 && (
+                      <Button
+                        onClick={downloadAll}
+                        variant="outline"
+                        className="w-full border-green-600 text-green-700 hover:bg-green-50"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download All ({completedResults})
+                      </Button>
+                    )}
+
+                    <Button onClick={resetAll} variant="outline" className="w-full text-gray-500">
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reset All
+                    </Button>
+
+                    {/* Progress */}
+                    {processing && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Progress</span>
+                          <span>{completedResults}/{files.length}</span>
+                        </div>
+                        <Progress value={progress} className="h-2" />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* File List */}
+                <div className="space-y-5">
+                  {/* Header with Stats */}
+                  <Card className="border border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-gray-400" />
+                          Files
+                        </h3>
+                      </div>
+                      
+                      {/* Stats */}
+                      <div className="flex gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium">Total:</span>
+                          <Badge variant="secondary" className="font-semibold">
+                            {files.length}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium">Completed:</span>
+                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 font-semibold">
+                            {completedResults}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium">Processing:</span>
+                          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 font-semibold">
+                            {Object.values(results).filter(r => r.status === "processing").length}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {files.map((file, index) => {
+                    const key = getFileKey(file);
+                    const result = results[key];
+                    const parsed = parsedDocs[key];
+                    const isPreviewOpen = previewOpen[key];
+
+                    return (
+                      <Card
+                        key={key}
+                        className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group"
+                      >
+                        <div className="p-4 flex gap-5 items-center">
                           {/* File Icon */}
-                          <div className="text-3xl flex-shrink-0">
-                            {getFileIcon(file.name)}
+                          <div className="w-16 h-16 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-green-100">
+                            <FileText className="w-8 h-8 text-green-400" />
                           </div>
 
                           {/* File Info */}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-800 truncate">{file.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {(file.size / 1024).toFixed(2)} KB
-                              {file.name.toLowerCase().endsWith(".docx") && (
-                                <span className="ml-2 text-blue-500">DOCX</span>
-                              )}
-                              {file.name.toLowerCase().endsWith(".txt") && (
-                                <span className="ml-2 text-gray-500">TXT</span>
-                              )}
-                            </p>
-                            {parsed?.error && (
-                              <p className="text-xs text-red-500 mt-1">Parse error: {parsed.error}</p>
-                            )}
-                            {result?.status === "error" && (
-                              <p className="text-xs text-red-500 mt-1">{result.error}</p>
-                            )}
-                            {result?.status === "done" && (
-                              <p className="text-xs text-green-600 mt-1">
-                                PDF size: {(result.size / 1024).toFixed(2)} KB
-                              </p>
-                            )}
-                          </div>
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
 
-                          {/* Status & Actions */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {result?.status === "processing" && (
-                              <Badge className="bg-blue-100 text-blue-700">
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                Converting
-                              </Badge>
-                            )}
-                            {result?.status === "done" && (
-                              <Badge className="bg-green-100 text-green-700">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Done
-                              </Badge>
-                            )}
-                            {result?.status === "error" && (
-                              <Badge className="bg-red-100 text-red-700">
-                                <AlertCircle className="h-3 w-3 mr-1" />
-                                Error
-                              </Badge>
-                            )}
-
-                            {/* Preview Button */}
-                            {parsed && !parsed.error && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => togglePreview(key)}
-                                title={isPreviewOpen ? "Hide preview" : "Show preview"}
-                              >
-                                {isPreviewOpen ? (
-                                  <EyeOff className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <Eye className="h-4 w-4 text-gray-500" />
+                              <div className="flex gap-2">
+                                {/* Preview Button */}
+                                {parsed && !parsed.error && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-gray-400 hover:text-green-600"
+                                    onClick={() => togglePreview(key)}
+                                    title={isPreviewOpen ? "Hide preview" : "Show preview"}
+                                  >
+                                    {isPreviewOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                  </Button>
                                 )}
-                              </Button>
-                            )}
 
-                            {/* Download */}
-                            {result?.status === "done" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => downloadPdf(key)}
-                                title="Download PDF"
-                              >
-                                <Download className="h-4 w-4 text-green-600" />
-                              </Button>
-                            )}
+                                {/* Download */}
+                                {result?.status === "done" && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100"
+                                    onClick={() => downloadPdf(key)}
+                                    title="Download PDF"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </Button>
+                                )}
 
-                            {/* Reset */}
-                            {result && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => resetFileResult(index)}
-                                title="Reset"
-                              >
-                                <RotateCcw className="h-4 w-4 text-gray-500" />
-                              </Button>
-                            )}
+                                {/* Remove */}
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                  onClick={() => removeFile(index)}
+                                  title="Remove"
+                                  disabled={processing}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
 
-                            {/* Remove */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeFile(index)}
-                              title="Remove"
-                              disabled={processing}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                            <div className="flex flex-wrap items-center gap-3 text-sm">
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                                {formatSize(file.size)}
+                              </Badge>
+
+                              {parsed?.error && (
+                                <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200">
+                                  Parse error
+                                </Badge>
+                              )}
+
+                              {result?.status === "done" && (
+                                <>
+                                  <ArrowRight className="w-3 h-3 text-gray-300" />
+                                  <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100 font-mono">
+                                    {formatSize(result.size)}
+                                  </Badge>
+                                  <Badge variant="outline" className="border-green-200 text-green-700 uppercase">
+                                    PDF
+                                  </Badge>
+                                </>
+                              )}
+
+                              {result?.status === "error" && (
+                                <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200">
+                                  {result.error || "Error"}
+                                </Badge>
+                              )}
+
+                              {!result && !parsed?.error && (
+                                <span className="text-gray-400 italic text-xs">Ready to convert</span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
                         {/* Preview */}
                         {isPreviewOpen && parsed && !parsed.error && (
-                          <>
-                            <Separator className="my-3" />
+                          <div className="px-4 pb-4">
+                            <Separator className="mb-3" />
                             <div className="max-h-64 overflow-y-auto border rounded-lg p-4 bg-white">
                               <div
                                 dangerouslySetInnerHTML={{ __html: parsed.html }}
                                 className="prose prose-sm max-w-none"
                               />
                             </div>
-                          </>
+                          </div>
                         )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+
+                        {/* Processing Progress */}
+                        {result?.status === "processing" && (
+                          <div className="px-4 pb-4 space-y-1">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-green-600 font-medium">Processing...</span>
+                              <span className="text-green-600 font-bold">{Math.round(result.progress || 0)}%</span>
+                            </div>
+                            <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-green-600 transition-all duration-300 ease-out"
+                                style={{ width: `${result.progress || 0}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {files.length === 0 && (
-            <div className="text-center py-16">
-              <FileType className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-500">No documents uploaded</h3>
-              <p className="text-gray-400 mt-1">Upload TXT or DOCX files to convert them to PDF</p>
-            </div>
-          )}
-
-          {/* Info Section */}
-          <div className="mt-12 grid md:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <FileText className="h-8 w-8 mx-auto text-green-600 mb-3" />
-                <h3 className="font-semibold mb-2">TXT Files</h3>
-                <p className="text-sm text-gray-500">
-                  Convert plain text files to well-formatted PDFs with clean typography
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <FileText className="h-8 w-8 mx-auto text-blue-600 mb-3" />
-                <h3 className="font-semibold mb-2">DOCX Files</h3>
-                <p className="text-sm text-gray-500">
-                  Convert Word documents with formatting, headings, lists, and tables preserved
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Download className="h-8 w-8 mx-auto text-purple-600 mb-3" />
-                <h3 className="font-semibold mb-2">Instant Download</h3>
-                <p className="text-sm text-gray-500">
-                  Download individual PDFs or all at once after conversion
-                </p>
-              </CardContent>
-            </Card>
+            )}
           </div>
         </main>
 
