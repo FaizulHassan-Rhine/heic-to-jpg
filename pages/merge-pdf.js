@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useAuth } from "../lib/authContext";
 import Head from "next/head";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -7,7 +8,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
     Upload,
     FileText,
@@ -81,6 +82,7 @@ async function renderPdfPageThumbnail(pdfDoc, pageNum, scale = 0.4) {
 // ─────────────────────────── MAIN COMPONENT ───────────────────────────
 
 export default function MergePdf() {
+    const { user, trackUsage } = useAuth();
     const [pdfEntries, setPdfEntries] = useState([]);
     // Each entry: { id, file, name, size, pageCount, thumbnails: [dataURL], rotation: 0 }
     const [merging, setMerging] = useState(false);
@@ -313,6 +315,24 @@ export default function MergePdf() {
             setMergedBlob(blob);
             setMergedSize(blob.size);
             toast.success("PDFs merged successfully!");
+
+            // Track usage after successful merge
+            if (user && trackUsage) {
+              // Collect file information for merged PDF
+              const totalInputSize = pdfEntries.reduce((sum, entry) => sum + (entry.size || 0), 0);
+              const processedFiles = [{
+                inputName: `${pdfEntries.length} PDF files merged`,
+                inputSize: totalInputSize,
+                inputFormat: "pdf",
+                outputName: "merged-document.pdf",
+                outputSize: blob.size,
+                outputFormat: "pdf",
+              }];
+              trackUsage("/merge-pdf", 1, pdfEntries.length, {
+                tool: "Merge PDF",
+                filesProcessed: pdfEntries.length,
+              }, processedFiles);
+            }
         } catch (err) {
             console.error("Merge error:", err);
             toast.error("Failed to merge PDFs: " + (err.message || "Unknown error"));
@@ -395,7 +415,6 @@ export default function MergePdf() {
 
             <div className="min-h-screen bg-background flex flex-col">
                 <Navbar />
-                <Toaster position="top-center" />
 
                 <main className="flex-1">
                     <div className="container mx-auto px-4 py-8 max-w-5xl">

@@ -2,11 +2,25 @@ module.exports = {
   reactStrictMode: true,
   // Use standalone output for better server deployment (cPanel, VPS, etc.)
   output: 'standalone',
-  // Required headers for FFmpeg WASM (SharedArrayBuffer)
+  // Required headers for FFmpeg WASM (SharedArrayBuffer) - only on video pages
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/video-convert',
+        headers: [
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+        ],
+      },
+      {
+        source: '/video-compress',
+        headers: [
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+        ],
+      },
+      {
+        source: '/video-trim',
         headers: [
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
           { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },

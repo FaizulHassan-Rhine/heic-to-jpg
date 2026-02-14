@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -14,7 +15,7 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import Head from "next/head";
 import JSZip from "jszip";
 
@@ -30,6 +31,7 @@ const formatSize = (bytes) => {
 };
 
 export default function ImageToPdf() {
+  const { user, trackUsage } = useAuth();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({}); // { [filename]: { status, blob, size, pdfUrl } }
   const [processing, setProcessing] = useState(false);
@@ -192,6 +194,7 @@ export default function ImageToPdf() {
     }
     setResults({ ...newResults });
 
+    const processedFiles = [];
     for (const file of files) {
       // Skip if already done
       if (results[file.name]?.status === "done") continue;
@@ -218,6 +221,19 @@ export default function ImageToPdf() {
         [file.name]: { ...res, progress: 100 } 
       }));
       
+      // Collect file information
+      if (res.status === "done") {
+        const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+        processedFiles.push({
+          inputName: file.name,
+          inputSize: file.size,
+          inputFormat: inputExt,
+          outputName: res.name || file.name.replace(/\.[^.]+$/, ".pdf"),
+          outputSize: res.size || 0,
+          outputFormat: "pdf",
+        });
+      }
+      
       // Reset to done status after showing 100%
       setTimeout(() => {
         setResults(prev => ({ 
@@ -225,6 +241,15 @@ export default function ImageToPdf() {
           [file.name]: res 
         }));
       }, 300);
+    }
+
+    // Track usage after all conversions complete
+    const successCount = processedFiles.length;
+    if (successCount > 0 && user && trackUsage) {
+      trackUsage("/image-to-pdf", successCount, successCount, {
+        tool: "Image to PDF",
+        filesProcessed: successCount,
+      }, processedFiles);
     }
 
     setProcessing(false);

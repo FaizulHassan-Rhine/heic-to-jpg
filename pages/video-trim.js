@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -13,7 +14,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import Head from "next/head";
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
@@ -69,6 +70,7 @@ const formatSize = (bytes) => {
 };
 
 export default function VideoTrim() {
+  const { user, trackUsage } = useAuth();
   const [file, setFile] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
   const [duration, setDuration] = useState(0);
@@ -225,13 +227,31 @@ export default function VideoTrim() {
       await ffmpeg.deleteFile(inputName);
       await ffmpeg.deleteFile(outputName);
 
+      const outputName = file.name.replace(/\.[^.]+$/, "") + "_trimmed.mp4";
       setResult({
         blob,
         size: blob.size,
-        name: file.name.replace(/\.[^.]+$/, "") + "_trimmed.mp4",
+        name: outputName,
         url: URL.createObjectURL(blob)
       });
       toast.success("Trim Complete!");
+
+      // Track usage after successful trim
+      if (user && trackUsage) {
+        const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+        const processedFiles = [{
+          inputName: file.name,
+          inputSize: file.size,
+          inputFormat: inputExt,
+          outputName: outputName,
+          outputSize: blob.size,
+          outputFormat: "mp4",
+        }];
+        trackUsage("/video-trim", 1, 1, {
+          tool: "Video Trimmer",
+          filesProcessed: 1,
+        }, processedFiles);
+      }
 
     } catch (error) {
       console.error(error);

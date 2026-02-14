@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -13,7 +14,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import Head from "next/head";
 
 const MAX_FILES = 5;
@@ -75,6 +76,7 @@ const formatSize = (bytes) => {
 };
 
 export default function VideoCompress() {
+  const { user, trackUsage } = useAuth();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -181,6 +183,7 @@ export default function VideoCompress() {
     }
     setResults(newResults);
 
+    const processedFiles = [];
     for (const file of files) {
       if (results[file.name]?.status === "done") continue;
 
@@ -200,11 +203,34 @@ export default function VideoCompress() {
         };
         const res = await compressSingle(file, progressTracker);
         setResults(prev => ({ ...prev, [file.name]: res }));
+        
+        // Collect file information
+        if (res.status === "done") {
+          const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+          processedFiles.push({
+            inputName: file.name,
+            inputSize: file.size,
+            inputFormat: inputExt,
+            outputName: file.name.replace(/\.[^.]+$/, "_compressed.mp4"),
+            outputSize: res.size || 0,
+            outputFormat: "mp4",
+          });
+        }
       } catch (e) {
         console.error(e);
         setResults(prev => ({ ...prev, [file.name]: { status: "error", error: "Failed" } }));
       }
     }
+
+    // Track usage after all compressions complete
+    const successCount = processedFiles.length;
+    if (successCount > 0 && user && trackUsage) {
+      trackUsage("/video-compress", successCount, successCount, {
+        tool: "Video Compressor",
+        filesProcessed: successCount,
+      }, processedFiles);
+    }
+
     setProcessing(false);
     setProcessingFile(null);
     setCompressProgress(0);

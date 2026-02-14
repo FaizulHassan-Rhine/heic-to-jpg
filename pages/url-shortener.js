@@ -9,11 +9,12 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import Head from "next/head";
 
 export default function UrlShortener() {
+  const { user, trackUsage } = useAuth();
   const [url, setUrl] = useState("");
   const [shortUrl, setShortUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +78,14 @@ export default function UrlShortener() {
 
       setHistory((prev) => [entry, ...prev].slice(0, 20));
       toast.success("URL shortened!");
+      
+      // Track usage after successful URL shortening
+      if (user && trackUsage) {
+        trackUsage("/url-shortener", 1, 1, {
+          tool: "URL Shortener",
+          filesProcessed: 1,
+        });
+      }
     } catch (error) {
       console.error("Shorten error:", error);
 
@@ -97,6 +106,14 @@ export default function UrlShortener() {
           };
           setHistory((prev) => [entry, ...prev].slice(0, 20));
           toast.success("URL shortened!");
+          
+          // Track usage after successful URL shortening (fallback)
+          if (user && trackUsage) {
+            trackUsage("/url-shortener", 1, 1, {
+              tool: "URL Shortener",
+              filesProcessed: 1,
+            });
+          }
         } else {
           throw new Error("Fallback also failed");
         }
@@ -182,7 +199,6 @@ export default function UrlShortener() {
 
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <Navbar />
-        <Toaster position="top-center" />
 
         <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
           {/* Header */}

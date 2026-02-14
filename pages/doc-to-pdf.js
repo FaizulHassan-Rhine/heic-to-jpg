@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -12,7 +13,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import Head from "next/head";
 
@@ -40,6 +41,7 @@ const loadHtml2Pdf = () => {
 };
 
 export default function DocToPdf() {
+  const { user, trackUsage } = useAuth();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -231,6 +233,7 @@ export default function DocToPdf() {
     setProcessing(true);
     setTotalCompleted(0);
     let completed = 0;
+    const processedFiles = [];
 
     for (const file of files) {
       const key = getFileKey(file);
@@ -266,16 +269,28 @@ export default function DocToPdf() {
         clearInterval(progressInterval);
         completed++;
         setTotalCompleted(completed);
+        const outputName = file.name.replace(/\.[^.]+$/, "") + ".pdf";
         setResults((prev) => ({
           ...prev,
           [key]: {
             status: "done",
             blob: pdfBlob,
             size: pdfBlob.size,
-            name: file.name.replace(/\.[^.]+$/, "") + ".pdf",
+            name: outputName,
             progress: 100,
           },
         }));
+        
+        // Collect file information
+        const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+        processedFiles.push({
+          inputName: file.name,
+          inputSize: file.size,
+          inputFormat: inputExt,
+          outputName: outputName,
+          outputSize: pdfBlob.size,
+          outputFormat: "pdf",
+        });
         
         // Reset progress after showing 100%
         setTimeout(() => {
@@ -290,6 +305,14 @@ export default function DocToPdf() {
           [key]: { status: "error", error: error.message },
         }));
       }
+    }
+
+    // Track usage after all conversions complete
+    if (completed > 0 && user && trackUsage) {
+      trackUsage("/doc-to-pdf", completed, completed, {
+        tool: "Doc to PDF",
+        filesProcessed: completed,
+      }, processedFiles);
     }
 
     setProcessing(false);
@@ -381,7 +404,6 @@ export default function DocToPdf() {
           <meta name="description" content="Convert TXT and DOCX documents to PDF for free. Fast, accurate, and easy to use." />
         </Head>
         <Navbar />
-        <Toaster position="top-center" />
 
         <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
           {/* Header */}

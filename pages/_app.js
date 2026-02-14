@@ -1,6 +1,8 @@
 import "../styles/globals.css";
 import Head from "next/head";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
+import { AuthContextProvider } from "../lib/authContext";
+import { Toaster } from "react-hot-toast";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
 const siteName = "ConvertMastery";
@@ -46,8 +48,11 @@ export default function App({ Component, pageProps }) {
           rel="stylesheet"
         />
       </Head>
-      <Component {...pageProps} />
-      {process.env.VERCEL && <Analytics />}
+      <AuthContextProvider>
+        <Component {...pageProps} />
+        {process.env.VERCEL && <Analytics />}
+        <Toaster position="top-center" toastOptions={{ duration: 3000, style: { zIndex: 9999 } }} />
+      </AuthContextProvider>
     </>
   );
 }

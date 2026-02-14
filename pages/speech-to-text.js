@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import {
@@ -9,7 +10,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import Head from "next/head";
 
@@ -85,6 +86,7 @@ const LANGUAGE_GROUPS = {
 };
 
 export default function SpeechToText() {
+  const { user, trackUsage } = useAuth();
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
@@ -158,6 +160,14 @@ export default function SpeechToText() {
       setInterimTranscript("");
       // Save to history if there's content
       if (transcriptRef.current.trim()) {
+        // Track usage after successful transcription
+        if (user && trackUsage) {
+          trackUsage("/speech-to-text", 1, 1, {
+            tool: "Speech to Text",
+            filesProcessed: 1,
+          });
+        }
+        
         setHistory((prev) => {
           const exists = prev.some((h) => h.text === transcriptRef.current.trim());
           if (exists) return prev;
@@ -263,7 +273,6 @@ export default function SpeechToText() {
 
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <Navbar />
-        <Toaster position="top-center" />
 
         <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
           {/* Header */}

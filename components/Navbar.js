@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import NextImage from "next/image";
 import { Button } from "./ui/button";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, LogOut, Package } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "../lib/authContext";
+import AuthModal from "./AuthModal";
 
 // Tool categories with their pages
 const TOOL_CATEGORIES = [
@@ -30,11 +32,11 @@ const TOOL_CATEGORIES = [
     label: "Document Tools",
     paths: ["/doc-to-pdf", "/pdf-to-doc", "/scanner", "/merge-pdf", "/compress-pdf"],
     items: [
-      { href: "/doc-to-pdf", label: "Doc to PDF" },
+      { href: "/doc-to-pdf", label: "Doc to PDF", popular: true },
       { href: "/pdf-to-doc", label: "PDF to DOCX/TXT" },
       { href: "/merge-pdf", label: "Merge PDF" },
       { href: "/compress-pdf", label: "Compress PDF" },
-      { href: "/scanner", label: "Document Scanner" },
+      { href: "/scanner", label: "Document Scanner", popular: true },
     ],
   },
   {
@@ -60,8 +62,18 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileExpanded, setMobileExpanded] = useState(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState("login");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const router = useRouter();
   const currentPath = router.pathname;
+  const { user, logOut, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering auth UI after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleDropdownEnter = (label) => setOpenDropdown(label);
   const handleDropdownLeave = () => setOpenDropdown(null);
@@ -70,7 +82,39 @@ export default function Navbar() {
     setMobileExpanded((prev) => (prev === label ? null : label));
   };
 
+  const handleSignOut = async () => {
+    await logOut();
+    setUserMenuOpen(false);
+  };
+
+  const userMenuRef = useRef(null);
+
+  // Auto-close auth modal when user signs in
+  useEffect(() => {
+    if (user && authModalOpen) {
+      setAuthModalOpen(false);
+    }
+  }, [user, authModalOpen]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [userMenuOpen]);
+
   return (
+    <>
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
@@ -142,14 +186,69 @@ export default function Navbar() {
               </div>
             ))}
 
-            <Link href="/guide">
-              <Button
-                variant={currentPath === "/guide" ? "default" : "ghost"}
-                className="text-sm"
-              >
-                Guide
-              </Button>
-            </Link>
+            {/* Auth Buttons / User Menu */}
+            {mounted && !loading && (
+              <>
+                {user ? (
+                  <div className="relative" ref={userMenuRef}>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center gap-2 text-sm"
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    >
+                      {user.photoURL ? (
+                        <img
+                          src={user.photoURL}
+                          alt={user.displayName || "User"}
+                          className="w-8 h-8 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                          {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
+                        </div>
+                      )}
+                      <span className="hidden md:inline">{user.displayName || user.email?.split("@")[0]}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    {userMenuOpen && (
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-white border rounded-md shadow-lg z-50">
+                        <div className="p-3 border-b">
+                          <div className="font-semibold text-sm">{user.displayName || "User"}</div>
+                          <div className="text-xs text-gray-500 truncate">{user.email}</div>
+                        </div>
+                        <Link href="/my-orders">
+                          <button
+                            onClick={() => setUserMenuOpen(false)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                          >
+                            <Package className="w-4 h-4" />
+                            My Orders
+                          </button>
+                        </Link>
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    variant="default"
+                    className="text-sm"
+                    onClick={() => {
+                      setAuthModalMode("signup");
+                      setAuthModalOpen(true);
+                    }}
+                  >
+                    Sign Up
+                  </Button>
+                )}
+              </>
+            )}
           </div>
 
           {/* Mobile Hamburger */}
@@ -215,22 +314,80 @@ export default function Navbar() {
                 </div>
               ))}
 
-              {/* Guide */}
-              <Link href="/guide" className="block">
-                <div
-                  className={`px-4 py-3 text-sm font-medium transition-colors ${currentPath === "/guide"
-                    ? "text-primary bg-accent/50"
-                    : "text-foreground hover:bg-accent/30"
-                    }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Guide
-                </div>
-              </Link>
+              {/* Mobile Auth */}
+              {mounted && !loading && (
+                <>
+                  {user ? (
+                    <div className="border-t mt-2 pt-2">
+                      <div className="px-4 py-2">
+                        <div className="flex items-center gap-3 mb-3">
+                          {user.photoURL ? (
+                            <img
+                              src={user.photoURL}
+                              alt={user.displayName || "User"}
+                              className="w-10 h-10 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                              {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-semibold text-sm">{user.displayName || "User"}</div>
+                            <div className="text-xs text-gray-500">{user.email}</div>
+                          </div>
+                        </div>
+                        <Link href="/my-orders" className="block">
+                          <button
+                            onClick={() => setIsMenuOpen(false)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-accent/30 flex items-center gap-2 text-gray-700 rounded mb-2"
+                          >
+                            <Package className="w-4 h-4" />
+                            My Orders
+                          </button>
+                        </Link>
+                        <button
+                          onClick={() => {
+                            handleSignOut();
+                            setIsMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-accent/30 flex items-center gap-2 text-red-600 rounded"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-t mt-2 pt-2 px-4 pb-2">
+                      <Button
+                        variant="default"
+                        className="w-full"
+                        onClick={() => {
+                          setAuthModalMode("signup");
+                          setAuthModalOpen(true);
+                          setIsMenuOpen(false);
+                        }}
+                      >
+                        Sign Up
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
       </div>
+
     </nav>
+
+    {/* Auth Modal - rendered outside nav to avoid stacking context issues */}
+    <AuthModal
+      isOpen={authModalOpen}
+      onClose={() => setAuthModalOpen(false)}
+      initialMode={authModalMode}
+    />
+    </>
   );
 }

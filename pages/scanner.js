@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useAuth } from "../lib/authContext";
 import Head from "next/head";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -741,6 +742,7 @@ const FILTERS = [
 // ─────────────────────────── MAIN COMPONENT ───────────────────────────
 
 export default function Scanner() {
+	const { user, trackUsage } = useAuth();
 	// ── Global State ──
 	const [step, setStep] = useState(0);
 	const [maxReached, setMaxReached] = useState(0);
@@ -1057,8 +1059,17 @@ export default function Scanner() {
 				URL.revokeObjectURL(url);
 			}
 		}
+
+		// Track usage after successful export
+		if (pages.length > 0 && user && trackUsage) {
+			trackUsage("/scanner", 1, pages.length, {
+				tool: "Document Scanner",
+				filesProcessed: pages.length,
+			});
+		}
+
 		setProcessing(false);
-	}, [pages, exportFormat, exportQuality]);
+	}, [pages, exportFormat, exportQuality, user, trackUsage]);
 
 	// ── Active Page ──
 	const activePage = pages[activePageIdx] || null;

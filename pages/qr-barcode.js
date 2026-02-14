@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import {
@@ -9,7 +10,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import Head from "next/head";
 
@@ -37,6 +38,7 @@ const QR_COLORS = [
 ];
 
 export default function QrBarcode() {
+  const { user, trackUsage } = useAuth();
   const [mode, setMode] = useState("qr"); // "qr" or "barcode"
   const [inputText, setInputText] = useState("");
   const [qrSize, setQrSize] = useState(256);
@@ -70,13 +72,21 @@ export default function QrBarcode() {
       });
 
       setGeneratedImage(dataUrl);
+      
+      // Track usage after successful QR generation
+      if (user && trackUsage) {
+        trackUsage("/qr-barcode", 1, 1, {
+          tool: "QR Code Generator",
+          filesProcessed: 1,
+        });
+      }
     } catch (error) {
       console.error("QR generation error:", error);
       toast.error("Failed to generate QR code: " + error.message);
     } finally {
       setIsGenerating(false);
     }
-  }, [inputText, qrSize, qrColor, customFg, customBg, useCustomColors]);
+  }, [inputText, qrSize, qrColor, customFg, customBg, useCustomColors, user, trackUsage]);
 
   const generateBarcode = useCallback(async () => {
     if (!inputText.trim()) return;
@@ -100,13 +110,21 @@ export default function QrBarcode() {
 
       const dataUrl = canvas.toDataURL("image/png");
       setGeneratedImage(dataUrl);
+      
+      // Track usage after successful barcode generation
+      if (user && trackUsage) {
+        trackUsage("/qr-barcode", 1, 1, {
+          tool: "Barcode Generator",
+          filesProcessed: 1,
+        });
+      }
     } catch (error) {
       console.error("Barcode generation error:", error);
       toast.error("Failed to generate barcode. Check your input matches the format requirements.");
     } finally {
       setIsGenerating(false);
     }
-  }, [inputText, barcodeFormat]);
+  }, [inputText, barcodeFormat, user, trackUsage]);
 
   const generate = () => {
     if (!inputText.trim()) {
@@ -228,7 +246,6 @@ export default function QrBarcode() {
 
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <Navbar />
-        <Toaster position="top-center" />
 
         <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
           {/* Header */}

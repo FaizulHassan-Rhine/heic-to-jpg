@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../lib/authContext";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
@@ -15,7 +16,7 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import Head from "next/head";
 
 // ─────────────────────────── HELPERS ───────────────────────────
@@ -40,30 +41,106 @@ const getFileType = (fileName) => {
 // ─────────────────────────── COMPONENT ───────────────────────────
 
 export default function ConvertImage() {
+  const { user, trackUsage } = useAuth();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
   const [previewUrls, setPreviewUrls] = useState({});
   const [viewingFile, setViewingFile] = useState(null); // { file, result, beforeUrl, afterUrl, beforeDimensions, afterDimensions }
+  const [selectedFile, setSelectedFile] = useState(null); // filename of selected file
 
-  // Settings
-  const [targetFormat, setTargetFormat] = useState("jpg"); // jpg, png, webp
-  const [quality, setQuality] = useState(85); // 0-100 slider
+  // Default settings (used when no file is selected or as defaults for new files)
+  const defaultSettings = {
+    targetFormat: "jpg",
+    quality: 85,
+    preserveMetadata: false,
+    rotation: 0,
+    resizeEnabled: false,
+    resizeWidth: 1920,
+    resizeHeight: 1080,
+    resizeMode: "fit",
+    preserveTransparency: true,
+    progressiveJpeg: false,
+    formatPreset: "custom",
+    watermarkEnabled: false,
+    watermarkText: "",
+    watermarkPosition: "bottom-right",
+  };
+
+  // Per-file settings: { [filename]: { targetFormat, quality, ... } }
+  const [fileSettings, setFileSettings] = useState({});
+
+  // Global settings (for batch operations when no file is selected)
+  const [targetFormat, setTargetFormat] = useState("jpg");
+  const [quality, setQuality] = useState(85);
   const [preserveMetadata, setPreserveMetadata] = useState(false);
-  const [rotation, setRotation] = useState(0); // 0, 90, 180, 270
+  const [rotation, setRotation] = useState(0);
   const [resizeEnabled, setResizeEnabled] = useState(false);
   const [resizeWidth, setResizeWidth] = useState(1920);
   const [resizeHeight, setResizeHeight] = useState(1080);
-  const [resizeMode, setResizeMode] = useState("fit"); // fit, fill, exact
-  const [preserveTransparency, setPreserveTransparency] = useState(true); // For PNG
-  const [progressiveJpeg, setProgressiveJpeg] = useState(false); // For JPG
-  const [formatPreset, setFormatPreset] = useState("custom"); // custom, web, print, social
+  const [resizeMode, setResizeMode] = useState("fit");
+  const [preserveTransparency, setPreserveTransparency] = useState(true);
+  const [progressiveJpeg, setProgressiveJpeg] = useState(false);
+  const [formatPreset, setFormatPreset] = useState("custom");
   const [batchRename, setBatchRename] = useState(false);
   const [renamePattern, setRenamePattern] = useState("{original}");
   const [watermarkEnabled, setWatermarkEnabled] = useState(false);
   const [watermarkText, setWatermarkText] = useState("");
   const [watermarkPosition, setWatermarkPosition] = useState("bottom-right");
   const [showPreview, setShowPreview] = useState(false);
+
+  // Get current settings (for selected file or global)
+  const getCurrentSettings = () => {
+    if (selectedFile && fileSettings[selectedFile]) {
+      return fileSettings[selectedFile];
+    }
+    return {
+      targetFormat,
+      quality,
+      preserveMetadata,
+      rotation,
+      resizeEnabled,
+      resizeWidth,
+      resizeHeight,
+      resizeMode,
+      preserveTransparency,
+      progressiveJpeg,
+      formatPreset,
+      watermarkEnabled,
+      watermarkText,
+      watermarkPosition,
+    };
+  };
+
+  // Update current settings (for selected file or global)
+  const updateCurrentSettings = (updates) => {
+    if (selectedFile) {
+      setFileSettings(prev => ({
+        ...prev,
+        [selectedFile]: {
+          ...defaultSettings,
+          ...(prev[selectedFile] || {}),
+          ...updates
+        }
+      }));
+    } else {
+      // Update global settings
+      if (updates.targetFormat !== undefined) setTargetFormat(updates.targetFormat);
+      if (updates.quality !== undefined) setQuality(updates.quality);
+      if (updates.preserveMetadata !== undefined) setPreserveMetadata(updates.preserveMetadata);
+      if (updates.rotation !== undefined) setRotation(updates.rotation);
+      if (updates.resizeEnabled !== undefined) setResizeEnabled(updates.resizeEnabled);
+      if (updates.resizeWidth !== undefined) setResizeWidth(updates.resizeWidth);
+      if (updates.resizeHeight !== undefined) setResizeHeight(updates.resizeHeight);
+      if (updates.resizeMode !== undefined) setResizeMode(updates.resizeMode);
+      if (updates.preserveTransparency !== undefined) setPreserveTransparency(updates.preserveTransparency);
+      if (updates.progressiveJpeg !== undefined) setProgressiveJpeg(updates.progressiveJpeg);
+      if (updates.formatPreset !== undefined) setFormatPreset(updates.formatPreset);
+      if (updates.watermarkEnabled !== undefined) setWatermarkEnabled(updates.watermarkEnabled);
+      if (updates.watermarkText !== undefined) setWatermarkText(updates.watermarkText);
+      if (updates.watermarkPosition !== undefined) setWatermarkPosition(updates.watermarkPosition);
+    }
+  };
 
   // ── File Handling ──
 
@@ -79,16 +156,24 @@ export default function ConvertImage() {
 
     // Generate previews
     const newPreviews = {};
+    const newSettings = {};
     valid.forEach(f => {
       const type = getFileType(f.name);
       // HEIC previews are hard client-side without libs, so skip for now (or handle if lib exists)
       if (type !== 'heic' && f.type.startsWith("image/")) {
         newPreviews[f.name] = URL.createObjectURL(f);
       }
+      // Initialize default settings for each new file
+      newSettings[f.name] = {
+        ...defaultSettings,
+        targetFormat: targetFormat,
+        quality: quality,
+      };
     });
 
     setFiles(prev => [...prev, ...valid]);
     setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
+    setFileSettings(prev => ({ ...prev, ...newSettings }));
   };
 
   const removeFile = (name) => {
@@ -98,6 +183,14 @@ export default function ConvertImage() {
       delete n[name];
       return n;
     });
+    setFileSettings(prev => {
+      const n = { ...prev };
+      delete n[name];
+      return n;
+    });
+    if (selectedFile === name) {
+      setSelectedFile(null);
+    }
     if (previewUrls[name]) {
       URL.revokeObjectURL(previewUrls[name]);
       setPreviewUrls(prev => {
@@ -114,26 +207,43 @@ export default function ConvertImage() {
     const formData = new FormData();
     formData.append("file", file);
 
+    // Use per-file settings if available, otherwise use global settings
+    const settings = fileSettings[file.name] || {
+      targetFormat,
+      quality,
+      preserveMetadata,
+      rotation,
+      resizeEnabled,
+      resizeWidth,
+      resizeHeight,
+      resizeMode,
+      preserveTransparency,
+      progressiveJpeg,
+      watermarkEnabled,
+      watermarkText,
+      watermarkPosition,
+    };
+
     // Send format and quality separately for better API handling
-    formData.append("format", targetFormat);
-    formData.append("quality", quality.toString());
+    formData.append("format", settings.targetFormat);
+    formData.append("quality", settings.quality.toString());
     formData.append("inputType", getFileType(file.name));
-    formData.append("preserveMetadata", preserveMetadata.toString());
-    formData.append("rotation", rotation.toString());
-    formData.append("preserveTransparency", preserveTransparency.toString());
-    formData.append("progressiveJpeg", progressiveJpeg.toString());
+    formData.append("preserveMetadata", settings.preserveMetadata.toString());
+    formData.append("rotation", settings.rotation.toString());
+    formData.append("preserveTransparency", settings.preserveTransparency.toString());
+    formData.append("progressiveJpeg", settings.progressiveJpeg.toString());
     
-    if (resizeEnabled) {
+    if (settings.resizeEnabled) {
       formData.append("resizeEnabled", "true");
-      formData.append("resizeWidth", resizeWidth.toString());
-      formData.append("resizeHeight", resizeHeight.toString());
-      formData.append("resizeMode", resizeMode);
+      formData.append("resizeWidth", settings.resizeWidth.toString());
+      formData.append("resizeHeight", settings.resizeHeight.toString());
+      formData.append("resizeMode", settings.resizeMode);
     }
 
-    if (watermarkEnabled && watermarkText) {
+    if (settings.watermarkEnabled && settings.watermarkText) {
       formData.append("watermarkEnabled", "true");
-      formData.append("watermarkText", watermarkText);
-      formData.append("watermarkPosition", watermarkPosition);
+      formData.append("watermarkText", settings.watermarkText);
+      formData.append("watermarkPosition", settings.watermarkPosition);
     }
 
     try {
@@ -163,7 +273,8 @@ export default function ConvertImage() {
       if (!res.ok) throw new Error("Failed");
 
       const blob = await res.blob();
-      const ext = res.headers.get("X-Output-Extension") || targetFormat;
+      const settings = fileSettings[file.name] || { targetFormat };
+      const ext = res.headers.get("X-Output-Extension") || settings.targetFormat;
 
       return {
         status: "done",
@@ -194,6 +305,8 @@ export default function ConvertImage() {
 
     // Process in batches
     const pending = files.filter(f => !results[f.name] || results[f.name].status === "error");
+    let successCount = 0;
+    const processedFiles = [];
 
     for (let i = 0; i < pending.length; i += 3) {
       const batch = pending.slice(i, i + 3);
@@ -209,7 +322,36 @@ export default function ConvertImage() {
         };
         const res = await convertSingle(file, progressTracker);
         setResults(prev => ({ ...prev, [file.name]: res }));
+        
+        // Track usage if conversion was successful
+        if (res.status === "done" && user && trackUsage) {
+          successCount++;
+          // Collect file information
+          const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+          const outputExt = res.ext || inputExt;
+          const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+          const fileInfo = {
+            inputName: file.name,
+            inputSize: file.size,
+            inputFormat: inputExt,
+            outputName: `${baseName}.${outputExt}`,
+            outputSize: res.size || res.blob?.size || 0,
+            outputFormat: outputExt,
+          };
+          console.log("Adding file info:", fileInfo);
+          processedFiles.push(fileInfo);
+        }
       }));
+    }
+
+    // Track usage after all conversions complete
+    if (successCount > 0 && user && trackUsage) {
+      console.log("Tracking usage - processedFiles:", processedFiles);
+      console.log("Tracking usage - successCount:", successCount);
+      trackUsage("/convert", successCount, successCount, {
+        tool: "Image Converter",
+        filesProcessed: successCount,
+      }, processedFiles);
     }
 
     setProcessing(false);
@@ -255,6 +397,8 @@ export default function ConvertImage() {
     setResults({});
     setPreviewUrls({});
     setViewingFile(null);
+    setSelectedFile(null);
+    setFileSettings({});
     toast.success("All files cleared");
   };
 
@@ -350,11 +494,36 @@ export default function ConvertImage() {
             <div className="grid md:grid-cols-[300px_1fr] gap-6 items-start">
 
               {/* Sidebar: Settings */}
-              <Card className="md:sticky md:top-24 h-fit">
+              <Card className="md:sticky md:top-24 h-fit overflow-hidden">
                 <CardContent className="p-5 space-y-6">
-                  <div className="flex items-center gap-2 font-semibold text-lg text-gray-800">
-                    <Settings2 className="w-5 h-5" /> Output Settings
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="flex items-center gap-2 font-semibold text-lg text-gray-800 flex-1 min-w-0">
+                      <Settings2 className="w-5 h-5 flex-shrink-0" /> 
+                      <span className="truncate">Output Settings</span>
+                    </div>
+                    {selectedFile && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedFile(null)}
+                        className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 whitespace-nowrap flex-shrink-0 h-7 px-2"
+                      >
+                        Clear Selection
+                      </Button>
+                    )}
                   </div>
+                  {selectedFile && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
+                      <div className="text-xs text-purple-600 font-medium mb-1">Editing Settings For:</div>
+                      <div className="text-sm font-semibold text-purple-900 truncate">{selectedFile}</div>
+                    </div>
+                  )}
+                  {!selectedFile && files.length > 0 && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                      <div className="text-xs text-gray-600 font-medium mb-1">Global Settings</div>
+                      <div className="text-sm text-gray-500">Click a file to edit individual settings</div>
+                    </div>
+                  )}
 
                   {/* Format Presets */}
                   <div className="space-y-3">
@@ -365,40 +534,53 @@ export default function ConvertImage() {
                         { id: "web", label: "Web", icon: "🌐" },
                         { id: "print", label: "Print", icon: "🖨️" },
                         { id: "social", label: "Social", icon: "📱" },
-                      ].map(preset => (
-                        <button
-                          key={preset.id}
-                          onClick={() => {
-                            setFormatPreset(preset.id);
-                            if (preset.id === "web") {
-                              setTargetFormat("webp");
-                              setQuality(80);
-                              setResizeEnabled(true);
-                              setResizeWidth(1920);
-                              setResizeMode("fit");
-                            } else if (preset.id === "print") {
-                              setTargetFormat("jpg");
-                              setQuality(95);
-                              setResizeEnabled(false);
-                            } else if (preset.id === "social") {
-                              setTargetFormat("jpg");
-                              setQuality(85);
-                              setResizeEnabled(true);
-                              setResizeWidth(1080);
-                              setResizeMode("fit");
-                            }
-                          }}
-                          className={cn(
-                            "p-2 rounded-lg border-2 transition-all text-center text-xs",
-                            formatPreset === preset.id
-                              ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm"
-                              : "border-gray-200 hover:border-gray-300 text-gray-600"
-                          )}
-                        >
-                          <div className="text-lg mb-1">{preset.icon}</div>
-                          <div className="font-medium">{preset.label}</div>
-                        </button>
-                      ))}
+                      ].map(preset => {
+                        const current = getCurrentSettings();
+                        return (
+                          <button
+                            key={preset.id}
+                            onClick={() => {
+                              if (preset.id === "web") {
+                                updateCurrentSettings({
+                                  formatPreset: preset.id,
+                                  targetFormat: "webp",
+                                  quality: 80,
+                                  resizeEnabled: true,
+                                  resizeWidth: 1920,
+                                  resizeMode: "fit",
+                                });
+                              } else if (preset.id === "print") {
+                                updateCurrentSettings({
+                                  formatPreset: preset.id,
+                                  targetFormat: "jpg",
+                                  quality: 95,
+                                  resizeEnabled: false,
+                                });
+                              } else if (preset.id === "social") {
+                                updateCurrentSettings({
+                                  formatPreset: preset.id,
+                                  targetFormat: "jpg",
+                                  quality: 85,
+                                  resizeEnabled: true,
+                                  resizeWidth: 1080,
+                                  resizeMode: "fit",
+                                });
+                              } else {
+                                updateCurrentSettings({ formatPreset: preset.id });
+                              }
+                            }}
+                            className={cn(
+                              "p-2 rounded-lg border-2 transition-all text-center text-xs",
+                              current.formatPreset === preset.id
+                                ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm"
+                                : "border-gray-200 hover:border-gray-300 text-gray-600"
+                            )}
+                          >
+                            <div className="text-lg mb-1">{preset.icon}</div>
+                            <div className="font-medium">{preset.label}</div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -406,22 +588,24 @@ export default function ConvertImage() {
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-600">Target Format</label>
                     <div className="grid grid-cols-1 gap-2">
-                      {['jpg', 'png', 'webp'].map(fmt => (
-                        <button
-                          key={fmt}
-                          onClick={() => {
-                            setTargetFormat(fmt);
-                            setFormatPreset("custom");
-                          }}
-                          className={cn(
-                            "flex items-center justify-between px-3 py-3 text-sm rounded-lg border-2 transition-all uppercase font-medium",
-                            targetFormat === fmt ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm" : "border-gray-200 hover:border-gray-300 text-gray-600"
-                          )}
-                        >
-                          {fmt}
-                          {targetFormat === fmt && <CheckCircle className="w-4 h-4 ml-2" />}
-                        </button>
-                      ))}
+                      {['jpg', 'png', 'webp'].map(fmt => {
+                        const current = getCurrentSettings();
+                        return (
+                          <button
+                            key={fmt}
+                            onClick={() => {
+                              updateCurrentSettings({ targetFormat: fmt, formatPreset: "custom" });
+                            }}
+                            className={cn(
+                              "flex items-center justify-between px-3 py-3 text-sm rounded-lg border-2 transition-all uppercase font-medium",
+                              current.targetFormat === fmt ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm" : "border-gray-200 hover:border-gray-300 text-gray-600"
+                            )}
+                          >
+                            {fmt}
+                            {current.targetFormat === fmt && <CheckCircle className="w-4 h-4 ml-2" />}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -429,33 +613,33 @@ export default function ConvertImage() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <label className="text-sm font-medium text-gray-600">Quality</label>
-                      <span className="text-sm font-bold text-purple-600">{quality}%</span>
+                      <span className="text-sm font-bold text-purple-600">{getCurrentSettings().quality}%</span>
                     </div>
                     <input
                       type="range"
                       min="1"
                       max="100"
-                      value={quality}
-                      onChange={(e) => setQuality(Number(e.target.value))}
+                      value={getCurrentSettings().quality}
+                      onChange={(e) => updateCurrentSettings({ quality: Number(e.target.value) })}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
                     />
                     <div className="flex justify-between text-xs text-gray-500">
                       <span>Low</span>
                       <span>High</span>
                     </div>
-                    {targetFormat === 'png' && (
+                    {getCurrentSettings().targetFormat === 'png' && (
                       <p className="text-xs text-gray-500 italic">PNG uses lossless compression</p>
                     )}
                   </div>
 
                   {/* Format-Specific Options */}
-                  {targetFormat === 'png' && (
+                  {getCurrentSettings().targetFormat === 'png' && (
                     <div className="space-y-2">
                       <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
                         <input
                           type="checkbox"
-                          checked={preserveTransparency}
-                          onChange={(e) => setPreserveTransparency(e.target.checked)}
+                          checked={getCurrentSettings().preserveTransparency}
+                          onChange={(e) => updateCurrentSettings({ preserveTransparency: e.target.checked })}
                           className="w-4 h-4 accent-purple-600"
                         />
                         <span className="text-sm font-medium text-gray-700">Preserve Transparency</span>
@@ -463,13 +647,13 @@ export default function ConvertImage() {
                     </div>
                   )}
 
-                  {targetFormat === 'jpg' && (
+                  {getCurrentSettings().targetFormat === 'jpg' && (
                     <div className="space-y-2">
                       <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
                         <input
                           type="checkbox"
-                          checked={progressiveJpeg}
-                          onChange={(e) => setProgressiveJpeg(e.target.checked)}
+                          checked={getCurrentSettings().progressiveJpeg}
+                          onChange={(e) => updateCurrentSettings({ progressiveJpeg: e.target.checked })}
                           className="w-4 h-4 accent-purple-600"
                         />
                         <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
@@ -481,20 +665,23 @@ export default function ConvertImage() {
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-600">Rotation</label>
                     <div className="grid grid-cols-4 gap-2">
-                      {[0, 90, 180, 270].map((angle) => (
-                        <button
-                          key={angle}
-                          onClick={() => setRotation(angle)}
-                          className={cn(
-                            "px-3 py-2 text-sm rounded-lg border-2 transition-all font-medium",
-                            rotation === angle
-                              ? "border-purple-500 bg-purple-50 text-purple-700"
-                              : "border-gray-200 hover:border-gray-300 text-gray-600"
-                          )}
-                        >
-                          {angle}°
-                        </button>
-                      ))}
+                      {[0, 90, 180, 270].map((angle) => {
+                        const current = getCurrentSettings();
+                        return (
+                          <button
+                            key={angle}
+                            onClick={() => updateCurrentSettings({ rotation: angle })}
+                            className={cn(
+                              "px-3 py-2 text-sm rounded-lg border-2 transition-all font-medium",
+                              current.rotation === angle
+                                ? "border-purple-500 bg-purple-50 text-purple-700"
+                                : "border-gray-200 hover:border-gray-300 text-gray-600"
+                            )}
+                          >
+                            {angle}°
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -503,21 +690,21 @@ export default function ConvertImage() {
                     <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
                       <input
                         type="checkbox"
-                        checked={resizeEnabled}
-                        onChange={(e) => setResizeEnabled(e.target.checked)}
+                        checked={getCurrentSettings().resizeEnabled}
+                        onChange={(e) => updateCurrentSettings({ resizeEnabled: e.target.checked })}
                         className="w-4 h-4 accent-purple-600"
                       />
                       <span className="text-sm font-medium text-gray-700">Resize During Conversion</span>
                     </label>
-                    {resizeEnabled && (
+                    {getCurrentSettings().resizeEnabled && (
                       <div className="bg-gray-50 rounded-lg p-3 space-y-3 border border-gray-200">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-xs text-gray-500 mb-1 block">Width (px)</label>
                             <input
                               type="number"
-                              value={resizeWidth}
-                              onChange={(e) => setResizeWidth(Number(e.target.value))}
+                              value={getCurrentSettings().resizeWidth}
+                              onChange={(e) => updateCurrentSettings({ resizeWidth: Number(e.target.value) })}
                               className="w-full px-2 py-1 text-sm border rounded-md"
                               min="1"
                             />
@@ -526,8 +713,8 @@ export default function ConvertImage() {
                             <label className="text-xs text-gray-500 mb-1 block">Height (px)</label>
                             <input
                               type="number"
-                              value={resizeHeight}
-                              onChange={(e) => setResizeHeight(Number(e.target.value))}
+                              value={getCurrentSettings().resizeHeight}
+                              onChange={(e) => updateCurrentSettings({ resizeHeight: Number(e.target.value) })}
                               className="w-full px-2 py-1 text-sm border rounded-md"
                               min="1"
                             />
@@ -536,8 +723,8 @@ export default function ConvertImage() {
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Resize Mode</label>
                           <select
-                            value={resizeMode}
-                            onChange={(e) => setResizeMode(e.target.value)}
+                            value={getCurrentSettings().resizeMode}
+                            onChange={(e) => updateCurrentSettings({ resizeMode: e.target.value })}
                             className="w-full px-2 py-1 text-sm border rounded-md"
                           >
                             <option value="fit">Fit (maintain aspect)</option>
@@ -554,8 +741,8 @@ export default function ConvertImage() {
                     <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
                       <input
                         type="checkbox"
-                        checked={preserveMetadata}
-                        onChange={(e) => setPreserveMetadata(e.target.checked)}
+                        checked={getCurrentSettings().preserveMetadata}
+                        onChange={(e) => updateCurrentSettings({ preserveMetadata: e.target.checked })}
                         className="w-4 h-4 accent-purple-600"
                       />
                       <span className="text-sm font-medium text-gray-700">Preserve EXIF Metadata</span>
@@ -567,24 +754,24 @@ export default function ConvertImage() {
                     <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
                       <input
                         type="checkbox"
-                        checked={watermarkEnabled}
-                        onChange={(e) => setWatermarkEnabled(e.target.checked)}
+                        checked={getCurrentSettings().watermarkEnabled}
+                        onChange={(e) => updateCurrentSettings({ watermarkEnabled: e.target.checked })}
                         className="w-4 h-4 accent-purple-600"
                       />
                       <span className="text-sm font-medium text-gray-700">Add Watermark</span>
                     </label>
-                    {watermarkEnabled && (
+                    {getCurrentSettings().watermarkEnabled && (
                       <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
                         <input
                           type="text"
                           placeholder="Watermark text"
-                          value={watermarkText}
-                          onChange={(e) => setWatermarkText(e.target.value)}
+                          value={getCurrentSettings().watermarkText}
+                          onChange={(e) => updateCurrentSettings({ watermarkText: e.target.value })}
                           className="w-full px-2 py-1 text-sm border rounded-md"
                         />
                         <select
-                          value={watermarkPosition}
-                          onChange={(e) => setWatermarkPosition(e.target.value)}
+                          value={getCurrentSettings().watermarkPosition}
+                          onChange={(e) => updateCurrentSettings({ watermarkPosition: e.target.value })}
                           className="w-full px-2 py-1 text-sm border rounded-md"
                         >
                           <option value="top-left">Top Left</option>
@@ -702,9 +889,20 @@ export default function ConvertImage() {
                 {files.map((file, idx) => {
                   const res = results[file.name];
                   const preview = previewUrls[file.name];
+                  const isSelected = selectedFile === file.name;
+                  const fileSettingsForThis = fileSettings[file.name] || { targetFormat };
 
                   return (
-                    <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <Card 
+                      key={file.name + idx} 
+                      className={cn(
+                        "overflow-hidden border-2 shadow-sm hover:shadow-md transition-all cursor-pointer",
+                        isSelected 
+                          ? "border-purple-500 bg-purple-50/30 shadow-md" 
+                          : "border-gray-200 hover:border-purple-300"
+                      )}
+                      onClick={() => setSelectedFile(file.name)}
+                    >
                       <div className="flex items-center p-3 gap-4">
                         {/* Preview */}
                         <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden relative border">
@@ -730,7 +928,10 @@ export default function ConvertImage() {
                                     size="icon" 
                                     variant="ghost" 
                                     className="h-8 w-8 text-blue-600 hover:text-blue-700" 
-                                    onClick={() => openViewModal(file, res)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openViewModal(file, res);
+                                    }}
                                     title="View before/after"
                                   >
                                     <Eye className="w-4 h-4" />
@@ -739,7 +940,8 @@ export default function ConvertImage() {
                                     size="icon" 
                                     variant="ghost" 
                                     className="h-8 w-8 text-green-600" 
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       const url = URL.createObjectURL(res.blob);
                                       const a = document.createElement("a");
                                       a.href = url;
@@ -764,7 +966,16 @@ export default function ConvertImage() {
                                   </Button>
                                 </>
                               )}
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500" onClick={() => removeFile(file.name)} title="Remove">
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-8 w-8 text-gray-400 hover:text-red-500" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeFile(file.name);
+                                }} 
+                                title="Remove"
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
@@ -782,9 +993,12 @@ export default function ConvertImage() {
                                 <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200">
                                   {formatSize(res.size)}
                                 </Badge>
-                                {res.percent > 0 && (
-                                  <span className="text-xs font-bold text-green-600 ml-1">
-                                    (-{res.percent}%)
+                                {res.percent !== 0 && (
+                                  <span className={cn(
+                                    "text-xs font-bold ml-1",
+                                    res.percent > 0 ? "text-green-600" : "text-red-600"
+                                  )}>
+                                    ({res.percent > 0 ? '-' : '+'}{Math.abs(res.percent)}%)
                                   </span>
                                 )}
                                 <Badge variant="outline" className="border-purple-200 text-purple-700 uppercase">
@@ -793,7 +1007,7 @@ export default function ConvertImage() {
                               </>
                             ) : (
                               <Badge variant="outline" className="text-gray-400 border-dashed border-gray-300 uppercase">
-                                To {targetFormat}
+                                To {fileSettingsForThis.targetFormat}
                               </Badge>
                             )}
 
@@ -915,10 +1129,18 @@ export default function ConvertImage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Size:</span>
-                      <span className="font-medium text-green-600">
+                      <span className={cn(
+                        "font-medium",
+                        viewingFile.result.percent > 0 ? "text-green-600" : viewingFile.result.percent < 0 ? "text-red-600" : "text-gray-600"
+                      )}>
                         {formatSize(viewingFile.result.size)}
-                        {viewingFile.result.percent > 0 && (
-                          <span className="ml-2 text-green-600">(-{viewingFile.result.percent}%)</span>
+                        {viewingFile.result.percent !== 0 && (
+                          <span className={cn(
+                            "ml-2",
+                            viewingFile.result.percent > 0 ? "text-green-600" : "text-red-600"
+                          )}>
+                            ({viewingFile.result.percent > 0 ? '-' : '+'}{Math.abs(viewingFile.result.percent)}%)
+                          </span>
                         )}
                       </span>
                     </div>
@@ -938,9 +1160,14 @@ export default function ConvertImage() {
               <div className="border-t border-gray-200 pt-4 mt-4">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Size Reduction</div>
-                    <div className="text-lg font-bold text-green-600">
-                      {viewingFile.result.percent > 0 ? `-${viewingFile.result.percent}%` : '0%'}
+                    <div className="text-xs text-gray-500 mb-1">Size Change</div>
+                    <div className={cn(
+                      "text-lg font-bold",
+                      viewingFile.result.percent > 0 ? "text-green-600" : viewingFile.result.percent < 0 ? "text-red-600" : "text-gray-600"
+                    )}>
+                      {viewingFile.result.percent !== 0 
+                        ? `${viewingFile.result.percent > 0 ? '-' : '+'}${Math.abs(viewingFile.result.percent)}%` 
+                        : '0%'}
                     </div>
                   </div>
                   <div className="p-3 bg-gray-50 rounded-lg">

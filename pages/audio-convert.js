@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../lib/authContext";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
@@ -11,7 +12,7 @@ import { Progress } from "../components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 // Audio format options
 const audioFormats = [
@@ -218,6 +219,30 @@ export default function AudioConvert() {
       }
     }
 
+    // Track usage after all conversions complete
+    const successCount = Object.values(newResults).filter(r => r.status === "success").length;
+    const processedFiles = files
+      .filter(f => newResults[f.name]?.status === "success")
+      .map(file => {
+        const result = newResults[file.name];
+        const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+        return {
+          inputName: file.name,
+          inputSize: file.size,
+          inputFormat: inputExt,
+          outputName: result.fileName || `${file.name.split('.')[0]}.${outputFormat}`,
+          outputSize: result.size || 0,
+          outputFormat: outputFormat.toLowerCase(),
+        };
+      });
+
+    if (successCount > 0 && user && trackUsage) {
+      trackUsage("/audio-convert", successCount, successCount, {
+        tool: "Audio Converter",
+        filesProcessed: successCount,
+      }, processedFiles);
+    }
+
     setProcessing(false);
   };
 
@@ -296,7 +321,6 @@ export default function AudioConvert() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Toaster position="top-center" />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">

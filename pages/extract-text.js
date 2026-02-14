@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -13,7 +14,7 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import Head from "next/head";
 
 const MAX_FILES = 10;
@@ -28,6 +29,7 @@ const formatSize = (bytes) => {
 };
 
 export default function ExtractText() {
+  const { user, trackUsage } = useAuth();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({}); // { [filename]: { status, text, error } }
   const [processing, setProcessing] = useState(false);
@@ -255,6 +257,7 @@ export default function ExtractText() {
     }
     setResults({ ...newResults });
 
+    const processedFiles = [];
     for (const file of files) {
       if (results[file.name]?.status === "done") continue;
       
@@ -280,6 +283,19 @@ export default function ExtractText() {
         [file.name]: { ...res, progress: 100 } 
       }));
       
+      // Collect file information
+      if (res.status === "done") {
+        const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+        processedFiles.push({
+          inputName: file.name,
+          inputSize: file.size,
+          inputFormat: inputExt,
+          outputName: file.name.replace(/\.[^.]+$/, `.${exportFormat}`),
+          outputSize: res.text ? new Blob([res.text]).size : 0,
+          outputFormat: exportFormat,
+        });
+      }
+      
       // Reset to done status after showing 100%
       setTimeout(() => {
         setResults(prev => ({ 
@@ -287,6 +303,15 @@ export default function ExtractText() {
           [file.name]: res 
         }));
       }, 300);
+    }
+
+    // Track usage after all extractions complete
+    const successCount = processedFiles.length;
+    if (successCount > 0 && user && trackUsage) {
+      trackUsage("/extract-text", successCount, successCount, {
+        tool: "Extract Text (OCR)",
+        filesProcessed: successCount,
+      }, processedFiles);
     }
 
     setProcessing(false);

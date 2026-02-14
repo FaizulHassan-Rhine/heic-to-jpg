@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -12,7 +13,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import Head from "next/head";
 
@@ -39,6 +40,7 @@ const getPdfJs = async () => {
 };
 
 export default function PdfToDoc() {
+  const { user, trackUsage } = useAuth();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -269,6 +271,7 @@ export default function PdfToDoc() {
     }
 
     setProcessing(true);
+    const processedFiles = [];
 
     for (const file of files) {
       const key = getFileKey(file);
@@ -318,6 +321,16 @@ export default function PdfToDoc() {
           [key]: { status: "done", blob: result.blob, size: result.blob.size, name: result.name, progress: 100 },
         }));
         
+        // Collect file information
+        processedFiles.push({
+          inputName: file.name,
+          inputSize: file.size,
+          inputFormat: "pdf",
+          outputName: result.name,
+          outputSize: result.blob.size,
+          outputFormat: outputFormat,
+        });
+        
         // Reset progress after showing 100%
         setTimeout(() => {
           setResults(prev => ({
@@ -331,10 +344,21 @@ export default function PdfToDoc() {
       }
     }
 
+    const completed = processedFiles.length;
+    
+    // Track usage after all conversions complete
+    if (completed > 0 && user && trackUsage) {
+      trackUsage("/pdf-to-doc", completed, completed, {
+        tool: "PDF to DOCX/TXT",
+        filesProcessed: completed,
+      }, processedFiles);
+    }
+
     setProcessing(false);
     setProcessingFile(null);
-    const completed = files.filter((f) => results[getFileKey(f)]?.status === "done" || true).length;
-    toast.success("Conversion complete!");
+    if (completed > 0) {
+      toast.success("Conversion complete!");
+    }
   };
 
   const downloadFile = (key) => {
@@ -383,7 +407,6 @@ export default function PdfToDoc() {
         <meta name="description" content="Convert PDF files to DOCX or TXT. Extracts text and images preserving layout." />
       </Head>
       <Navbar />
-      <Toaster position="top-center" />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}

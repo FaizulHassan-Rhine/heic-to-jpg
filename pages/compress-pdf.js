@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { useAuth } from "../lib/authContext";
 import Head from "next/head";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -7,7 +8,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
     Upload,
     FileText,
@@ -59,6 +60,7 @@ function parsePageRange(rangeStr, maxPages) {
 }
 
 export default function CompressPdf() {
+    const { user, trackUsage } = useAuth();
     const [file, setFile] = useState(null);
     const [result, setResult] = useState(null);
     const [processing, setProcessing] = useState(false);
@@ -178,6 +180,7 @@ export default function CompressPdf() {
             const savedBytes = file.size - resultBlob.size;
             const savedPercent = Math.round((savedBytes / file.size) * 100);
 
+            const outputName = file.name.replace(/\.[^.]+$/, "_compressed.pdf");
             setResult({
                 blob: resultBlob,
                 size: resultBlob.size,
@@ -187,6 +190,22 @@ export default function CompressPdf() {
 
             setProgress(100);
             toast.success("Compression successful!");
+
+            // Track usage after successful compression
+            if (user && trackUsage) {
+              const processedFiles = [{
+                inputName: file.name,
+                inputSize: file.size,
+                inputFormat: "pdf",
+                outputName: outputName,
+                outputSize: resultBlob.size,
+                outputFormat: "pdf",
+              }];
+              trackUsage("/compress-pdf", 1, 1, {
+                tool: "Compress PDF",
+                filesProcessed: 1,
+              }, processedFiles);
+            }
 
         } catch (error) {
             console.error("Compression error:", error);
@@ -215,7 +234,6 @@ export default function CompressPdf() {
 
             <div className="min-h-screen bg-gray-50 flex flex-col">
                 <Navbar />
-                <Toaster position="top-center" />
 
                 <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
                     {/* Header */}

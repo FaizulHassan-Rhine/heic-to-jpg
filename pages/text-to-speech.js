@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import {
@@ -8,7 +9,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import Head from "next/head";
 
@@ -70,6 +71,7 @@ const LANGUAGE_GROUPS = {
 };
 
 export default function TextToSpeech() {
+  const { user, trackUsage } = useAuth();
   const [text, setText] = useState("");
   const [selectedLang, setSelectedLang] = useState("en-US");
   const [voices, setVoices] = useState([]);
@@ -151,6 +153,14 @@ export default function TextToSpeech() {
       setIsSpeaking(false);
       setIsPaused(false);
       setHighlightIndex(-1);
+      
+      // Track usage after successful speech
+      if (user && trackUsage && text.trim()) {
+        trackUsage("/text-to-speech", 1, 1, {
+          tool: "Text to Speech",
+          filesProcessed: 1,
+        });
+      }
     };
 
     utterance.onerror = (e) => {
@@ -323,7 +333,6 @@ export default function TextToSpeech() {
 
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <Navbar />
-        <Toaster position="top-center" />
 
         <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
           {/* Header */}

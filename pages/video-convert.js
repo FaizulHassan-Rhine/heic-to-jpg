@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -13,7 +14,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import Head from "next/head";
 
 const MAX_FILES = 5;
@@ -250,6 +251,8 @@ export default function VideoConvert() {
     }
     setResults(newResults);
 
+    let successCount = 0;
+    const processedFiles = [];
     for (const file of files) {
       if (results[file.name]?.status === "done") continue;
 
@@ -271,6 +274,21 @@ export default function VideoConvert() {
         const res = await convertSingle(file, progressTracker);
         setResults(prev => ({ ...prev, [file.name]: { ...res, progress: 100 } }));
         
+        if (res.status === "done") {
+          successCount++;
+          // Collect file information
+          const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+          const outputExt = targetFormat.toLowerCase() || inputExt;
+          processedFiles.push({
+            inputName: file.name,
+            inputSize: file.size,
+            inputFormat: inputExt,
+            outputName: res.name || file.name.replace(/\.[^.]+$/, `.${outputExt}`),
+            outputSize: res.size || 0,
+            outputFormat: outputExt,
+          });
+        }
+        
         // Reset progress after showing 100%
         setTimeout(() => {
           setResults(prev => ({ 
@@ -291,6 +309,15 @@ export default function VideoConvert() {
         toast.error(`${file.name}: ${errorMessage}`);
       }
     }
+
+    // Track usage after all conversions complete
+    if (successCount > 0 && user && trackUsage) {
+      trackUsage("/video-convert", successCount, successCount, {
+        tool: "Video Converter",
+        filesProcessed: successCount,
+      }, processedFiles);
+    }
+
     setProcessing(false);
     setProcessingFile(null);
     setProgress(0);
