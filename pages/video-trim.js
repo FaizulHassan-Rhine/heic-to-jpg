@@ -208,7 +208,7 @@ export default function VideoTrim() {
       const { fetchFile } = await import("@ffmpeg/util");
       const ext = file.name.split('.').pop();
       const inputName = `input.${ext}`;
-      const outputName = `output.mp4`; // Always MP4 for consistency
+      const ffmpegOutputName = `output.mp4`; // Always MP4 for consistency
 
       await ffmpeg.writeFile(inputName, await fetchFile(file));
 
@@ -218,14 +218,14 @@ export default function VideoTrim() {
         "-to", endTime.toFixed(3),
         "-c:v", "libx264", "-preset", "fast", "-crf", "22", // Re-encode for accuracy
         "-c:a", "aac",
-        outputName
+        ffmpegOutputName
       ]);
 
-      const data = await ffmpeg.readFile(outputName);
+      const data = await ffmpeg.readFile(ffmpegOutputName);
       const blob = new Blob([data.buffer], { type: "video/mp4" });
 
       await ffmpeg.deleteFile(inputName);
-      await ffmpeg.deleteFile(outputName);
+      await ffmpeg.deleteFile(ffmpegOutputName);
 
       const outputName = file.name.replace(/\.[^.]+$/, "") + "_trimmed.mp4";
       setResult({
