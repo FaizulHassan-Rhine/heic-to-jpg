@@ -60,7 +60,13 @@ export default async function handler(req, res) {
       },
     });
   } catch (error) {
-    console.error("Sync user error:", error);
+    console.error("Sync user error:", error.message);
+    
+    // Return a more specific error message
+    if (error.message.includes("MONGODB_URI")) {
+      return res.status(503).json({ error: "Database configuration missing. Please contact administrator." });
+    }
+    
     return res.status(500).json({ error: "Internal server error" });
   }
 }

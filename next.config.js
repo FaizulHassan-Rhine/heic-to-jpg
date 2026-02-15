@@ -5,6 +5,7 @@ module.exports = {
   // Required headers for FFmpeg WASM (SharedArrayBuffer) - only on video pages
   async headers() {
     return [
+      // Video pages need COOP/COEP for SharedArrayBuffer
       {
         source: '/video-convert',
         headers: [
@@ -24,6 +25,15 @@ module.exports = {
         headers: [
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
           { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+        ],
+      },
+      // API routes - add caching headers
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
         ],
       },
     ];
