@@ -1,6 +1,9 @@
+"use client";
+
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { useAuth } from "@/lib/authContext";
 import {
   Link2, Copy, ExternalLink, Trash2, RotateCcw,
   Loader2, CheckCircle, AlertCircle, QrCode, Download
