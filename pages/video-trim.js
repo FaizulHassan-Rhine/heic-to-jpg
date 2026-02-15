@@ -227,11 +227,11 @@ export default function VideoTrim() {
       await ffmpeg.deleteFile(inputName);
       await ffmpeg.deleteFile(ffmpegOutputName);
 
-      const outputName = file.name.replace(/\.[^.]+$/, "") + "_trimmed.mp4";
+      const trimmedFileName = file.name.replace(/\.[^.]+$/, "") + "_trimmed.mp4";
       setResult({
         blob,
         size: blob.size,
-        name: outputName,
+        name: trimmedFileName,
         url: URL.createObjectURL(blob)
       });
       toast.success("Trim Complete!");
@@ -243,7 +243,7 @@ export default function VideoTrim() {
           inputName: file.name,
           inputSize: file.size,
           inputFormat: inputExt,
-          outputName: outputName,
+          outputName: trimmedFileName,
           outputSize: blob.size,
           outputFormat: "mp4",
         }];
