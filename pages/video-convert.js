@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
+import { generateFileThumbnails } from "../lib/thumbnailUtils";
+import { blobToBase64, extractBase64 } from "../lib/fileUtils";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -99,6 +101,7 @@ const formatSize = (bytes) => {
 const getFileKey = (file) => file.name + file.size + file.lastModified;
 
 export default function VideoConvert() {
+  const { user, trackUsage } = useAuth();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -274,19 +277,50 @@ export default function VideoConvert() {
         const res = await convertSingle(file, progressTracker);
         setResults(prev => ({ ...prev, [file.name]: { ...res, progress: 100 } }));
         
-        if (res.status === "done") {
+        if (res.status === "done" && user && trackUsage) {
           successCount++;
           // Collect file information
           const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
           const outputExt = targetFormat.toLowerCase() || inputExt;
-          processedFiles.push({
+          const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+          
+          // Generate thumbnails for input and output
+          const thumbnails = await generateFileThumbnails(file, res.blob).catch((error) => {
+            console.warn("Thumbnail generation failed:", error);
+            return {};
+          });
+          
+          // Convert thumbnails from data URL to pure base64 for storage
+          const inputThumbnailBase64 = extractBase64(thumbnails.inputThumbnail);
+          const outputThumbnailBase64 = extractBase64(thumbnails.outputThumbnail);
+          
+          // Convert output blob to base64 for storage (limit to 10MB to avoid MongoDB 16MB limit)
+          let outputFileData = null;
+          const maxFileSize = 10 * 1024 * 1024; // 10MB
+          if (res.blob && res.blob.size <= maxFileSize) {
+            try {
+              const dataUrl = await blobToBase64(res.blob);
+              outputFileData = extractBase64(dataUrl);
+            } catch (error) {
+              console.warn("Failed to convert file to base64:", error);
+            }
+          } else if (res.blob && res.blob.size > maxFileSize) {
+            console.warn(`File ${file.name} is too large (${res.blob.size} bytes) to store. Max size: ${maxFileSize} bytes`);
+          }
+          
+          const fileInfo = {
             inputName: file.name,
             inputSize: file.size,
             inputFormat: inputExt,
-            outputName: res.name || file.name.replace(/\.[^.]+$/, `.${outputExt}`),
-            outputSize: res.size || 0,
+            outputName: `${baseName}.${outputExt}`,
+            outputSize: res.size || res.blob?.size || 0,
             outputFormat: outputExt,
-          });
+            inputThumbnail: inputThumbnailBase64,
+            outputThumbnail: outputThumbnailBase64,
+            outputFileData: outputFileData,
+          };
+          
+          processedFiles.push(fileInfo);
         }
         
         // Reset progress after showing 100%

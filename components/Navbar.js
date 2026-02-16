@@ -7,8 +7,8 @@ import Link from "next/link";
 import { useAuth } from "../lib/authContext";
 import AuthModal from "./AuthModal";
 
-// Tool categories with their pages
-const TOOL_CATEGORIES = [
+// Main menu categories (Image Tools and Document Tools)
+const MAIN_CATEGORIES = [
   {
     label: "Image Tools",
     paths: ["/convert", "/compress", "/image-to-pdf", "/extract-text"],
@@ -17,15 +17,6 @@ const TOOL_CATEGORIES = [
       { href: "/compress", label: "Image Compressor", popular: true },
       { href: "/image-to-pdf", label: "Image to PDF" },
       { href: "/extract-text", label: "Extract Text (OCR)" },
-    ],
-  },
-  {
-    label: "Video Tools",
-    paths: ["/video-convert", "/video-compress", "/video-trim"],
-    items: [
-      { href: "/video-convert", label: "Video Converter" },
-      { href: "/video-compress", label: "Video Compressor" },
-      { href: "/video-trim", label: "Video Trimmer" },
     ],
   },
   {
@@ -39,8 +30,21 @@ const TOOL_CATEGORIES = [
       { href: "/scanner", label: "Document Scanner", popular: true },
     ],
   },
+];
+
+// Other Tools mega menu sections
+const OTHER_TOOLS_SECTIONS = [
   {
-    label: "Audio Tools",
+    title: "Video Tools",
+    paths: ["/video-convert", "/video-compress", "/video-trim"],
+    items: [
+      { href: "/video-convert", label: "Video Converter" },
+      { href: "/video-compress", label: "Video Compressor" },
+      { href: "/video-trim", label: "Video Trimmer" },
+    ],
+  },
+  {
+    title: "Audio Tools",
     paths: ["/audio-convert", "/text-to-speech", "/speech-to-text"],
     items: [
       { href: "/audio-convert", label: "Audio Converter" },
@@ -49,12 +53,25 @@ const TOOL_CATEGORIES = [
     ],
   },
   {
-    label: "Other Tools",
+    title: "Utilities",
     paths: ["/qr-barcode", "/url-shortener"],
     items: [
       { href: "/qr-barcode", label: "QR & Barcode" },
       { href: "/url-shortener", label: "URL Shortener" },
     ],
+  },
+];
+
+// All paths for "Other Tools" (for active state detection)
+const OTHER_TOOLS_PATHS = OTHER_TOOLS_SECTIONS.flatMap(section => section.paths);
+
+// Combined categories for mobile menu
+const TOOL_CATEGORIES = [
+  ...MAIN_CATEGORIES,
+  {
+    label: "Other Tools",
+    paths: OTHER_TOOLS_PATHS,
+    items: OTHER_TOOLS_SECTIONS.flatMap(section => section.items),
   },
 ];
 
@@ -132,7 +149,8 @@ export default function Navbar() {
 
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-1">
-            {TOOL_CATEGORIES.map((category) => (
+            {/* Main Categories (Image Tools & Document Tools) */}
+            {MAIN_CATEGORIES.map((category) => (
               <div
                 key={category.label}
                 className="relative"
@@ -157,7 +175,7 @@ export default function Navbar() {
 
                 {openDropdown === category.label && (
                   <div
-                    className="absolute top-full left-0 pt-1 w-52 z-50"
+                    className="absolute top-full left-0 pt-1 w-64 z-50"
                     onMouseEnter={() => handleDropdownEnter(category.label)}
                     onMouseLeave={handleDropdownLeave}
                   >
@@ -173,7 +191,7 @@ export default function Navbar() {
                           >
                             <span>{item.label}</span>
                             {item.popular && (
-                              <span className="ml-2 px-1.5 py-0.5 text-[10px] font-semibold bg-orange-500 text-white rounded">
+                              <span className="ml-2 px-1 py-0.5 text-[9px] font-semibold bg-orange-500 text-white rounded leading-none">
                                 Popular
                               </span>
                             )}
@@ -185,6 +203,69 @@ export default function Navbar() {
                 )}
               </div>
             ))}
+
+            {/* Other Tools - Mega Menu */}
+            <div
+              className="relative"
+              onMouseEnter={() => handleDropdownEnter("Other Tools")}
+              onMouseLeave={handleDropdownLeave}
+            >
+              <Button
+                variant={OTHER_TOOLS_PATHS.includes(currentPath) ? "default" : "ghost"}
+                className="flex items-center gap-1 text-sm"
+                onClick={() =>
+                  setOpenDropdown((prev) =>
+                    prev === "Other Tools" ? null : "Other Tools"
+                  )
+                }
+              >
+                Other Tools
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${openDropdown === "Other Tools" ? "rotate-180" : ""
+                    }`}
+                />
+              </Button>
+
+              {openDropdown === "Other Tools" && (
+                <div
+                  className="absolute top-full left-0 pt-1 z-50"
+                  onMouseEnter={() => handleDropdownEnter("Other Tools")}
+                  onMouseLeave={handleDropdownLeave}
+                >
+                  <div className="bg-background border rounded-md shadow-lg overflow-hidden">
+                    <div className="flex gap-0">
+                      {OTHER_TOOLS_SECTIONS.map((section, index) => (
+                        <div
+                          key={section.title}
+                          className={`${index > 0 ? "border-l" : ""} border-gray-200`}
+                        >
+                          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                              {section.title}
+                            </h3>
+                          </div>
+                          <div className="min-w-[200px]">
+                            {section.items.map((item) => (
+                              <Link key={item.href} href={item.href}>
+                                <div
+                                  className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm ${currentPath === item.href
+                                    ? "bg-accent font-medium"
+                                    : ""
+                                    }`}
+                                  onClick={() => setOpenDropdown(null)}
+                                >
+                                  {item.label}
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Auth Buttons / User Menu */}
             {mounted && !loading && (
@@ -302,7 +383,7 @@ export default function Navbar() {
                           >
                             <span>{item.label}</span>
                             {item.popular && (
-                              <span className="ml-2 px-1.5 py-0.5 text-[10px] font-semibold bg-orange-500 text-white rounded">
+                              <span className="ml-2 px-1 py-0.5 text-[9px] font-semibold bg-orange-500 text-white rounded leading-none">
                                 Popular
                               </span>
                             )}
