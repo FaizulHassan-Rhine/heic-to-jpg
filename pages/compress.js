@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
+import { generateFileThumbnails } from "../lib/thumbnailUtils";
+import { blobToBase64, extractBase64 } from "../lib/fileUtils";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
@@ -413,6 +415,28 @@ export default function CompressImage() {
           // Collect file information
           const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
           const outputExt = res.ext || inputExt;
+          
+          // Generate thumbnails for input and output
+          const thumbnails = await generateFileThumbnails(file, res.blob).catch(() => ({}));
+          
+          // Convert thumbnails from data URL to pure base64 for storage
+          const inputThumbnailBase64 = extractBase64(thumbnails.inputThumbnail);
+          const outputThumbnailBase64 = extractBase64(thumbnails.outputThumbnail);
+          
+          // Convert output blob to base64 for storage (limit to 10MB to avoid MongoDB 16MB limit)
+          let outputFileData = null;
+          const maxFileSize = 10 * 1024 * 1024; // 10MB
+          if (res.blob && res.blob.size <= maxFileSize) {
+            try {
+              const dataUrl = await blobToBase64(res.blob);
+              outputFileData = extractBase64(dataUrl);
+            } catch (error) {
+              console.warn("Failed to convert file to base64:", error);
+            }
+          } else if (res.blob && res.blob.size > maxFileSize) {
+            console.warn(`File ${file.name} is too large (${res.blob.size} bytes) to store. Max size: ${maxFileSize} bytes`);
+          }
+          
           processedFiles.push({
             inputName: file.name,
             inputSize: file.size,
@@ -420,6 +444,9 @@ export default function CompressImage() {
             outputName: res.name || file.name.replace(/\.[^.]+$/, `_min.${outputExt}`),
             outputSize: res.size || 0,
             outputFormat: outputExt,
+            inputThumbnail: inputThumbnailBase64,
+            outputThumbnail: outputThumbnailBase64,
+            outputFileData: outputFileData,
           });
         }
       }));
@@ -487,8 +514,8 @@ export default function CompressImage() {
   };
 
   const openViewModal = async (file, result) => {
-    const hasPreview = !!previewUrls[file.name];
-    const beforeUrl = previewUrls[file.name] || URL.createObjectURL(file);
+    // Always use the original file object for best quality, not cached preview
+    const beforeUrl = URL.createObjectURL(file);
     const afterUrl = URL.createObjectURL(result.blob);
     
     const beforeDims = await getImageDimensions(beforeUrl);
@@ -501,7 +528,7 @@ export default function CompressImage() {
       afterUrl,
       beforeDimensions: beforeDims,
       afterDimensions: afterDims,
-      createdBeforeUrl: !hasPreview // Track if we created the before URL
+      createdBeforeUrl: true // Always track that we created the before URL
     });
   };
 
@@ -511,8 +538,8 @@ export default function CompressImage() {
       if (viewingFile.afterUrl) {
         URL.revokeObjectURL(viewingFile.afterUrl);
       }
-      // Only revoke before URL if we created it (not from previewUrls)
-      if (viewingFile.createdBeforeUrl && viewingFile.beforeUrl) {
+      // Always revoke before URL since we always create it now
+      if (viewingFile.beforeUrl) {
         URL.revokeObjectURL(viewingFile.beforeUrl);
       }
     }
@@ -961,7 +988,12 @@ export default function CompressImage() {
                             <div key={file.name + idx} className="space-y-2">
                               <div className="relative aspect-square border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                                 {preview && (
-                                  <img src={preview} alt="Before" className="w-full h-full object-cover" />
+                                  <img 
+                                    src={preview} 
+                                    alt="Before" 
+                                    className="w-full h-full object-contain" 
+                                    style={{ imageRendering: 'auto' }}
+                                  />
                                 )}
                                 <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
                                   BEFORE
@@ -971,7 +1003,8 @@ export default function CompressImage() {
                                 <img 
                                   src={afterUrl} 
                                   alt="After" 
-                                  className="w-full h-full object-cover" 
+                                  className="w-full h-full object-contain" 
+                                  style={{ imageRendering: 'auto' }}
                                   onLoad={() => {
                                     // URL will be cleaned up when component unmounts
                                   }}
@@ -1171,7 +1204,7 @@ export default function CompressImage() {
           onClick={closeViewModal}
         >
           <div 
-            className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto"
+            className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1200,11 +1233,13 @@ export default function CompressImage() {
                       <Badge variant="secondary" className="bg-gray-100">BEFORE</Badge>
                     </h4>
                   </div>
-                  <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
                     <img 
                       src={viewingFile.beforeUrl} 
                       alt="Before" 
-                      className="w-full h-auto max-h-96 object-contain mx-auto"
+                      className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                      loading="eager"
+                      decoding="async"
                     />
                   </div>
                   <div className="space-y-2 text-sm">
@@ -1230,11 +1265,13 @@ export default function CompressImage() {
                       <Badge className="bg-blue-100 text-blue-700 border-blue-200">AFTER</Badge>
                     </h4>
                   </div>
-                  <div className="border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
                     <img 
                       src={viewingFile.afterUrl} 
                       alt="After" 
-                      className="w-full h-auto max-h-96 object-contain mx-auto"
+                      className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                      loading="eager"
+                      decoding="async"
                     />
                   </div>
                   <div className="space-y-2 text-sm">

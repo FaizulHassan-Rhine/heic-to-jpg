@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
+import { generateThumbnail } from "../lib/thumbnailUtils";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Dropzone from "../components/Dropzone";
@@ -224,6 +225,7 @@ export default function ImageToPdf() {
       // Collect file information
       if (res.status === "done") {
         const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+        const inputThumbnail = await generateThumbnail(file).catch(() => null);
         processedFiles.push({
           inputName: file.name,
           inputSize: file.size,
@@ -231,6 +233,8 @@ export default function ImageToPdf() {
           outputName: res.name || file.name.replace(/\.[^.]+$/, ".pdf"),
           outputSize: res.size || 0,
           outputFormat: "pdf",
+          inputThumbnail: inputThumbnail || null,
+          outputThumbnail: null,
         });
       }
       

@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
     try {
       // Get Firebase UID from query (client will pass it)
-      const { firebaseUid, page = 1, limit = 20 } = req.query;
+      const { firebaseUid, page = 1, limit = 10 } = req.query;
 
       if (!firebaseUid) {
         return res.status(400).json({ error: "Firebase UID is required" });

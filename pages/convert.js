@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../lib/authContext";
+import { generateFileThumbnails } from "../lib/thumbnailUtils";
+import { blobToBase64, extractBase64 } from "../lib/fileUtils";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
@@ -323,6 +325,31 @@ export default function ConvertImage() {
           const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
           const outputExt = res.ext || inputExt;
           const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+          
+          // Generate thumbnails for input and output
+          const thumbnails = await generateFileThumbnails(file, res.blob).catch((error) => {
+            console.warn("Thumbnail generation failed:", error);
+            return {};
+          });
+          
+          // Convert thumbnails from data URL to pure base64 for storage
+          const inputThumbnailBase64 = extractBase64(thumbnails.inputThumbnail);
+          const outputThumbnailBase64 = extractBase64(thumbnails.outputThumbnail);
+          
+          // Convert output blob to base64 for storage (limit to 10MB to avoid MongoDB 16MB limit)
+          let outputFileData = null;
+          const maxFileSize = 10 * 1024 * 1024; // 10MB
+          if (res.blob && res.blob.size <= maxFileSize) {
+            try {
+              const dataUrl = await blobToBase64(res.blob);
+              outputFileData = extractBase64(dataUrl);
+            } catch (error) {
+              console.warn("Failed to convert file to base64:", error);
+            }
+          } else if (res.blob && res.blob.size > maxFileSize) {
+            console.warn(`File ${file.name} is too large (${res.blob.size} bytes) to store. Max size: ${maxFileSize} bytes`);
+          }
+          
           const fileInfo = {
             inputName: file.name,
             inputSize: file.size,
@@ -330,8 +357,27 @@ export default function ConvertImage() {
             outputName: `${baseName}.${outputExt}`,
             outputSize: res.size || res.blob?.size || 0,
             outputFormat: outputExt,
+            inputThumbnail: inputThumbnailBase64,
+            outputThumbnail: outputThumbnailBase64,
+            outputFileData: outputFileData,
           };
-          console.log("Adding file info:", fileInfo);
+          
+          console.log(`File ${file.name} - Data prepared:`, {
+            hasInputThumbnail: !!fileInfo.inputThumbnail,
+            hasOutputThumbnail: !!fileInfo.outputThumbnail,
+            hasOutputFileData: !!fileInfo.outputFileData,
+            inputThumbnailLength: fileInfo.inputThumbnail?.length || 0,
+            outputThumbnailLength: fileInfo.outputThumbnail?.length || 0,
+            outputFileDataLength: fileInfo.outputFileData?.length || 0,
+          });
+          
+          console.log(`File ${file.name} - Thumbnails generated:`, {
+            input: !!fileInfo.inputThumbnail,
+            output: !!fileInfo.outputThumbnail,
+            inputSize: fileInfo.inputThumbnail ? fileInfo.inputThumbnail.length : 0,
+            outputSize: fileInfo.outputThumbnail ? fileInfo.outputThumbnail.length : 0,
+          });
+          
           processedFiles.push(fileInfo);
         }
       }));
@@ -409,8 +455,8 @@ export default function ConvertImage() {
   };
 
   const openViewModal = async (file, result) => {
-    const hasPreview = !!previewUrls[file.name];
-    const beforeUrl = previewUrls[file.name] || URL.createObjectURL(file);
+    // Always use the original file object for best quality, not cached preview
+    const beforeUrl = URL.createObjectURL(file);
     const afterUrl = URL.createObjectURL(result.blob);
     
     const beforeDims = await getImageDimensions(beforeUrl);
@@ -423,7 +469,7 @@ export default function ConvertImage() {
       afterUrl,
       beforeDimensions: beforeDims,
       afterDimensions: afterDims,
-      createdBeforeUrl: !hasPreview // Track if we created the before URL
+      createdBeforeUrl: true // Always track that we created the before URL
     });
   };
 
@@ -433,8 +479,8 @@ export default function ConvertImage() {
       if (viewingFile.afterUrl) {
         URL.revokeObjectURL(viewingFile.afterUrl);
       }
-      // Only revoke before URL if we created it (not from previewUrls)
-      if (viewingFile.createdBeforeUrl && viewingFile.beforeUrl) {
+      // Always revoke before URL since we always create it now
+      if (viewingFile.beforeUrl) {
         URL.revokeObjectURL(viewingFile.beforeUrl);
       }
     }
@@ -1041,7 +1087,7 @@ export default function ConvertImage() {
           onClick={closeViewModal}
         >
           <div 
-            className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto"
+            className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1070,11 +1116,13 @@ export default function ConvertImage() {
                       <Badge variant="secondary" className="bg-gray-100">BEFORE</Badge>
                     </h4>
                   </div>
-                  <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
                     <img 
                       src={viewingFile.beforeUrl} 
                       alt="Before" 
-                      className="w-full h-auto max-h-96 object-contain mx-auto"
+                      className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                      loading="eager"
+                      decoding="async"
                     />
                   </div>
                   <div className="space-y-2 text-sm">
@@ -1106,11 +1154,13 @@ export default function ConvertImage() {
                       <Badge className="bg-purple-100 text-purple-700 border-purple-200">AFTER</Badge>
                     </h4>
                   </div>
-                  <div className="border-2 border-purple-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="border-2 border-purple-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
                     <img 
                       src={viewingFile.afterUrl} 
                       alt="After" 
-                      className="w-full h-auto max-h-96 object-contain mx-auto"
+                      className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                      loading="eager"
+                      decoding="async"
                     />
                   </div>
                   <div className="space-y-2 text-sm">

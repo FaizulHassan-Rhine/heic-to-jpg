@@ -49,6 +49,9 @@ const OrderSchema = new mongoose.Schema(
           outputSize: Number,
           inputFormat: String,
           outputFormat: String,
+          inputThumbnail: String,
+          outputThumbnail: String,
+          outputFileData: String, // Base64 encoded output file (for downloads)
         },
       ],
       default: [],
@@ -64,5 +67,9 @@ OrderSchema.index({ firebaseUid: 1, createdAt: -1 });
 OrderSchema.index({ userEmail: 1, createdAt: -1 });
 OrderSchema.index({ toolPath: 1, createdAt: -1 });
 
-// Prevent model recompilation in development
+// In development, delete cached model to pick up schema changes
+if (process.env.NODE_ENV === 'development' && mongoose.models.Order) {
+  delete mongoose.models.Order;
+}
+
 export default mongoose.models.Order || mongoose.model("Order", OrderSchema);

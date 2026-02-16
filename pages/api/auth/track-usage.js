@@ -2,6 +2,15 @@ import connectDB from "../../../lib/mongodb";
 import User from "../../../models/User";
 import Order from "../../../models/Order";
 
+// Increase body size limit to handle base64 file data (default 1MB is too small)
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
+};
+
 // Maps tool page paths to toolUsage field names and tool names
 const TOOL_MAP = {
   "/convert": { field: "imageConverter", name: "Image Converter", type: "conversion" },
@@ -53,8 +62,22 @@ export default async function handler(req, res) {
     const orderFiles = Array.isArray(files) && files.length > 0 ? files : [];
     
     // Debug logging
-    console.log("Track usage - Files received:", JSON.stringify(orderFiles, null, 2));
     console.log("Track usage - Files count:", orderFiles.length);
+    if (orderFiles.length > 0) {
+      const firstFile = orderFiles[0];
+      console.log("Track usage - First file details:", {
+        inputName: firstFile.inputName,
+        outputName: firstFile.outputName,
+        inputSize: firstFile.inputSize,
+        outputSize: firstFile.outputSize,
+        hasInputThumbnail: !!firstFile.inputThumbnail,
+        hasOutputThumbnail: !!firstFile.outputThumbnail,
+        hasOutputFileData: !!firstFile.outputFileData,
+        inputThumbnailLength: firstFile.inputThumbnail?.length || 0,
+        outputThumbnailLength: firstFile.outputThumbnail?.length || 0,
+        outputFileDataLength: firstFile.outputFileData?.length || 0,
+      });
+    }
     
     const newOrder = {
       firebaseUid,
@@ -70,7 +93,21 @@ export default async function handler(req, res) {
 
     // Insert order
     const savedOrder = await Order.create(newOrder);
-    console.log("Order created with files:", savedOrder.files?.length || 0);
+    console.log("Order created - ID:", savedOrder._id);
+    console.log("Order created - files count:", savedOrder.files?.length || 0);
+    if (savedOrder.files && savedOrder.files.length > 0) {
+      const f = savedOrder.files[0];
+      console.log("Order created - First file saved:", {
+        inputName: f.inputName,
+        outputName: f.outputName,
+        hasInputThumbnail: !!f.inputThumbnail,
+        hasOutputThumbnail: !!f.outputThumbnail,
+        hasOutputFileData: !!f.outputFileData,
+        inputThumbnailLength: f.inputThumbnail?.length || 0,
+        outputThumbnailLength: f.outputThumbnail?.length || 0,
+        outputFileDataLength: f.outputFileData?.length || 0,
+      });
+    }
 
     // Update user stats
     const updateFields = {
