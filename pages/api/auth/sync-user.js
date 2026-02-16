@@ -2,71 +2,96 @@ import connectDB from "../../../lib/mongodb";
 import User from "../../../models/User";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
+  // Ensure we always return JSON, even on unexpected errors
   try {
-    const { firebaseUid, email, displayName, photoURL, provider } = req.body;
-
-    if (!firebaseUid || !email) {
-      return res.status(400).json({ error: "Firebase UID and email are required" });
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
     }
 
-    await connectDB();
+    try {
+      const { firebaseUid, email, displayName, photoURL, provider } = req.body;
 
-    // Upsert user - create if not exists, update if exists
-    const user = await User.findOneAndUpdate(
-      { firebaseUid },
-      {
-        $set: {
-          email,
-          displayName: displayName || "",
-          photoURL: photoURL || "",
-          provider: provider || "email",
-          lastActive: new Date(),
-        },
-        $setOnInsert: {
-          firebaseUid,
-          totalConversions: 0,
-          totalCompressions: 0,
-          totalToolsUsed: 0,
-          toolUsage: {},
-          isActive: true,
-        },
-      },
-      {
-        upsert: true,
-        new: true,
-        runValidators: true,
+      if (!firebaseUid || !email) {
+        return res.status(400).json({ error: "Firebase UID and email are required" });
       }
-    );
 
-    return res.status(200).json({
-      success: true,
-      user: {
-        id: user._id,
-        firebaseUid: user.firebaseUid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        provider: user.provider,
-        totalConversions: user.totalConversions,
-        totalCompressions: user.totalCompressions,
-        totalToolsUsed: user.totalToolsUsed,
-        toolUsage: user.toolUsage,
-        createdAt: user.createdAt,
-        lastActive: user.lastActive,
-      },
-    });
-  } catch (error) {
-    console.error("Sync user error:", error.message);
-    
-    // Return a more specific error message
-    if (error.message.includes("MONGODB_URI")) {
-      return res.status(503).json({ error: "Database configuration missing. Please contact administrator." });
+      await connectDB();
+
+      // Upsert user - create if not exists, update if exists
+      const user = await User.findOneAndUpdate(
+        { firebaseUid },
+        {
+          $set: {
+            email,
+            displayName: displayName || "",
+            photoURL: photoURL || "",
+            provider: provider || "email",
+            lastActive: new Date(),
+          },
+          $setOnInsert: {
+            firebaseUid,
+            totalConversions: 0,
+            totalCompressions: 0,
+            totalToolsUsed: 0,
+            toolUsage: {},
+            isActive: true,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: user._id,
+          firebaseUid: user.firebaseUid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          provider: user.provider,
+          totalConversions: user.totalConversions,
+          totalCompressions: user.totalCompressions,
+          totalToolsUsed: user.totalToolsUsed,
+          toolUsage: user.toolUsage,
+          createdAt: user.createdAt,
+          lastActive: user.lastActive,
+        },
+      });
+    } catch (error) {
+      console.error("Sync user error:", error.message);
+      
+      // Return a more specific error message based on error type
+      if (error.code === "MONGODB_URI_MISSING") {
+        return res.status(503).json({ 
+          error: "Database configuration missing",
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+      
+      if (error.code === "MONGODB_CONNECTION_FAILED") {
+        return res.status(503).json({ 
+          error: "Database connection failed",
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+      
+      return res.status(500).json({ 
+        error: "Internal server error",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
-    
-    return res.status(500).json({ error: "Internal server error" });
+  } catch (outerError) {
+    // Catch any errors that happen outside the main try block
+    console.error("Sync user outer error:", outerError);
+    if (!res.headersSent) {
+      return res.status(500).json({ 
+        error: "Internal server error",
+        details: process.env.NODE_ENV === 'development' ? outerError.message : undefined
+      });
+    }
   }
 }

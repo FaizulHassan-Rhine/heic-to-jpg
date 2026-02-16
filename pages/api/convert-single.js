@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     let inputType = "heic";
 
     busboy.on("field", (name, value) => {
-      if (name === "format") format = value;
+      if (name === "format") format = value.toLowerCase().trim();
       if (name === "inputType") inputType = value;
       if (name === "quality") quality = parseInt(value) || 85;
       if (name === "preserveMetadata") preserveMetadata = value === "true";
@@ -62,6 +62,7 @@ export default async function handler(req, res) {
           res.status(400).json({ error: "No file received" });
           return resolve();
         }
+
 
         // Check file size
         // Local development: 20MB limit
@@ -215,14 +216,19 @@ export default async function handler(req, res) {
           // Sharp by default preserves metadata unless explicitly removed
         }
 
-        // Set extension for frontend
-        let ext = "jpg";
-        if (format.includes("webp")) ext = "webp";
-        else if (format === "png") ext = "png";
-        else if (format.includes("jpg")) ext = "jpg";
+        // Set extension for frontend - format is already normalized
+        let ext = "jpg"; // default fallback
+        if (format === "webp") {
+          ext = "webp";
+        } else if (format === "png") {
+          ext = "png";
+        } else if (format === "jpg" || format === "jpeg") {
+          ext = "jpg";
+        }
 
         res.setHeader("Content-Type", "application/octet-stream");
         res.setHeader("X-Output-Extension", ext);
+        res.setHeader("Access-Control-Expose-Headers", "X-Output-Extension");
         res.send(outputBuffer);
 
         resolve();

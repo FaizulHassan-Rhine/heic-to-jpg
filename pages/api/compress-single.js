@@ -259,16 +259,24 @@ export default async function handler(req, res) {
                 .jpeg(jpegOptions)
                 .toBuffer();
             } else if (outputFormat === "png") {
+              // Compress as PNG - use high compression level and optional palette optimization
+              const pngOptions = {
+                compressionLevel: 9,
+                adaptiveFiltering: true,
+              };
+              if (optimizePalette) {
+                pngOptions.palette = true;
+              }
               if (losslessCompression) {
-                outputBuffer = await sharpInstance.png({ 
-                  compressionLevel: 9,
-                  palette: optimizePalette 
-                }).toBuffer();
-              } else {
-                // Convert PNG to JPEG for lossy compression
                 outputBuffer = await sharpInstance
-                  .flatten({ background: "#fff" })
-                  .jpeg({ quality: quality })
+                  .png(pngOptions)
+                  .toBuffer();
+              } else {
+                // Lossy PNG: reduce colors with palette quantization
+                pngOptions.colours = Math.max(2, Math.round(256 * (quality / 100)));
+                pngOptions.palette = true;
+                outputBuffer = await sharpInstance
+                  .png(pngOptions)
                   .toBuffer();
               }
             } else if (outputFormat === "webp") {
@@ -314,6 +322,7 @@ export default async function handler(req, res) {
 
         res.setHeader("Content-Type", "application/octet-stream");
         res.setHeader("X-Output-Extension", ext);
+        res.setHeader("Access-Control-Expose-Headers", "X-Output-Extension");
         res.send(outputBuffer);
 
         resolve();

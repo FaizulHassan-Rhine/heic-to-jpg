@@ -94,7 +94,19 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true, ordersCreated: 1, filesCount: orderFiles.length });
   } catch (error) {
-    console.error("Track usage error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Track usage error:", error.message);
+    
+    // Handle MongoDB connection errors
+    if (error.code === "MONGODB_URI_MISSING" || error.code === "MONGODB_CONNECTION_FAILED") {
+      return res.status(503).json({ 
+        error: "Database unavailable",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: "Internal server error",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }

@@ -39,7 +39,19 @@ export default async function handler(req, res) {
       },
     });
   } catch (error) {
-    console.error("Get user error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Get user error:", error.message);
+    
+    // Handle MongoDB connection errors
+    if (error.code === "MONGODB_URI_MISSING" || error.code === "MONGODB_CONNECTION_FAILED") {
+      return res.status(503).json({ 
+        error: "Database unavailable",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: "Internal server error",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }

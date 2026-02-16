@@ -156,24 +156,16 @@ export default function ConvertImage() {
 
     // Generate previews
     const newPreviews = {};
-    const newSettings = {};
     valid.forEach(f => {
       const type = getFileType(f.name);
       // HEIC previews are hard client-side without libs, so skip for now (or handle if lib exists)
       if (type !== 'heic' && f.type.startsWith("image/")) {
         newPreviews[f.name] = URL.createObjectURL(f);
       }
-      // Initialize default settings for each new file
-      newSettings[f.name] = {
-        ...defaultSettings,
-        targetFormat: targetFormat,
-        quality: quality,
-      };
     });
 
     setFiles(prev => [...prev, ...valid]);
     setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
-    setFileSettings(prev => ({ ...prev, ...newSettings }));
   };
 
   const removeFile = (name) => {
@@ -207,7 +199,9 @@ export default function ConvertImage() {
     const formData = new FormData();
     formData.append("file", file);
 
-    // Use per-file settings if available, otherwise use global settings
+    // Use per-file settings ONLY if the user explicitly customized this file
+    // (fileSettings entry only exists if user clicked the file and changed its settings)
+    // Otherwise, always use current global settings
     const settings = fileSettings[file.name] || {
       targetFormat,
       quality,
@@ -273,7 +267,6 @@ export default function ConvertImage() {
       if (!res.ok) throw new Error("Failed");
 
       const blob = await res.blob();
-      const settings = fileSettings[file.name] || { targetFormat };
       const ext = res.headers.get("X-Output-Extension") || settings.targetFormat;
 
       return {

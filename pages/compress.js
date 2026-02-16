@@ -180,7 +180,6 @@ export default function CompressImage() {
     if (valid.length === 0) return;
 
     const newPreviews = {};
-    const newSettings = {};
 
     valid.forEach(f => {
       if (f.type.startsWith("image/")) {
@@ -197,17 +196,10 @@ export default function CompressImage() {
         };
         img.src = url;
       }
-      // Initialize default settings for each new file
-      newSettings[f.name] = {
-        ...defaultSettings,
-        quality: quality,
-        compressionPreset: compressionPreset,
-      };
     });
 
     setFiles(prev => [...prev, ...valid]);
     setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
-    setFileSettings(prev => ({ ...prev, ...newSettings }));
   };
 
   const removeFile = (name) => {
@@ -275,7 +267,8 @@ export default function CompressImage() {
     const formData = new FormData();
     formData.append("file", file);
 
-    // Use per-file settings if available, otherwise use global settings
+    // Use per-file settings ONLY if user explicitly customized this file
+    // Otherwise, always use current global settings
     const settings = fileSettings[file.name] || {
       resizeMode,
       compressionPreset,
@@ -366,7 +359,9 @@ export default function CompressImage() {
       }
 
       const blob = await res.blob();
-      const ext = res.headers.get("X-Output-Extension") || "jpg";
+      // Get extension from API header; fallback to the file's original extension
+      const fileExt = file.name.split('.').pop().toLowerCase();
+      const ext = res.headers.get("X-Output-Extension") || fileExt || "jpg";
 
       return {
         status: "done",
@@ -1062,7 +1057,8 @@ export default function CompressImage() {
                                       const url = URL.createObjectURL(res.blob);
                                       const a = document.createElement("a");
                                       a.href = url;
-                                      a.download = "min_" + file.name;
+                                      const baseName = file.name.substring(0, file.name.lastIndexOf("."));
+                                      a.download = baseName + "_min." + res.ext;
                                       a.click();
                                     }}
                                     title="Download"
