@@ -15,7 +15,9 @@ export default function CollapsibleDropzone({
   onDisabledClick,
   className,
   borderColor = "border-gray-300",
-  hoverColor = "hover:border-blue-500"
+  hoverColor = "hover:border-blue-500",
+  maxFiles, // Pass through to Dropzone
+  currentFileCount, // Pass through to Dropzone
 }) {
   const [isExpanded, setIsExpanded] = useState(files.length === 0);
   const [userManuallyExpanded, setUserManuallyExpanded] = useState(false);
@@ -151,6 +153,8 @@ export default function CollapsibleDropzone({
               disabled={disabled}
               onDisabledClick={onDisabledClick}
               className={cn(hasFiles ? "p-6" : "p-10", className)}
+              maxFiles={maxFiles}
+              currentFileCount={currentFileCount}
             />
           </div>
         </CardContent>

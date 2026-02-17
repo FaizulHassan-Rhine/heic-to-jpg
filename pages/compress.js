@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
+import { useSettings } from "../lib/useSettings";
 import { generateFileThumbnails } from "../lib/thumbnailUtils";
 import { blobToBase64, extractBase64 } from "../lib/fileUtils";
 import Dropzone from "../components/Dropzone";
@@ -53,6 +54,7 @@ const calculateEstimatedSize = (originalSize, oldW, oldH, newW, newH) => {
 
 export default function CompressImage() {
   const { user, trackUsage } = useAuth();
+  const { settings, loading: settingsLoading } = useSettings();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -176,14 +178,71 @@ export default function CompressImage() {
   // ── File Handling ──
 
   const handleFilesAdded = (newFiles) => {
-    // Filter oversized
+    // CRITICAL: Block if settings not loaded yet - MUST wait for database
+    if (settingsLoading || !settings || !settings.image) {
+      toast.error("Settings are loading from database. Please wait a moment and try again.");
+      console.error("Settings not loaded from database:", { settingsLoading, settings: !!settings, hasImageSettings: !!settings?.image });
+      return;
+    }
+
+    // Get values directly from database - no fallbacks
+    const maxSize = settings.image.maxSize;
+    const maxFiles = settings.image.maxFiles;
+    
+    // Safety check - if database values are missing, block upload
+    if (!maxSize || !maxFiles) {
+      toast.error("Upload limits not configured. Please contact support.");
+      console.error("Database settings incomplete:", { maxSize, maxFiles });
+      return;
+    }
+
+    // Check total file count - STRICT validation
+    const totalFiles = files.length + newFiles.length;
+    if (totalFiles > maxFiles) {
+      const excess = totalFiles - maxFiles;
+      toast.error(`Maximum ${maxFiles} files allowed. You have ${files.length} files and trying to add ${newFiles.length} (${excess} too many). Please remove some files first.`);
+      return;
+    }
+
+    // Also check individual file count in this batch
+    if (newFiles.length > maxFiles) {
+      toast.error(`Cannot upload more than ${maxFiles} files at once. You selected ${newFiles.length} files.`);
+      return;
+    }
+
+    // Filter oversized files
     const valid = [];
+    const oversized = [];
     newFiles.forEach(f => {
-      if (f.size > 20 * 1024 * 1024) toast.error(`"${f.name}" is too large (>20MB)`);
-      else valid.push(f);
+      if (f.size > maxSize) {
+        const maxSizeMB = (maxSize / 1024 / 1024).toFixed(1);
+        oversized.push(f.name);
+        toast.error(`"${f.name}" is too large (max ${maxSizeMB}MB)`);
+      } else {
+        valid.push(f);
+      }
     });
 
-    if (valid.length === 0) return;
+    if (valid.length === 0) {
+      if (oversized.length > 0) {
+        toast.error(`All selected files exceed the maximum size limit.`);
+      }
+      return;
+    }
+
+    // Final check: ensure we don't exceed limit after adding valid files
+    if (files.length + valid.length > maxFiles) {
+      const allowed = maxFiles - files.length;
+      toast.error(`Can only add ${allowed} more file${allowed !== 1 ? 's' : ''}. You tried to add ${valid.length}.`);
+      return;
+    }
+
+    // ABSOLUTE FINAL CHECK - prevent any addition if limit would be exceeded
+    const finalTotal = files.length + valid.length;
+    if (finalTotal > maxFiles) {
+      toast.error(`Cannot add files. Maximum ${maxFiles} files allowed. Current: ${files.length}, Trying to add: ${valid.length}`);
+      return;
+    }
 
     const newPreviews = {};
 
@@ -204,8 +263,13 @@ export default function CompressImage() {
       }
     });
 
-    setFiles(prev => [...prev, ...valid]);
-    setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
+    // Only add files if we're still under the limit
+    if (files.length + valid.length <= maxFiles) {
+      setFiles(prev => [...prev, ...valid]);
+      setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
+    } else {
+      toast.error(`Cannot add files. Maximum ${maxFiles} files allowed.`);
+    }
   };
 
   const removeFile = (name) => {
@@ -614,8 +678,21 @@ export default function CompressImage() {
           <CollapsibleDropzone
             files={files}
             setFiles={handleFilesAdded}
+            disabled={settingsLoading || !settings}
+            onDisabledClick={() => {
+              if (settingsLoading) {
+                toast.error("Loading upload settings... Please wait.");
+              } else if (!settings) {
+                toast.error("Settings not available. Please refresh the page.");
+              } else {
+                const maxFiles = settings.image?.maxFiles;
+                toast.error(`Maximum ${maxFiles} files allowed. You have ${files.length} files.`);
+              }
+            }}
+            maxFiles={settings?.image?.maxFiles}
+            currentFileCount={files.length}
             title="Upload Images to Compress"
-            description="JPG, PNG, WebP • Max 10MB each"
+            description={settings && settings.image ? `JPG, PNG, WebP, HEIC, TIFF • Max ${Math.round(settings.image.maxSize / (1024 * 1024))}MB each • Up to ${settings.image.maxFiles} files` : "Loading settings from database..."}
             accept={{
               "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
               "image/png": [".png", ".PNG"],

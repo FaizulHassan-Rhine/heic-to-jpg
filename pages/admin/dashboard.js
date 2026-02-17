@@ -2,10 +2,25 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Users, Mail, Activity, TrendingUp, LogOut, Search, Download, Package, Clock, Eye, FileImage, FileVideo, FileAudio, FileText, Image, Trash2 } from "lucide-react";
+import { 
+  Users, Mail, Activity, TrendingUp, LogOut, Search, Download, Package, 
+  Clock, Eye, FileImage, FileVideo, FileAudio, FileText, Image, Trash2,
+  LayoutDashboard, BarChart3, Menu, X, Settings as SettingsIcon, Save
+} from "lucide-react";
 import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
+import { clearSettingsCache } from "../../lib/useSettings";
+
+const SIDEBAR_ITEMS = [
+  { id: "stats", label: "Dashboard", icon: LayoutDashboard },
+  { id: "users", label: "Users", icon: Users },
+  { id: "orders", label: "Orders", icon: Package },
+  { id: "settings", label: "Settings", icon: SettingsIcon },
+];
 
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("stats");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -18,6 +33,9 @@ export default function AdminDashboard() {
   const [ordersSearchTerm, setOrdersSearchTerm] = useState("");
   const [viewingOrder, setViewingOrder] = useState(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [settings, setSettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,12 +53,22 @@ export default function AdminDashboard() {
   }, [router]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [currentPage, searchTerm]);
+    if (activeTab === "users") {
+      fetchUsers();
+    }
+  }, [currentPage, searchTerm, activeTab]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [ordersPage, ordersSearchTerm]);
+    if (activeTab === "orders") {
+      fetchOrders();
+    }
+  }, [ordersPage, ordersSearchTerm, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "settings") {
+      fetchSettings();
+    }
+  }, [activeTab]);
 
   const fetchStats = async () => {
     try {
@@ -98,7 +126,6 @@ export default function AdminDashboard() {
       const data = await response.json();
       if (data.success) {
         console.log(`Fetched ${data.orders.length} orders, total: ${data.pagination.total}`);
-        console.log("Orders sample:", data.orders.slice(0, 2));
         setOrders(data.orders);
         setOrdersPagination(data.pagination);
       } else {
@@ -170,13 +197,12 @@ export default function AdminDashboard() {
     }
 
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/delete-file`, {
+      const response = await fetch(`/api/admin/orders/${orderId}/delete-file?fileIndex=${fileIndex}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ fileIndex }),
       });
 
       const data = await response.json();
@@ -244,6 +270,54 @@ export default function AdminDashboard() {
     toast.success("Users exported successfully");
   };
 
+  const fetchSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const response = await fetch("/api/admin/settings", {
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSettings(data.settings);
+      } else {
+        toast.error("Failed to load settings");
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      toast.error("Failed to load settings");
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(settings),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success("Settings saved successfully");
+        setSettings(data.settings);
+        // Clear cache so all pages get updated settings immediately
+        clearSettingsCache();
+      } else {
+        toast.error("Failed to save settings");
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast.error("Failed to save settings");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -256,510 +330,928 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-              <p className="text-sm text-gray-500">ConvertMastery Admin Panel</p>
-            </div>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {stats?.totalUsers || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users (30d)</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {stats?.activeUsers || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Conversions</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {stats?.totalConversions || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Compressions</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {stats?.totalCompressions || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Order Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {stats?.totalOrders || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <Package className="w-6 h-6 text-indigo-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Orders (24h)</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {stats?.ordersLast24Hours || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Conversion Orders</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {stats?.conversionOrders || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Package className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Compression Orders</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {stats?.compressionOrders || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Package className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium text-gray-600">New Users (7d)</p>
-              <p className="text-2xl font-bold text-gray-800 mt-2">
-                {stats?.newUsersLastWeek || 0}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium text-gray-600">Google Sign-ins</p>
-              <p className="text-2xl font-bold text-gray-800 mt-2">
-                {stats?.googleUsers || 0}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium text-gray-600">Email Sign-ups</p>
-              <p className="text-2xl font-bold text-gray-800 mt-2">
-                {stats?.emailUsers || 0}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Users Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Users</CardTitle>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <Button onClick={exportUsers} variant="outline" className="flex items-center gap-2">
-                  <Download className="w-4 h-4" />
-                  Export CSV
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Provider</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Conversions</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Compressions</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Tools Used</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Created</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Last Active</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="text-center py-8 text-gray-500">
-                        No users found
-                      </td>
-                    </tr>
-                  ) : (
-                    users.map((user) => (
-                      <tr key={user.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            {user.photoURL && (
-                              <img
-                                src={user.photoURL}
-                                alt={user.displayName}
-                                className="w-8 h-8 rounded-full"
-                              />
-                            )}
-                            <span className="text-sm">{user.email}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm">{user.displayName}</td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              user.provider === "google"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {user.provider}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm">{user.totalConversions}</td>
-                        <td className="py-3 px-4 text-sm">{user.totalCompressions}</td>
-                        <td className="py-3 px-4 text-sm">{user.totalToolsUsed}</td>
-                        <td className="py-3 px-4 text-sm text-gray-500">
-                          {new Date(user.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-500">
-                          {new Date(user.lastActive).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-600">
-                  Showing {((currentPage - 1) * 20) + 1} to{" "}
-                  {Math.min(currentPage * 20, pagination.total)} of {pagination.total} users
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
-                    disabled={currentPage === pagination.totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "bg-white border-r shadow-sm transition-all duration-300 z-40",
+          sidebarOpen ? "w-64" : "w-20"
+        )}
+      >
+        <div className="flex flex-col h-screen">
+          {/* Sidebar Header */}
+          <div className="p-4 border-b flex items-center justify-between">
+            {sidebarOpen && (
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Admin Panel</h2>
+                <p className="text-xs text-gray-500">ConvertMastery</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="ml-auto"
+            >
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
 
-        {/* Orders with Files */}
-        <Card className="mt-8">
-          <CardHeader>
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-2">
+            {SIDEBAR_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                    activeTab === item.id
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50"
+                  )}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {sidebarOpen && <span className="text-sm">{item.label}</span>}
+                </button>
+              );
+            })}
+          </nav>
+
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header */}
+        <header className="bg-white border-b shadow-sm">
+          <div className="px-6 py-4">
             <div className="flex items-center justify-between">
-              <CardTitle>Orders & Files</CardTitle>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search orders..."
-                    value={ordersSearchTerm}
-                    onChange={(e) => {
-                      setOrdersSearchTerm(e.target.value);
-                      setOrdersPage(1);
-                    }}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">
+                  {SIDEBAR_ITEMS.find((item) => item.id === activeTab)?.label || "Dashboard"}
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  {activeTab === "stats" && "Overview of your platform statistics"}
+                  {activeTab === "users" && "Manage and view all registered users"}
+                  {activeTab === "orders" && "View and manage all orders and files"}
+                {activeTab === "settings" && "Configure file upload limits and system settings"}
+                </p>
               </div>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            {ordersLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-4 text-gray-600">Loading orders...</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {orders.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No orders found
-                  </div>
-                ) : (
-                  orders.map((order) => (
-                  <div key={order.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex items-start justify-between mb-3">
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {/* Stats Tab */}
+          {activeTab === "stats" && (
+            <div className="space-y-6">
+              {/* Main Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-800">{order.toolName}</h3>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            order.toolType === "conversion" 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-blue-100 text-blue-800"
-                          }`}>
-                            {order.toolType}
-                          </span>
-                          {order.isAnonymous && (
-                            <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                              Anonymous
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {order.userEmail || "Anonymous User"}
-                          {order.sessionId && (
-                            <span className="text-xs text-gray-400 ml-2">({order.sessionId})</span>
-                          )}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(order.createdAt).toLocaleString()} • {order.fileCount} file{order.fileCount !== 1 ? 's' : ''}
+                        <p className="text-sm font-medium text-gray-600">Total Users</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                          {stats?.totalUsers || 0}
                         </p>
                       </div>
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="w-6 h-6 text-blue-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Active Users (30d)</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                          {stats?.activeUsers || 0}
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <Activity className="w-6 h-6 text-green-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Conversions</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                          {stats?.totalConversions || 0}
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <TrendingUp className="w-6 h-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Compressions</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                          {stats?.totalCompressions || 0}
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                        <TrendingUp className="w-6 h-6 text-orange-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Order Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                          {stats?.totalOrders || 0}
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <Package className="w-6 h-6 text-indigo-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Orders (24h)</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                          {stats?.ordersLast24Hours || 0}
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Clock className="w-6 h-6 text-blue-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Conversion Orders</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                          {stats?.conversionOrders || 0}
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <Package className="w-6 h-6 text-green-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Compression Orders</p>
+                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                          {stats?.compressionOrders || 0}
+                        </p>
+                      </div>
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Package className="w-6 h-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Additional Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-sm font-medium text-gray-600">New Users (7d)</p>
+                    <p className="text-2xl font-bold text-gray-800 mt-2">
+                      {stats?.newUsersLastWeek || 0}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-sm font-medium text-gray-600">Google Sign-ins</p>
+                    <p className="text-2xl font-bold text-gray-800 mt-2">
+                      {stats?.googleUsers || 0}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-sm font-medium text-gray-600">Email Sign-ups</p>
+                    <p className="text-2xl font-bold text-gray-800 mt-2">
+                      {stats?.emailUsers || 0}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* Users Tab */}
+          {activeTab === "users" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Users</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search users..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <Button onClick={exportUsers} variant="outline" className="flex items-center gap-2">
+                      <Download className="w-4 h-4" />
+                      Export CSV
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Provider</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Conversions</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Compressions</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Tools Used</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Created</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Last Active</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="text-center py-8 text-gray-500">
+                            No users found
+                          </td>
+                        </tr>
+                      ) : (
+                        users.map((user) => (
+                          <tr key={user.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                {user.photoURL && (
+                                  <img
+                                    src={user.photoURL}
+                                    alt={user.displayName}
+                                    className="w-8 h-8 rounded-full"
+                                  />
+                                )}
+                                <span className="text-sm">{user.email}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-sm">{user.displayName}</td>
+                            <td className="py-3 px-4">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  user.provider === "google"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {user.provider}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-sm">{user.totalConversions}</td>
+                            <td className="py-3 px-4 text-sm">{user.totalCompressions}</td>
+                            <td className="py-3 px-4 text-sm">{user.totalToolsUsed}</td>
+                            <td className="py-3 px-4 text-sm text-gray-500">
+                              {new Date(user.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-gray-500">
+                              {new Date(user.lastActive).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-sm text-gray-600">
+                      Showing {((currentPage - 1) * 20) + 1} to{" "}
+                      {Math.min(currentPage * 20, pagination.total)} of {pagination.total} users
+                    </p>
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        size="sm"
-                        onClick={() => setViewingOrder(viewingOrder?.id === order.id ? null : order)}
-                        className="flex items-center gap-2"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
                       >
-                        <Eye className="w-4 h-4" />
-                        {viewingOrder?.id === order.id ? "Hide Files" : "View Files"}
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
+                        disabled={currentPage === pagination.totalPages}
+                      >
+                        Next
                       </Button>
                     </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-                    {viewingOrder?.id === order.id && order.files && order.files.length > 0 && (
-                      <div className="mt-4 space-y-3 border-t pt-4">
-                        {order.files.map((file, fileIndex) => {
-                          const InputIcon = getFileIcon(file.inputFormat);
-                          const OutputIcon = getFileIcon(file.outputFormat);
-                          return (
-                            <div key={fileIndex} className="bg-white border rounded-lg p-4 relative">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteFile(order.id, fileIndex)}
-                                className="absolute top-2 right-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Delete this file"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                              <div className="grid grid-cols-2 gap-4">
-                                {/* Input File */}
-                                <div>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <InputIcon className="w-4 h-4 text-gray-600" />
-                                    <span className="text-sm font-semibold text-gray-700">Input File</span>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <p className="text-xs text-gray-600 truncate">{file.inputName}</p>
-                                    {file.inputThumbnail && (
-                                      <div className="border rounded overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: '120px', maxHeight: '200px' }}>
-                                        <img
-                                          src={file.inputThumbnail.startsWith('data:') 
-                                            ? file.inputThumbnail 
-                                            : `data:image/jpeg;base64,${file.inputThumbnail}`}
-                                          alt="Input preview"
-                                          className="max-w-full h-auto object-contain"
-                                          style={{ maxHeight: '200px' }}
-                                          onError={(e) => {
-                                            e.target.style.display = 'none';
-                                          }}
-                                        />
-                                      </div>
-                                    )}
-                                    {file.inputSize && (
-                                      <p className="text-xs text-gray-500">Size: {formatSize(file.inputSize)}</p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Output File */}
-                                <div>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <OutputIcon className="w-4 h-4 text-gray-600" />
-                                    <span className="text-sm font-semibold text-gray-700">Output File</span>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <p className="text-xs text-gray-600 truncate">{file.outputName}</p>
-                                    {file.outputThumbnail && (
-                                      <div className="border rounded overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: '120px', maxHeight: '200px' }}>
-                                        <img
-                                          src={file.outputThumbnail.startsWith('data:') 
-                                            ? file.outputThumbnail 
-                                            : `data:image/jpeg;base64,${file.outputThumbnail}`}
-                                          alt="Output preview"
-                                          className="max-w-full h-auto object-contain"
-                                          style={{ maxHeight: '200px' }}
-                                          onError={(e) => {
-                                            e.target.style.display = 'none';
-                                          }}
-                                        />
-                                      </div>
-                                    )}
-                                    {file.outputSize && (
-                                      <p className="text-xs text-gray-500">Size: {formatSize(file.outputSize)}</p>
-                                    )}
-                                    {file.hasOutputFileData && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => downloadFile(file, fileIndex, order.id)}
-                                        className="w-full mt-2 flex items-center gap-2"
-                                      >
-                                        <Download className="w-3 h-3" />
-                                        Download Output
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
+          {/* Orders Tab */}
+          {activeTab === "orders" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Orders & Files</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search orders..."
+                        value={ordersSearchTerm}
+                        onChange={(e) => {
+                          setOrdersSearchTerm(e.target.value);
+                          setOrdersPage(1);
+                        }}
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {ordersLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="mt-4 text-gray-600">Loading orders...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        No orders found
+                      </div>
+                    ) : (
+                      orders.map((order) => (
+                        <div key={order.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-gray-800">{order.toolName}</h3>
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  order.toolType === "conversion" 
+                                    ? "bg-green-100 text-green-800" 
+                                    : "bg-blue-100 text-blue-800"
+                                }`}>
+                                  {order.toolType}
+                                </span>
+                                {order.isAnonymous && (
+                                  <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                    Anonymous
+                                  </span>
+                                )}
                               </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {order.userEmail || "Anonymous User"}
+                                {order.sessionId && (
+                                  <span className="text-xs text-gray-400 ml-2">({order.sessionId})</span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(order.createdAt).toLocaleString()} • {order.fileCount} file{order.fileCount !== 1 ? 's' : ''}
+                              </p>
                             </div>
-                          );
-                        })}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setViewingOrder(viewingOrder?.id === order.id ? null : order)}
+                              className="flex items-center gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              {viewingOrder?.id === order.id ? "Hide Files" : "View Files"}
+                            </Button>
+                          </div>
+
+                          {viewingOrder?.id === order.id && order.files && order.files.length > 0 && (
+                            <div className="mt-4 space-y-3 border-t pt-4">
+                              {order.files.map((file, fileIndex) => {
+                                const InputIcon = getFileIcon(file.inputFormat);
+                                const OutputIcon = getFileIcon(file.outputFormat);
+                                return (
+                                  <div key={fileIndex} className="bg-white border rounded-lg p-4 relative">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteFile(order.id, fileIndex)}
+                                      className="absolute top-2 right-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      title="Delete this file"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      {/* Input File */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <InputIcon className="w-4 h-4 text-gray-600" />
+                                          <span className="text-sm font-semibold text-gray-700">Input File</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <p className="text-xs text-gray-600 truncate">{file.inputName}</p>
+                                          {file.inputThumbnail && (
+                                            <div className="border rounded overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: '120px', maxHeight: '200px' }}>
+                                              <img
+                                                src={file.inputThumbnail.startsWith('data:') 
+                                                  ? file.inputThumbnail 
+                                                  : `data:image/jpeg;base64,${file.inputThumbnail}`}
+                                                alt="Input preview"
+                                                className="max-w-full h-auto object-contain"
+                                                style={{ maxHeight: '200px' }}
+                                                onError={(e) => {
+                                                  e.target.style.display = 'none';
+                                                }}
+                                              />
+                                            </div>
+                                          )}
+                                          {file.inputSize && (
+                                            <p className="text-xs text-gray-500">Size: {formatSize(file.inputSize)}</p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Output File */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <OutputIcon className="w-4 h-4 text-gray-600" />
+                                          <span className="text-sm font-semibold text-gray-700">Output File</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <p className="text-xs text-gray-600 truncate">{file.outputName}</p>
+                                          {file.outputThumbnail && (
+                                            <div className="border rounded overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: '120px', maxHeight: '200px' }}>
+                                              <img
+                                                src={file.outputThumbnail.startsWith('data:') 
+                                                  ? file.outputThumbnail 
+                                                  : `data:image/jpeg;base64,${file.outputThumbnail}`}
+                                                alt="Output preview"
+                                                className="max-w-full h-auto object-contain"
+                                                style={{ maxHeight: '200px' }}
+                                                onError={(e) => {
+                                                  e.target.style.display = 'none';
+                                                }}
+                                              />
+                                            </div>
+                                          )}
+                                          {file.outputSize && (
+                                            <p className="text-xs text-gray-500">Size: {formatSize(file.outputSize)}</p>
+                                          )}
+                                          {file.hasOutputFileData && (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => downloadFile(file, fileIndex, order.id)}
+                                              className="w-full mt-2 flex items-center gap-2"
+                                            >
+                                              <Download className="w-3 h-3" />
+                                              Download Output
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+
+                    {/* Orders Pagination */}
+                    {ordersPagination.totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-4">
+                        <p className="text-sm text-gray-600">
+                          Showing {((ordersPage - 1) * 10) + 1} to{" "}
+                          {Math.min(ordersPage * 10, ordersPagination.total)} of {ordersPagination.total} orders
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
+                            disabled={ordersPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setOrdersPage((p) => Math.min(ordersPagination.totalPages, p + 1))}
+                            disabled={ordersPage === ordersPagination.totalPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
-                ))
-              )}
-
-              {/* Orders Pagination */}
-              {ordersPagination.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-gray-600">
-                    Showing {((ordersPage - 1) * 10) + 1} to{" "}
-                    {Math.min(ordersPage * 10, ordersPagination.total)} of {ordersPagination.total} orders
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
-                      disabled={ordersPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setOrdersPage((p) => Math.min(ordersPagination.totalPages, p + 1))}
-                      disabled={ordersPage === ordersPagination.totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === "settings" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>File Upload Settings</CardTitle>
+                  <Button
+                    onClick={saveSettings}
+                    disabled={savingSettings || settingsLoading}
+                    className="flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    {savingSettings ? "Saving..." : "Save Settings"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {settingsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="mt-4 text-gray-600">Loading settings...</p>
+                    </div>
+                  </div>
+                ) : settings ? (
+                  <div className="space-y-8">
+                    {/* Image Settings */}
+                    <div className="border rounded-lg p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <FileImage className="w-5 h-5 text-blue-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">Image Files</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum File Size (MB)
+                          </label>
+                          <input
+                            type="number"
+                            value={Math.round(settings.imageMaxSize / (1024 * 1024))}
+                            onChange={(e) => {
+                              const mb = parseFloat(e.target.value) || 0;
+                              setSettings({
+                                ...settings,
+                                imageMaxSize: mb * 1024 * 1024,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                            step="0.1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Current: {formatSize(settings.imageMaxSize)}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Files Per Upload (Batch Limit)
+                          </label>
+                          <input
+                            type="number"
+                            value={settings.imageMaxFiles}
+                            onChange={(e) => {
+                              setSettings({
+                                ...settings,
+                                imageMaxFiles: parseInt(e.target.value) || 0,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Users can upload up to {settings.imageMaxFiles} images at once
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Document Settings */}
+                    <div className="border rounded-lg p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <FileText className="w-5 h-5 text-green-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">Document Files (DOC, DOCX, TXT)</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum File Size (MB)
+                          </label>
+                          <input
+                            type="number"
+                            value={Math.round(settings.documentMaxSize / (1024 * 1024))}
+                            onChange={(e) => {
+                              const mb = parseFloat(e.target.value) || 0;
+                              setSettings({
+                                ...settings,
+                                documentMaxSize: mb * 1024 * 1024,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                            step="0.1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Current: {formatSize(settings.documentMaxSize)}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Files Per Upload (Batch Limit)
+                          </label>
+                          <input
+                            type="number"
+                            value={settings.documentMaxFiles}
+                            onChange={(e) => {
+                              setSettings({
+                                ...settings,
+                                documentMaxFiles: parseInt(e.target.value) || 0,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Users can upload up to {settings.documentMaxFiles} documents at once
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PDF Settings */}
+                    <div className="border rounded-lg p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <FileText className="w-5 h-5 text-red-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">PDF Files</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum File Size (MB)
+                          </label>
+                          <input
+                            type="number"
+                            value={Math.round(settings.pdfMaxSize / (1024 * 1024))}
+                            onChange={(e) => {
+                              const mb = parseFloat(e.target.value) || 0;
+                              setSettings({
+                                ...settings,
+                                pdfMaxSize: mb * 1024 * 1024,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                            step="0.1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Current: {formatSize(settings.pdfMaxSize)}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Files Per Upload (Batch Limit)
+                          </label>
+                          <input
+                            type="number"
+                            value={settings.pdfMaxFiles}
+                            onChange={(e) => {
+                              setSettings({
+                                ...settings,
+                                pdfMaxFiles: parseInt(e.target.value) || 0,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Users can upload up to {settings.pdfMaxFiles} PDF files at once
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Video Settings */}
+                    <div className="border rounded-lg p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <FileVideo className="w-5 h-5 text-purple-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">Video Files</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum File Size (MB)
+                          </label>
+                          <input
+                            type="number"
+                            value={Math.round(settings.videoMaxSize / (1024 * 1024))}
+                            onChange={(e) => {
+                              const mb = parseFloat(e.target.value) || 0;
+                              setSettings({
+                                ...settings,
+                                videoMaxSize: mb * 1024 * 1024,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                            step="0.1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Current: {formatSize(settings.videoMaxSize)}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Files Per Upload (Batch Limit)
+                          </label>
+                          <input
+                            type="number"
+                            value={settings.videoMaxFiles}
+                            onChange={(e) => {
+                              setSettings({
+                                ...settings,
+                                videoMaxFiles: parseInt(e.target.value) || 0,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Users can upload up to {settings.videoMaxFiles} videos at once
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Audio Settings */}
+                    <div className="border rounded-lg p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <FileAudio className="w-5 h-5 text-pink-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">Audio Files</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum File Size (MB)
+                          </label>
+                          <input
+                            type="number"
+                            value={Math.round(settings.audioMaxSize / (1024 * 1024))}
+                            onChange={(e) => {
+                              const mb = parseFloat(e.target.value) || 0;
+                              setSettings({
+                                ...settings,
+                                audioMaxSize: mb * 1024 * 1024,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                            step="0.1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Current: {formatSize(settings.audioMaxSize)}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Files Per Upload (Batch Limit)
+                          </label>
+                          <input
+                            type="number"
+                            value={settings.audioMaxFiles}
+                            onChange={(e) => {
+                              setSettings({
+                                ...settings,
+                                audioMaxFiles: parseInt(e.target.value) || 0,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Users can upload up to {settings.audioMaxFiles} audio files at once
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* General Settings */}
+                    <div className="border rounded-lg p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <SettingsIcon className="w-5 h-5 text-gray-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">General Files (Other Types)</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum File Size (MB)
+                          </label>
+                          <input
+                            type="number"
+                            value={Math.round(settings.generalMaxSize / (1024 * 1024))}
+                            onChange={(e) => {
+                              const mb = parseFloat(e.target.value) || 0;
+                              setSettings({
+                                ...settings,
+                                generalMaxSize: mb * 1024 * 1024,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                            step="0.1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Current: {formatSize(settings.generalMaxSize)}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Files Per Upload (Batch Limit)
+                          </label>
+                          <input
+                            type="number"
+                            value={settings.generalMaxFiles}
+                            onChange={(e) => {
+                              setSettings({
+                                ...settings,
+                                generalMaxFiles: parseInt(e.target.value) || 0,
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="1"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Users can upload up to {settings.generalMaxFiles} files at once
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    Failed to load settings
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </main>
       </div>
     </div>
   );

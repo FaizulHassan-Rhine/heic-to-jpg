@@ -64,11 +64,24 @@ export default async function handler(req, res) {
         }
 
 
-        // Check file size
-        // Local development: 20MB limit
-        // Vercel: 4.5MB limit (Vercel's hard limit)
+        // Check file size using dynamic settings from MongoDB
+        const Settings = (await import("../../../models/Settings")).default;
+        const connectDB = (await import("../../../lib/mongodb")).default;
+        await connectDB();
+        const settings = await Settings.getSettings();
+        
+        // Get max size directly from database - no fallbacks
+        if (!settings || !settings.imageMaxSize) {
+          res.status(500).json({ error: "Upload limits not configured in database. Please contact administrator." });
+          return resolve();
+        }
+        
+        // Use Vercel's hard limit as absolute max, but prefer database setting
         const isVercel = process.env.VERCEL === '1';
-        const maxSize = isVercel ? 4.5 * 1024 * 1024 : 20 * 1024 * 1024; // 4.5MB on Vercel, 20MB locally
+        const vercelMaxSize = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
+        const dbMaxSize = settings.imageMaxSize; // From database
+        const maxSize = isVercel ? Math.min(vercelMaxSize, dbMaxSize) : dbMaxSize;
+        
         if (fileBuffer.length > maxSize) {
           res.status(413).json({ 
             error: `File too large. Maximum size is ${(maxSize / 1024 / 1024).toFixed(1)}MB. Your file is ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB.` 

@@ -12,12 +12,43 @@ export default function Dropzone({
   description, // New prop for custom description
   disabled,
   onDisabledClick,
-  className
+  className,
+  maxFiles, // New prop for maximum files limit
+  currentFileCount = 0, // Current number of files already uploaded
 }) {
   const onDrop = useCallback((acceptedFiles) => {
     if (disabled) {
       if (onDisabledClick) onDisabledClick();
       return;
+    }
+
+    // Validate maxFiles BEFORE processing - CRITICAL VALIDATION
+    if (maxFiles !== undefined && maxFiles !== null && maxFiles > 0) {
+      const totalFiles = currentFileCount + acceptedFiles.length;
+      console.log("Dropzone validation:", {
+        currentFileCount,
+        acceptedFiles: acceptedFiles.length,
+        maxFiles,
+        totalFiles,
+        willExceed: totalFiles > maxFiles
+      });
+      
+      if (totalFiles > maxFiles) {
+        console.error(`BLOCKED: Total files (${totalFiles}) exceeds limit (${maxFiles})`);
+        if (onDisabledClick) {
+          onDisabledClick();
+        }
+        // Don't process files if they exceed limit
+        return;
+      }
+      // Also check if this batch alone exceeds limit
+      if (acceptedFiles.length > maxFiles) {
+        console.error(`BLOCKED: Batch size (${acceptedFiles.length}) exceeds limit (${maxFiles})`);
+        if (onDisabledClick) {
+          onDisabledClick();
+        }
+        return;
+      }
     }
 
     // Process files (maintain existing HEIC fix logic but make it safe)
@@ -47,8 +78,9 @@ export default function Dropzone({
     });
 
     if (resetResults) resetResults();
+    // Call setFiles which should be the validation handler (handleFilesAdded)
     setFiles(fixedFiles);
-  }, [setFiles, resetResults, disabled, onDisabledClick]);
+  }, [setFiles, resetResults, disabled, onDisabledClick, maxFiles, currentFileCount]);
 
   // Determine accept types
   const getAcceptObject = () => {
@@ -68,6 +100,7 @@ export default function Dropzone({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: getAcceptObject(),
     multiple: true,
+    maxFiles: maxFiles !== undefined ? maxFiles - currentFileCount : undefined,
     onDrop,
     disabled: disabled,
     noClick: disabled,
