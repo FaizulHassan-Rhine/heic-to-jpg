@@ -44,6 +44,21 @@ export default async function handler(req, res) {
           maxSize: settings.generalMaxSize,
           maxFiles: settings.generalMaxFiles,
         },
+        // Feature flags - true = free, false = requires sign-in
+        features: settings.features || {
+          imageConverter: {
+            socialPreset: false,
+            advancedOptions: false,
+          },
+          imageCompress: {
+            webpFormat: false,
+            targetFileSize: false,
+            advancedOptions: false,
+          },
+          videoConvert: {
+            webmFormat: false,
+          },
+        },
       },
     });
   } catch (error) {

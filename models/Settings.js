@@ -61,6 +61,45 @@ const SettingsSchema = new mongoose.Schema(
       type: Number,
       default: 10,
     },
+    
+    // Feature Flags - Control which features require sign-in
+    // true = free, false = requires sign-in
+    features: {
+      // Image Converter features
+      imageConverter: {
+        socialPreset: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Image Compress features
+      imageCompress: {
+        webpFormat: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        targetFileSize: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Video Convert features
+      videoConvert: {
+        webmFormat: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Add more tools/features as needed
+    },
   },
   {
     timestamps: true,

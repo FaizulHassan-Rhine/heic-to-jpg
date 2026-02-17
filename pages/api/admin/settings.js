@@ -32,6 +32,7 @@ export default async function handler(req, res) {
         audioMaxFiles,
         generalMaxSize,
         generalMaxFiles,
+        features, // Feature flags object
       } = req.body;
 
       // Get or create settings
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
         settings = new Settings({});
       }
 
-      // Update fields if provided
+      // Update file limit fields if provided
       if (imageMaxSize !== undefined) settings.imageMaxSize = imageMaxSize;
       if (imageMaxFiles !== undefined) settings.imageMaxFiles = imageMaxFiles;
       if (documentMaxSize !== undefined) settings.documentMaxSize = documentMaxSize;
@@ -53,6 +54,47 @@ export default async function handler(req, res) {
       if (audioMaxFiles !== undefined) settings.audioMaxFiles = audioMaxFiles;
       if (generalMaxSize !== undefined) settings.generalMaxSize = generalMaxSize;
       if (generalMaxFiles !== undefined) settings.generalMaxFiles = generalMaxFiles;
+
+      // Update feature flags if provided
+      if (features !== undefined) {
+        if (!settings.features) {
+          settings.features = {};
+        }
+        // Merge feature flags (deep merge for nested objects)
+        if (features.imageConverter) {
+          if (!settings.features.imageConverter) {
+            settings.features.imageConverter = {};
+          }
+          if (features.imageConverter.socialPreset !== undefined) {
+            settings.features.imageConverter.socialPreset = features.imageConverter.socialPreset;
+          }
+          if (features.imageConverter.advancedOptions !== undefined) {
+            settings.features.imageConverter.advancedOptions = features.imageConverter.advancedOptions;
+          }
+        }
+        if (features.imageCompress) {
+          if (!settings.features.imageCompress) {
+            settings.features.imageCompress = {};
+          }
+          if (features.imageCompress.webpFormat !== undefined) {
+            settings.features.imageCompress.webpFormat = features.imageCompress.webpFormat;
+          }
+          if (features.imageCompress.targetFileSize !== undefined) {
+            settings.features.imageCompress.targetFileSize = features.imageCompress.targetFileSize;
+          }
+          if (features.imageCompress.advancedOptions !== undefined) {
+            settings.features.imageCompress.advancedOptions = features.imageCompress.advancedOptions;
+          }
+        }
+        if (features.videoConvert) {
+          if (!settings.features.videoConvert) {
+            settings.features.videoConvert = {};
+          }
+          if (features.videoConvert.webmFormat !== undefined) {
+            settings.features.videoConvert.webmFormat = features.videoConvert.webmFormat;
+          }
+        }
+      }
 
       await settings.save();
 

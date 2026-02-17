@@ -2,6 +2,7 @@ import { useDropzone } from "react-dropzone";
 import { useCallback } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function Dropzone({
   setFiles,
@@ -34,7 +35,10 @@ export default function Dropzone({
       });
       
       if (totalFiles > maxFiles) {
+        const excess = totalFiles - maxFiles;
+        const errorMsg = `Maximum ${maxFiles} files allowed. You have ${currentFileCount} files and trying to add ${acceptedFiles.length} (${excess} too many). Please remove some files first.`;
         console.error(`BLOCKED: Total files (${totalFiles}) exceeds limit (${maxFiles})`);
+        toast.error(errorMsg);
         if (onDisabledClick) {
           onDisabledClick();
         }
@@ -43,7 +47,9 @@ export default function Dropzone({
       }
       // Also check if this batch alone exceeds limit
       if (acceptedFiles.length > maxFiles) {
+        const errorMsg = `Cannot upload more than ${maxFiles} files at once. You selected ${acceptedFiles.length} files.`;
         console.error(`BLOCKED: Batch size (${acceptedFiles.length}) exceeds limit (${maxFiles})`);
+        toast.error(errorMsg);
         if (onDisabledClick) {
           onDisabledClick();
         }
@@ -97,11 +103,45 @@ export default function Dropzone({
     return types[inputType] || {};
   };
 
+  const onDropRejected = useCallback((rejectedFiles) => {
+    // Handle files rejected by react-dropzone (e.g., maxFiles exceeded)
+    // Show only ONE message regardless of how many files are rejected
+    if (rejectedFiles && rejectedFiles.length > 0) {
+      let hasTooManyFilesError = false;
+      
+      // Check if any file was rejected due to too-many-files
+      for (const rejection of rejectedFiles) {
+        if (rejection.errors) {
+          for (const error of rejection.errors) {
+            if (error.code === 'too-many-files') {
+              hasTooManyFilesError = true;
+              break;
+            }
+          }
+        }
+        if (hasTooManyFilesError) break;
+      }
+      
+      // Show only one message
+      if (hasTooManyFilesError && maxFiles !== undefined && maxFiles !== null && maxFiles > 0) {
+        const totalRejected = rejectedFiles.length;
+        toast.error(`Cannot upload more than ${maxFiles} files. ${totalRejected} file${totalRejected > 1 ? 's' : ''} rejected.`);
+      } else if (rejectedFiles.length > 0) {
+        // For other errors, show the first error message only
+        const firstRejection = rejectedFiles[0];
+        if (firstRejection.errors && firstRejection.errors.length > 0) {
+          toast.error(firstRejection.errors[0].message || 'File upload rejected');
+        }
+      }
+    }
+  }, [maxFiles]);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: getAcceptObject(),
     multiple: true,
-    maxFiles: maxFiles !== undefined ? maxFiles - currentFileCount : undefined,
+    maxFiles: maxFiles !== undefined && maxFiles > 0 ? maxFiles - currentFileCount : undefined,
     onDrop,
+    onDropRejected,
     disabled: disabled,
     noClick: disabled,
   });
