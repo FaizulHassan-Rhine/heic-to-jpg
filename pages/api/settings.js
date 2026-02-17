@@ -45,18 +45,93 @@ export default async function handler(req, res) {
           maxFiles: settings.generalMaxFiles,
         },
         // Feature flags - true = free, false = requires sign-in
-        features: settings.features || {
+        features: {
           imageConverter: {
-            socialPreset: false,
-            advancedOptions: false,
+            webPreset: settings.features?.imageConverter?.webPreset ?? true,
+            printPreset: settings.features?.imageConverter?.printPreset ?? true,
+            socialPreset: settings.features?.imageConverter?.socialPreset ?? false,
+            jpgFormat: settings.features?.imageConverter?.jpgFormat ?? true,
+            pngFormat: settings.features?.imageConverter?.pngFormat ?? true,
+            webpFormat: settings.features?.imageConverter?.webpFormat ?? true,
+            qualitySlider: settings.features?.imageConverter?.qualitySlider ?? true,
+            preserveTransparency: settings.features?.imageConverter?.preserveTransparency ?? true,
+            advancedOptions: {
+              resize: settings.features?.imageConverter?.advancedOptions?.resize ?? false,
+              preserveMetadata: settings.features?.imageConverter?.advancedOptions?.preserveMetadata ?? false,
+              watermark: settings.features?.imageConverter?.advancedOptions?.watermark ?? false,
+              customNames: settings.features?.imageConverter?.advancedOptions?.customNames ?? false,
+              showPreview: settings.features?.imageConverter?.advancedOptions?.showPreview ?? false,
+            },
           },
           imageCompress: {
-            webpFormat: false,
-            targetFileSize: false,
-            advancedOptions: false,
+            resizeMode: settings.features?.imageCompress?.resizeMode ?? true,
+            compressionPreset: settings.features?.imageCompress?.compressionPreset ?? true,
+            qualitySlider: settings.features?.imageCompress?.qualitySlider ?? true,
+            targetFileSize: settings.features?.imageCompress?.targetFileSize ?? false,
+            convertFormat: settings.features?.imageCompress?.convertFormat ?? true,
+            jpgFormat: settings.features?.imageCompress?.jpgFormat ?? true,
+            pngFormat: settings.features?.imageCompress?.pngFormat ?? true,
+            webpFormat: settings.features?.imageCompress?.webpFormat ?? false,
+            smartCrop: settings.features?.imageCompress?.smartCrop ?? true,
+            advancedOptions: {
+              progressiveJpeg: settings.features?.imageCompress?.advancedOptions?.progressiveJpeg ?? false,
+              optimizePalette: settings.features?.imageCompress?.advancedOptions?.optimizePalette ?? false,
+              stripMetadata: settings.features?.imageCompress?.advancedOptions?.stripMetadata ?? false,
+              losslessCompression: settings.features?.imageCompress?.advancedOptions?.losslessCompression ?? false,
+            },
+          },
+          imageToPdf: {
+            advancedOptions: settings.features?.imageToPdf?.advancedOptions ?? false,
+          },
+          extractText: {
+            proOCR: settings.features?.extractText?.proOCR ?? false,
+            languageSelection: settings.features?.extractText?.languageSelection ?? false,
+            exportFormat: settings.features?.extractText?.exportFormat ?? false,
           },
           videoConvert: {
-            webmFormat: false,
+            mp4Format: settings.features?.videoConvert?.mp4Format ?? true,
+            webmFormat: settings.features?.videoConvert?.webmFormat ?? false,
+            aviFormat: settings.features?.videoConvert?.aviFormat ?? true,
+          },
+          videoCompress: {
+            advancedOptions: settings.features?.videoCompress?.advancedOptions ?? false,
+          },
+          videoTrim: {
+            advancedOptions: settings.features?.videoTrim?.advancedOptions ?? false,
+          },
+          docToPdf: {
+            batchConversion: settings.features?.docToPdf?.batchConversion ?? false,
+            advancedOptions: settings.features?.docToPdf?.advancedOptions ?? false,
+          },
+          pdfToDoc: {
+            advancedOptions: settings.features?.pdfToDoc?.advancedOptions ?? false,
+          },
+          mergePdf: {
+            advancedOptions: settings.features?.mergePdf?.advancedOptions ?? false,
+          },
+          compressPdf: {
+            advancedOptions: settings.features?.compressPdf?.advancedOptions ?? false,
+          },
+          scanner: {
+            advancedOptions: settings.features?.scanner?.advancedOptions ?? false,
+          },
+          audioConvert: {
+            highQuality: settings.features?.audioConvert?.highQuality ?? false,
+            advancedOptions: settings.features?.audioConvert?.advancedOptions ?? false,
+          },
+          textToSpeech: {
+            advancedOptions: settings.features?.textToSpeech?.advancedOptions ?? false,
+          },
+          speechToText: {
+            longAudio: settings.features?.speechToText?.longAudio ?? false,
+            advancedOptions: settings.features?.speechToText?.advancedOptions ?? false,
+          },
+          qrBarcode: {
+            customDesign: settings.features?.qrBarcode?.customDesign ?? false,
+            batchGeneration: settings.features?.qrBarcode?.batchGeneration ?? false,
+          },
+          urlShortener: {
+            advancedOptions: settings.features?.urlShortener?.advancedOptions ?? false,
           },
         },
       },

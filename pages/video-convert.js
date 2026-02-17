@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
+import { useSettings } from "../lib/useSettings";
 import { generateFileThumbnails } from "../lib/thumbnailUtils";
 import { blobToBase64, extractBase64 } from "../lib/fileUtils";
 import Navbar from "../components/Navbar";
@@ -103,6 +104,7 @@ const getFileKey = (file) => file.name + file.size + file.lastModified;
 
 export default function VideoConvert() {
   const { user, trackUsage } = useAuth();
+  const { settings } = useSettings();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -410,13 +412,15 @@ export default function VideoConvert() {
                     <div className="grid grid-cols-2 gap-2">
                       {FORMATS.map(f => {
                         const Icon = f.icon;
-                        const requiresAuth = f.value === "WEBM" && !user;
+                        // Check database feature flag - if false, requires auth
+                        const webmFree = settings?.features?.videoConvert?.webmFormat ?? false;
+                        const requiresAuth = f.value === "WEBM" && !webmFree && !user;
                         return (
                           <button
                             key={f.value}
                             onClick={() => {
-                              // Require authentication for WEBM format
-                              if (f.value === "WEBM" && !user) {
+                              // Require authentication if feature is locked and user not logged in
+                              if (f.value === "WEBM" && !webmFree && !user) {
                                 toast.error("Please sign in to use WEBM format");
                                 setAuthModalMode("login");
                                 setAuthModalOpen(true);

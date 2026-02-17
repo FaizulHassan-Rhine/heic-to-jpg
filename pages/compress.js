@@ -654,7 +654,7 @@ export default function CompressImage() {
       />
       <Navbar />
 
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
@@ -707,7 +707,7 @@ export default function CompressImage() {
 
           {/* Workspace */}
           {files.length > 0 && (
-            <div className="grid lg:grid-cols-[340px_1fr] gap-8 items-start">
+            <div className="grid lg:grid-cols-[400px_1fr] gap-8 items-start">
 
               {/* Sidebar: Settings */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
@@ -796,11 +796,18 @@ export default function CompressImage() {
                     <label 
                       className={cn(
                         "flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all relative",
-                        !user && "opacity-75"
+                        (() => {
+                          const targetFileSizeFree = settings?.features?.imageCompress?.targetFileSize ?? false;
+                          return !targetFileSizeFree && !user;
+                        })() && "opacity-75"
                       )}
-                      style={!user ? { filter: 'blur(0.5px)' } : {}}
+                      style={(() => {
+                        const targetFileSizeFree = settings?.features?.imageCompress?.targetFileSize ?? false;
+                        return !targetFileSizeFree && !user ? { filter: 'blur(0.5px)' } : {};
+                      })()}
                       onClick={(e) => {
-                        if (!user) {
+                        const targetFileSizeFree = settings?.features?.imageCompress?.targetFileSize ?? false;
+                        if (!targetFileSizeFree && !user) {
                           e.preventDefault();
                           toast.error("Please sign in to use target file size");
                           setAuthModalMode("login");
@@ -812,7 +819,8 @@ export default function CompressImage() {
                         type="checkbox"
                         checked={getCurrentSettings().useTargetSize}
                         onChange={(e) => {
-                          if (!user) {
+                          const targetFileSizeFree = settings?.features?.imageCompress?.targetFileSize ?? false;
+                          if (!targetFileSizeFree && !user) {
                             e.preventDefault();
                             e.target.checked = false;
                             toast.error("Please sign in to use target file size");
@@ -825,7 +833,10 @@ export default function CompressImage() {
                         className="w-4 h-4 accent-blue-600"
                       />
                       <span className="text-sm font-medium text-gray-700">Target File Size</span>
-                      {!user && (
+                      {(() => {
+                        const targetFileSizeFree = settings?.features?.imageCompress?.targetFileSize ?? false;
+                        return !targetFileSizeFree && !user;
+                      })() && (
                         <Lock className="w-4 h-4 text-gray-600 ml-auto" />
                       )}
                     </label>
@@ -972,157 +983,185 @@ export default function CompressImage() {
                       )}
                     </button>
 
-                    {advancedOptionsOpen && (
-                      <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
-                        <label 
-                          className={cn(
-                            "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                            !user && "opacity-75"
-                          )}
-                          style={!user ? { filter: 'blur(0.5px)' } : {}}
-                          onClick={(e) => {
-                            if (!user) {
-                              e.preventDefault();
-                              toast.error("Please sign in to use advanced options");
-                              setAuthModalMode("login");
-                              setAuthModalOpen(true);
-                            }
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={getCurrentSettings().progressiveJpeg}
-                            onChange={(e) => {
-                              if (!user) {
-                                e.preventDefault();
-                                e.target.checked = false;
-                                toast.error("Please sign in to use advanced options");
-                                setAuthModalMode("login");
-                                setAuthModalOpen(true);
-                                return;
-                              }
-                              updateCurrentSettings({ progressiveJpeg: e.target.checked });
-                            }}
-                            className="w-4 h-4 accent-blue-600"
-                          />
-                          <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
-                          {!user && (
-                            <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                          )}
-                        </label>
+                    {advancedOptionsOpen && (() => {
+                      // Check each sub-feature individually
+                      const progressiveJpegFree = settings?.features?.imageCompress?.advancedOptions?.progressiveJpeg ?? false;
+                      const optimizePaletteFree = settings?.features?.imageCompress?.advancedOptions?.optimizePalette ?? false;
+                      const stripMetadataFree = settings?.features?.imageCompress?.advancedOptions?.stripMetadata ?? false;
+                      const losslessCompressionFree = settings?.features?.imageCompress?.advancedOptions?.losslessCompression ?? false;
+                      
+                      return (
+                        <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
+                          {(() => {
+                            const requiresAuth = !progressiveJpegFree && !user;
+                            return (
+                              <label 
+                                className={cn(
+                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                  requiresAuth && "opacity-75"
+                                )}
+                                style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                onClick={(e) => {
+                                  if (requiresAuth) {
+                                    e.preventDefault();
+                                    toast.error("Please sign in to use advanced options");
+                                    setAuthModalMode("login");
+                                    setAuthModalOpen(true);
+                                  }
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={getCurrentSettings().progressiveJpeg}
+                                  onChange={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      e.target.checked = false;
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                      return;
+                                    }
+                                    updateCurrentSettings({ progressiveJpeg: e.target.checked });
+                                  }}
+                                  className="w-4 h-4 accent-blue-600"
+                                />
+                                <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
+                                {requiresAuth && (
+                                  <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                )}
+                              </label>
+                            );
+                          })()}
 
-                        <label 
-                          className={cn(
-                            "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                            !user && "opacity-75"
-                          )}
-                          style={!user ? { filter: 'blur(0.5px)' } : {}}
-                          onClick={(e) => {
-                            if (!user) {
-                              e.preventDefault();
-                              toast.error("Please sign in to use advanced options");
-                              setAuthModalMode("login");
-                              setAuthModalOpen(true);
-                            }
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={getCurrentSettings().optimizePalette}
-                            onChange={(e) => {
-                              if (!user) {
-                                e.preventDefault();
-                                e.target.checked = false;
-                                toast.error("Please sign in to use advanced options");
-                                setAuthModalMode("login");
-                                setAuthModalOpen(true);
-                                return;
-                              }
-                              updateCurrentSettings({ optimizePalette: e.target.checked });
-                            }}
-                            className="w-4 h-4 accent-blue-600"
-                          />
-                          <span className="text-sm font-medium text-gray-700">Optimize Palette (PNG)</span>
-                          {!user && (
-                            <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                          )}
-                        </label>
+                          {(() => {
+                            const requiresAuth = !optimizePaletteFree && !user;
+                            return (
+                              <label 
+                                className={cn(
+                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                  requiresAuth && "opacity-75"
+                                )}
+                                style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                onClick={(e) => {
+                                  if (requiresAuth) {
+                                    e.preventDefault();
+                                    toast.error("Please sign in to use advanced options");
+                                    setAuthModalMode("login");
+                                    setAuthModalOpen(true);
+                                  }
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={getCurrentSettings().optimizePalette}
+                                  onChange={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      e.target.checked = false;
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                      return;
+                                    }
+                                    updateCurrentSettings({ optimizePalette: e.target.checked });
+                                  }}
+                                  className="w-4 h-4 accent-blue-600"
+                                />
+                                <span className="text-sm font-medium text-gray-700">Optimize Palette (PNG)</span>
+                                {requiresAuth && (
+                                  <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                )}
+                              </label>
+                            );
+                          })()}
 
-                        <label 
-                          className={cn(
-                            "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                            !user && "opacity-75"
-                          )}
-                          style={!user ? { filter: 'blur(0.5px)' } : {}}
-                          onClick={(e) => {
-                            if (!user) {
-                              e.preventDefault();
-                              toast.error("Please sign in to use advanced options");
-                              setAuthModalMode("login");
-                              setAuthModalOpen(true);
-                            }
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={getCurrentSettings().stripMetadata}
-                            onChange={(e) => {
-                              if (!user) {
-                                e.preventDefault();
-                                e.target.checked = false;
-                                toast.error("Please sign in to use advanced options");
-                                setAuthModalMode("login");
-                                setAuthModalOpen(true);
-                                return;
-                              }
-                              updateCurrentSettings({ stripMetadata: e.target.checked });
-                            }}
-                            className="w-4 h-4 accent-blue-600"
-                          />
-                          <span className="text-sm font-medium text-gray-700">Strip Metadata</span>
-                          {!user && (
-                            <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                          )}
-                        </label>
+                          {(() => {
+                            const requiresAuth = !stripMetadataFree && !user;
+                            return (
+                              <label 
+                                className={cn(
+                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                  requiresAuth && "opacity-75"
+                                )}
+                                style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                onClick={(e) => {
+                                  if (requiresAuth) {
+                                    e.preventDefault();
+                                    toast.error("Please sign in to use advanced options");
+                                    setAuthModalMode("login");
+                                    setAuthModalOpen(true);
+                                  }
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={getCurrentSettings().stripMetadata}
+                                  onChange={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      e.target.checked = false;
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                      return;
+                                    }
+                                    updateCurrentSettings({ stripMetadata: e.target.checked });
+                                  }}
+                                  className="w-4 h-4 accent-blue-600"
+                                />
+                                <span className="text-sm font-medium text-gray-700">Strip Metadata</span>
+                                {requiresAuth && (
+                                  <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                )}
+                              </label>
+                            );
+                          })()}
 
-                        <label 
-                          className={cn(
-                            "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                            !user && "opacity-75"
-                          )}
-                          style={!user ? { filter: 'blur(0.5px)' } : {}}
-                          onClick={(e) => {
-                            if (!user) {
-                              e.preventDefault();
-                              toast.error("Please sign in to use advanced options");
-                              setAuthModalMode("login");
-                              setAuthModalOpen(true);
-                            }
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={getCurrentSettings().losslessCompression}
-                            onChange={(e) => {
-                              if (!user) {
-                                e.preventDefault();
-                                e.target.checked = false;
-                                toast.error("Please sign in to use advanced options");
-                                setAuthModalMode("login");
-                                setAuthModalOpen(true);
-                                return;
-                              }
-                              updateCurrentSettings({ losslessCompression: e.target.checked });
-                            }}
-                            className="w-4 h-4 accent-blue-600"
-                          />
-                          <span className="text-sm font-medium text-gray-700">Lossless Compression</span>
-                          {!user && (
-                            <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                          )}
-                        </label>
-                      </div>
-                    )}
+                          {(() => {
+                            const requiresAuth = !losslessCompressionFree && !user;
+                            return (
+                              <label 
+                                className={cn(
+                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                  requiresAuth && "opacity-75"
+                                )}
+                                style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                onClick={(e) => {
+                                  if (requiresAuth) {
+                                    e.preventDefault();
+                                    toast.error("Please sign in to use advanced options");
+                                    setAuthModalMode("login");
+                                    setAuthModalOpen(true);
+                                  }
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={getCurrentSettings().losslessCompression}
+                                  onChange={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      e.target.checked = false;
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                      return;
+                                    }
+                                    updateCurrentSettings({ losslessCompression: e.target.checked });
+                                  }}
+                                  className="w-4 h-4 accent-blue-600"
+                                />
+                                <span className="text-sm font-medium text-gray-700">Lossless Compression</span>
+                                {requiresAuth && (
+                                  <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                )}
+                              </label>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Format Conversion */}
@@ -1142,13 +1181,15 @@ export default function CompressImage() {
                         <div className="grid grid-cols-3 gap-2">
                           {['jpg', 'png', 'webp'].map(fmt => {
                             const current = getCurrentSettings();
-                            const requiresAuth = fmt === "webp" && !user;
+                            // Check database feature flag - if false, requires auth
+                            const webpFree = settings?.features?.imageCompress?.webpFormat ?? false;
+                            const requiresAuth = fmt === "webp" && !webpFree && !user;
                             return (
                               <button
                                 key={fmt}
                                 onClick={() => {
-                                  // Require authentication for WEBP format
-                                  if (fmt === "webp" && !user) {
+                                  // Require authentication if feature is locked and user not logged in
+                                  if (fmt === "webp" && !webpFree && !user) {
                                     toast.error("Please sign in to use WEBP format");
                                     setAuthModalMode("login");
                                     setAuthModalOpen(true);

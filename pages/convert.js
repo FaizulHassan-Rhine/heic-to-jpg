@@ -591,7 +591,7 @@ export default function ConvertImage() {
       />
       <Navbar />
 
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
@@ -647,7 +647,7 @@ export default function ConvertImage() {
 
           {/* 2. Controls & List */}
           {files.length > 0 && (
-            <div className="grid md:grid-cols-[300px_1fr] gap-6 items-start">
+            <div className="grid md:grid-cols-[360px_1fr] gap-8 items-start">
 
               {/* Sidebar: Settings */}
               <Card className="md:sticky md:top-24 h-fit overflow-hidden">
@@ -879,48 +879,58 @@ export default function ConvertImage() {
                     </button>
 
                     {advancedOptionsOpen && (() => {
-                      const advancedOptionsFree = settings?.features?.imageConverter?.advancedOptions ?? false;
-                      const requiresAuth = !advancedOptionsFree && !user;
+                      // Check each sub-feature individually
+                      const resizeFree = settings?.features?.imageConverter?.advancedOptions?.resize ?? false;
+                      const preserveMetadataFree = settings?.features?.imageConverter?.advancedOptions?.preserveMetadata ?? false;
+                      const watermarkFree = settings?.features?.imageConverter?.advancedOptions?.watermark ?? false;
+                      const customFileNamesFree = settings?.features?.imageConverter?.advancedOptions?.customFileNames ?? false;
+                      const showPreviewFree = settings?.features?.imageConverter?.advancedOptions?.showPreview ?? false;
+                      
                       return (
                         <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
                           {/* Resize Option */}
                           <div className="space-y-3">
-                            <label 
-                              className={cn(
-                                "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                                requiresAuth && "opacity-75"
-                              )}
-                              style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
-                              onClick={(e) => {
-                                if (requiresAuth) {
-                                  e.preventDefault();
-                                  toast.error("Please sign in to use advanced options");
-                                  setAuthModalMode("login");
-                                  setAuthModalOpen(true);
-                                }
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={getCurrentSettings().resizeEnabled}
-                                onChange={(e) => {
-                                  if (requiresAuth) {
-                                    e.preventDefault();
-                                    e.target.checked = false;
-                                    toast.error("Please sign in to use advanced options");
-                                    setAuthModalMode("login");
-                                    setAuthModalOpen(true);
-                                    return;
-                                  }
-                                  updateCurrentSettings({ resizeEnabled: e.target.checked });
-                                }}
-                                className="w-4 h-4 accent-purple-600"
-                              />
-                              <span className="text-sm font-medium text-gray-700">Resize During Conversion</span>
-                              {requiresAuth && (
-                                <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                              )}
-                            </label>
+                            {(() => {
+                              const requiresAuth = !resizeFree && !user;
+                              return (
+                                <label 
+                                  className={cn(
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    requiresAuth && "opacity-75"
+                                  )}
+                                  style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                  onClick={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={getCurrentSettings().resizeEnabled}
+                                    onChange={(e) => {
+                                      if (requiresAuth) {
+                                        e.preventDefault();
+                                        e.target.checked = false;
+                                        toast.error("Please sign in to use advanced options");
+                                        setAuthModalMode("login");
+                                        setAuthModalOpen(true);
+                                        return;
+                                      }
+                                      updateCurrentSettings({ resizeEnabled: e.target.checked });
+                                    }}
+                                    className="w-4 h-4 accent-purple-600"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700">Resize During Conversion</span>
+                                  {requiresAuth && (
+                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  )}
+                                </label>
+                              );
+                            })()}
                           {getCurrentSettings().resizeEnabled && (
                             <div className="bg-white rounded-lg p-3 space-y-3 border border-gray-200">
                               <div className="grid grid-cols-2 gap-2">
@@ -963,82 +973,92 @@ export default function ConvertImage() {
 
                           {/* Metadata Option */}
                           <div className="space-y-2">
-                            <label 
-                              className={cn(
-                                "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                                requiresAuth && "opacity-75"
-                              )}
-                              style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
-                              onClick={(e) => {
-                                if (requiresAuth) {
-                                  e.preventDefault();
-                                  toast.error("Please sign in to use advanced options");
-                                  setAuthModalMode("login");
-                                  setAuthModalOpen(true);
-                                }
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={getCurrentSettings().preserveMetadata}
-                                onChange={(e) => {
-                                  if (requiresAuth) {
-                                    e.preventDefault();
-                                    e.target.checked = false;
-                                    toast.error("Please sign in to use advanced options");
-                                    setAuthModalMode("login");
-                                    setAuthModalOpen(true);
-                                    return;
-                                  }
-                                  updateCurrentSettings({ preserveMetadata: e.target.checked });
-                                }}
-                                className="w-4 h-4 accent-purple-600"
-                              />
-                              <span className="text-sm font-medium text-gray-700">Preserve EXIF Metadata</span>
-                              {requiresAuth && (
-                                <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                              )}
-                            </label>
+                            {(() => {
+                              const requiresAuth = !preserveMetadataFree && !user;
+                              return (
+                                <label 
+                                  className={cn(
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    requiresAuth && "opacity-75"
+                                  )}
+                                  style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                  onClick={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={getCurrentSettings().preserveMetadata}
+                                    onChange={(e) => {
+                                      if (requiresAuth) {
+                                        e.preventDefault();
+                                        e.target.checked = false;
+                                        toast.error("Please sign in to use advanced options");
+                                        setAuthModalMode("login");
+                                        setAuthModalOpen(true);
+                                        return;
+                                      }
+                                      updateCurrentSettings({ preserveMetadata: e.target.checked });
+                                    }}
+                                    className="w-4 h-4 accent-purple-600"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700">Preserve EXIF Metadata</span>
+                                  {requiresAuth && (
+                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  )}
+                                </label>
+                              );
+                            })()}
                           </div>
 
                           {/* Watermark */}
                           <div className="space-y-2">
-                            <label 
-                              className={cn(
-                                "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                                requiresAuth && "opacity-75"
-                              )}
-                              style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
-                              onClick={(e) => {
-                                if (requiresAuth) {
-                                  e.preventDefault();
-                                  toast.error("Please sign in to use advanced options");
-                                  setAuthModalMode("login");
-                                  setAuthModalOpen(true);
-                                }
-                              }}
-                            >
-                            <input
-                              type="checkbox"
-                              checked={getCurrentSettings().watermarkEnabled}
-                              onChange={(e) => {
-                                if (!user) {
-                                  e.preventDefault();
-                                  e.target.checked = false;
-                                  toast.error("Please sign in to use advanced options");
-                                  setAuthModalMode("login");
-                                  setAuthModalOpen(true);
-                                  return;
-                                }
-                                updateCurrentSettings({ watermarkEnabled: e.target.checked });
-                              }}
-                              className="w-4 h-4 accent-purple-600"
-                            />
-                            <span className="text-sm font-medium text-gray-700">Add Watermark</span>
-                            {!user && (
-                              <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                            )}
-                          </label>
+                            {(() => {
+                              const requiresAuth = !watermarkFree && !user;
+                              return (
+                                <label 
+                                  className={cn(
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    requiresAuth && "opacity-75"
+                                  )}
+                                  style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                  onClick={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={getCurrentSettings().watermarkEnabled}
+                                    onChange={(e) => {
+                                      if (requiresAuth) {
+                                        e.preventDefault();
+                                        e.target.checked = false;
+                                        toast.error("Please sign in to use advanced options");
+                                        setAuthModalMode("login");
+                                        setAuthModalOpen(true);
+                                        return;
+                                      }
+                                      updateCurrentSettings({ watermarkEnabled: e.target.checked });
+                                    }}
+                                    className="w-4 h-4 accent-purple-600"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700">Add Watermark</span>
+                                  {requiresAuth && (
+                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  )}
+                                </label>
+                              );
+                            })()}
                           {getCurrentSettings().watermarkEnabled && (
                             <div className="bg-white rounded-lg p-3 space-y-2 border border-gray-200">
                               <input
@@ -1065,42 +1085,47 @@ export default function ConvertImage() {
 
                           {/* Batch Rename */}
                           <div className="space-y-2">
-                            <label 
-                              className={cn(
-                                "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                                requiresAuth && "opacity-75"
-                              )}
-                              style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
-                              onClick={(e) => {
-                                if (requiresAuth) {
-                                  e.preventDefault();
-                                  toast.error("Please sign in to use advanced options");
-                                  setAuthModalMode("login");
-                                  setAuthModalOpen(true);
-                                }
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={batchRename}
-                                onChange={(e) => {
-                                  if (requiresAuth) {
-                                    e.preventDefault();
-                                    e.target.checked = false;
-                                    toast.error("Please sign in to use advanced options");
-                                    setAuthModalMode("login");
-                                    setAuthModalOpen(true);
-                                    return;
-                                  }
-                                  setBatchRename(e.target.checked);
-                                }}
-                                className="w-4 h-4 accent-purple-600"
-                              />
-                              <span className="text-sm font-medium text-gray-700">Custom File Names</span>
-                              {requiresAuth && (
-                                <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                              )}
-                            </label>
+                            {(() => {
+                              const requiresAuth = !customFileNamesFree && !user;
+                              return (
+                                <label 
+                                  className={cn(
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    requiresAuth && "opacity-75"
+                                  )}
+                                  style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                  onClick={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={batchRename}
+                                    onChange={(e) => {
+                                      if (requiresAuth) {
+                                        e.preventDefault();
+                                        e.target.checked = false;
+                                        toast.error("Please sign in to use advanced options");
+                                        setAuthModalMode("login");
+                                        setAuthModalOpen(true);
+                                        return;
+                                      }
+                                      setBatchRename(e.target.checked);
+                                    }}
+                                    className="w-4 h-4 accent-purple-600"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700">Custom File Names</span>
+                                  {requiresAuth && (
+                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  )}
+                                </label>
+                              );
+                            })()}
                           {batchRename && (
                             <div className="bg-white rounded-lg p-3 space-y-2 border border-gray-200">
                               <input
@@ -1119,42 +1144,47 @@ export default function ConvertImage() {
 
                           {/* Preview Toggle */}
                           <div className="space-y-2">
-                            <label 
-                              className={cn(
-                                "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
-                                requiresAuth && "opacity-75"
-                              )}
-                              style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
-                              onClick={(e) => {
-                                if (requiresAuth) {
-                                  e.preventDefault();
-                                  toast.error("Please sign in to use advanced options");
-                                  setAuthModalMode("login");
-                                  setAuthModalOpen(true);
-                                }
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={showPreview}
-                                onChange={(e) => {
-                                  if (requiresAuth) {
-                                    e.preventDefault();
-                                    e.target.checked = false;
-                                    toast.error("Please sign in to use advanced options");
-                                    setAuthModalMode("login");
-                                    setAuthModalOpen(true);
-                                    return;
-                                  }
-                                  setShowPreview(e.target.checked);
-                                }}
-                                className="w-4 h-4 accent-purple-600"
-                              />
-                              <span className="text-sm font-medium text-gray-700">Show Preview Before Conversion</span>
-                              {requiresAuth && (
-                                <Lock className="w-4 h-4 text-gray-600 ml-auto" />
-                              )}
-                            </label>
+                            {(() => {
+                              const requiresAuth = !showPreviewFree && !user;
+                              return (
+                                <label 
+                                  className={cn(
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    requiresAuth && "opacity-75"
+                                  )}
+                                  style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
+                                  onClick={(e) => {
+                                    if (requiresAuth) {
+                                      e.preventDefault();
+                                      toast.error("Please sign in to use advanced options");
+                                      setAuthModalMode("login");
+                                      setAuthModalOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={showPreview}
+                                    onChange={(e) => {
+                                      if (requiresAuth) {
+                                        e.preventDefault();
+                                        e.target.checked = false;
+                                        toast.error("Please sign in to use advanced options");
+                                        setAuthModalMode("login");
+                                        setAuthModalOpen(true);
+                                        return;
+                                      }
+                                      setShowPreview(e.target.checked);
+                                    }}
+                                    className="w-4 h-4 accent-purple-600"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700">Show Preview Before Conversion</span>
+                                  {requiresAuth && (
+                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  )}
+                                </label>
+                              );
+                            })()}
                           </div>
                         </div>
                       );

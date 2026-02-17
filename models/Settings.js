@@ -67,38 +67,255 @@ const SettingsSchema = new mongoose.Schema(
     features: {
       // Image Converter features
       imageConverter: {
+        webPreset: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        printPreset: {
+          type: Boolean,
+          default: true, // Free by default
+        },
         socialPreset: {
           type: Boolean,
           default: false, // Requires sign-in by default
         },
-        advancedOptions: {
+        jpgFormat: {
           type: Boolean,
-          default: false, // Requires sign-in by default
+          default: true, // Free by default
+        },
+        pngFormat: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        webpFormat: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        qualitySlider: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        preserveTransparency: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        advancedOptions: {
+          resize: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
+          preserveMetadata: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
+          watermark: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
+          customNames: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
+          showPreview: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
         },
       },
       // Image Compress features
       imageCompress: {
-        webpFormat: {
+        resizeMode: {
           type: Boolean,
-          default: false, // Requires sign-in by default
+          default: true, // Free by default
+        },
+        compressionPreset: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        qualitySlider: {
+          type: Boolean,
+          default: true, // Free by default
         },
         targetFileSize: {
           type: Boolean,
           default: false, // Requires sign-in by default
         },
+        convertFormat: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        jpgFormat: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        pngFormat: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        webpFormat: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        smartCrop: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        advancedOptions: {
+          progressiveJpeg: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
+          optimizePalette: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
+          stripMetadata: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
+          losslessCompression: {
+            type: Boolean,
+            default: false, // Requires sign-in by default
+          },
+        },
+      },
+      // Video Convert features
+      videoConvert: {
+        mp4Format: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        webmFormat: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        aviFormat: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+      },
+      // Video Compress features
+      videoCompress: {
         advancedOptions: {
           type: Boolean,
           default: false, // Requires sign-in by default
         },
       },
-      // Video Convert features
-      videoConvert: {
-        webmFormat: {
+      // Document to PDF features
+      docToPdf: {
+        batchConversion: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        advancedOptions: {
           type: Boolean,
           default: false, // Requires sign-in by default
         },
       },
-      // Add more tools/features as needed
+      // PDF to Document features
+      pdfToDoc: {
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Audio Convert features
+      audioConvert: {
+        highQuality: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // QR & Barcode features
+      qrBarcode: {
+        customDesign: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        batchGeneration: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Speech to Text features
+      speechToText: {
+        longAudio: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Image to PDF features
+      imageToPdf: {
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Extract Text (OCR) features
+      extractText: {
+        proOCR: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        languageSelection: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        exportFormat: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Video Trim features
+      videoTrim: {
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Merge PDF features
+      mergePdf: {
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Compress PDF features
+      compressPdf: {
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Document Scanner features
+      scanner: {
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Text to Speech features
+      textToSpeech: {
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // URL Shortener features
+      urlShortener: {
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
     },
   },
   {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { 
@@ -16,6 +17,7 @@ const SIDEBAR_ITEMS = [
   { id: "users", label: "Users", icon: Users },
   { id: "orders", label: "Orders", icon: Package },
   { id: "settings", label: "Settings", icon: SettingsIcon },
+  { id: "features", label: "Features", icon: SettingsIcon, href: "/admin/features" },
 ];
 
 export default function AdminDashboard() {
@@ -36,6 +38,8 @@ export default function AdminDashboard() {
   const [settings, setSettings] = useState(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  // Local state for input values (as strings to allow clearing)
+  const [inputValues, setInputValues] = useState({});
   const router = useRouter();
 
   useEffect(() => {
@@ -279,6 +283,21 @@ export default function AdminDashboard() {
       const data = await response.json();
       if (data.success) {
         setSettings(data.settings);
+        // Initialize input values from settings (convert bytes to MB)
+        setInputValues({
+          imageMaxSize: (data.settings.imageMaxSize / (1024 * 1024)).toString(),
+          imageMaxFiles: data.settings.imageMaxFiles.toString(),
+          documentMaxSize: (data.settings.documentMaxSize / (1024 * 1024)).toString(),
+          documentMaxFiles: data.settings.documentMaxFiles.toString(),
+          pdfMaxSize: (data.settings.pdfMaxSize / (1024 * 1024)).toString(),
+          pdfMaxFiles: data.settings.pdfMaxFiles.toString(),
+          videoMaxSize: (data.settings.videoMaxSize / (1024 * 1024)).toString(),
+          videoMaxFiles: data.settings.videoMaxFiles.toString(),
+          audioMaxSize: (data.settings.audioMaxSize / (1024 * 1024)).toString(),
+          audioMaxFiles: data.settings.audioMaxFiles.toString(),
+          generalMaxSize: (data.settings.generalMaxSize / (1024 * 1024)).toString(),
+          generalMaxFiles: data.settings.generalMaxFiles.toString(),
+        });
       } else {
         toast.error("Failed to load settings");
       }
@@ -361,6 +380,22 @@ export default function AdminDashboard() {
           <nav className="flex-1 p-4 space-y-2">
             {SIDEBAR_ITEMS.map((item) => {
               const Icon = item.icon;
+              // If item has href, use Link, otherwise use button for tabs
+              if (item.href) {
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                      "text-gray-700 hover:bg-gray-50"
+                    )}
+                  >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    {sidebarOpen && <span className="text-sm">{item.label}</span>}
+                  </Link>
+                );
+              }
               return (
                 <button
                   key={item.id}
@@ -944,16 +979,30 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={Math.round(settings.imageMaxSize / (1024 * 1024))}
+                            value={inputValues.imageMaxSize || ""}
                             onChange={(e) => {
-                              const mb = parseFloat(e.target.value) || 0;
-                              setSettings({
-                                ...settings,
-                                imageMaxSize: mb * 1024 * 1024,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, imageMaxSize: value });
+                              const mb = parseFloat(value);
+                              if (!isNaN(mb) && mb > 0) {
+                                setSettings({
+                                  ...settings,
+                                  imageMaxSize: mb * 1024 * 1024,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const mb = parseFloat(e.target.value);
+                              if (isNaN(mb) || mb <= 0) {
+                                // Reset to current setting if invalid
+                                setInputValues({
+                                  ...inputValues,
+                                  imageMaxSize: (settings.imageMaxSize / (1024 * 1024)).toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            min="1"
+                            min="0.1"
                             step="0.1"
                           />
                           <p className="text-xs text-gray-500 mt-1">
@@ -966,12 +1015,26 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={settings.imageMaxFiles}
+                            value={inputValues.imageMaxFiles || ""}
                             onChange={(e) => {
-                              setSettings({
-                                ...settings,
-                                imageMaxFiles: parseInt(e.target.value) || 0,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, imageMaxFiles: value });
+                              const num = parseInt(value);
+                              if (!isNaN(num) && num > 0) {
+                                setSettings({
+                                  ...settings,
+                                  imageMaxFiles: num,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const num = parseInt(e.target.value);
+                              if (isNaN(num) || num <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  imageMaxFiles: settings.imageMaxFiles.toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             min="1"
@@ -996,16 +1059,29 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={Math.round(settings.documentMaxSize / (1024 * 1024))}
+                            value={inputValues.documentMaxSize || ""}
                             onChange={(e) => {
-                              const mb = parseFloat(e.target.value) || 0;
-                              setSettings({
-                                ...settings,
-                                documentMaxSize: mb * 1024 * 1024,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, documentMaxSize: value });
+                              const mb = parseFloat(value);
+                              if (!isNaN(mb) && mb > 0) {
+                                setSettings({
+                                  ...settings,
+                                  documentMaxSize: mb * 1024 * 1024,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const mb = parseFloat(e.target.value);
+                              if (isNaN(mb) || mb <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  documentMaxSize: (settings.documentMaxSize / (1024 * 1024)).toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            min="1"
+                            min="0.1"
                             step="0.1"
                           />
                           <p className="text-xs text-gray-500 mt-1">
@@ -1018,12 +1094,26 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={settings.documentMaxFiles}
+                            value={inputValues.documentMaxFiles || ""}
                             onChange={(e) => {
-                              setSettings({
-                                ...settings,
-                                documentMaxFiles: parseInt(e.target.value) || 0,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, documentMaxFiles: value });
+                              const num = parseInt(value);
+                              if (!isNaN(num) && num > 0) {
+                                setSettings({
+                                  ...settings,
+                                  documentMaxFiles: num,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const num = parseInt(e.target.value);
+                              if (isNaN(num) || num <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  documentMaxFiles: settings.documentMaxFiles.toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             min="1"
@@ -1048,16 +1138,29 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={Math.round(settings.pdfMaxSize / (1024 * 1024))}
+                            value={inputValues.pdfMaxSize || ""}
                             onChange={(e) => {
-                              const mb = parseFloat(e.target.value) || 0;
-                              setSettings({
-                                ...settings,
-                                pdfMaxSize: mb * 1024 * 1024,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, pdfMaxSize: value });
+                              const mb = parseFloat(value);
+                              if (!isNaN(mb) && mb > 0) {
+                                setSettings({
+                                  ...settings,
+                                  pdfMaxSize: mb * 1024 * 1024,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const mb = parseFloat(e.target.value);
+                              if (isNaN(mb) || mb <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  pdfMaxSize: (settings.pdfMaxSize / (1024 * 1024)).toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            min="1"
+                            min="0.1"
                             step="0.1"
                           />
                           <p className="text-xs text-gray-500 mt-1">
@@ -1070,12 +1173,26 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={settings.pdfMaxFiles}
+                            value={inputValues.pdfMaxFiles || ""}
                             onChange={(e) => {
-                              setSettings({
-                                ...settings,
-                                pdfMaxFiles: parseInt(e.target.value) || 0,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, pdfMaxFiles: value });
+                              const num = parseInt(value);
+                              if (!isNaN(num) && num > 0) {
+                                setSettings({
+                                  ...settings,
+                                  pdfMaxFiles: num,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const num = parseInt(e.target.value);
+                              if (isNaN(num) || num <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  pdfMaxFiles: settings.pdfMaxFiles.toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             min="1"
@@ -1100,16 +1217,29 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={Math.round(settings.videoMaxSize / (1024 * 1024))}
+                            value={inputValues.videoMaxSize || ""}
                             onChange={(e) => {
-                              const mb = parseFloat(e.target.value) || 0;
-                              setSettings({
-                                ...settings,
-                                videoMaxSize: mb * 1024 * 1024,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, videoMaxSize: value });
+                              const mb = parseFloat(value);
+                              if (!isNaN(mb) && mb > 0) {
+                                setSettings({
+                                  ...settings,
+                                  videoMaxSize: mb * 1024 * 1024,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const mb = parseFloat(e.target.value);
+                              if (isNaN(mb) || mb <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  videoMaxSize: (settings.videoMaxSize / (1024 * 1024)).toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            min="1"
+                            min="0.1"
                             step="0.1"
                           />
                           <p className="text-xs text-gray-500 mt-1">
@@ -1122,12 +1252,26 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={settings.videoMaxFiles}
+                            value={inputValues.videoMaxFiles || ""}
                             onChange={(e) => {
-                              setSettings({
-                                ...settings,
-                                videoMaxFiles: parseInt(e.target.value) || 0,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, videoMaxFiles: value });
+                              const num = parseInt(value);
+                              if (!isNaN(num) && num > 0) {
+                                setSettings({
+                                  ...settings,
+                                  videoMaxFiles: num,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const num = parseInt(e.target.value);
+                              if (isNaN(num) || num <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  videoMaxFiles: settings.videoMaxFiles.toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             min="1"
@@ -1152,16 +1296,29 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={Math.round(settings.audioMaxSize / (1024 * 1024))}
+                            value={inputValues.audioMaxSize || ""}
                             onChange={(e) => {
-                              const mb = parseFloat(e.target.value) || 0;
-                              setSettings({
-                                ...settings,
-                                audioMaxSize: mb * 1024 * 1024,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, audioMaxSize: value });
+                              const mb = parseFloat(value);
+                              if (!isNaN(mb) && mb > 0) {
+                                setSettings({
+                                  ...settings,
+                                  audioMaxSize: mb * 1024 * 1024,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const mb = parseFloat(e.target.value);
+                              if (isNaN(mb) || mb <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  audioMaxSize: (settings.audioMaxSize / (1024 * 1024)).toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            min="1"
+                            min="0.1"
                             step="0.1"
                           />
                           <p className="text-xs text-gray-500 mt-1">
@@ -1174,12 +1331,26 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={settings.audioMaxFiles}
+                            value={inputValues.audioMaxFiles || ""}
                             onChange={(e) => {
-                              setSettings({
-                                ...settings,
-                                audioMaxFiles: parseInt(e.target.value) || 0,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, audioMaxFiles: value });
+                              const num = parseInt(value);
+                              if (!isNaN(num) && num > 0) {
+                                setSettings({
+                                  ...settings,
+                                  audioMaxFiles: num,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const num = parseInt(e.target.value);
+                              if (isNaN(num) || num <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  audioMaxFiles: settings.audioMaxFiles.toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             min="1"
@@ -1204,16 +1375,29 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={Math.round(settings.generalMaxSize / (1024 * 1024))}
+                            value={inputValues.generalMaxSize || ""}
                             onChange={(e) => {
-                              const mb = parseFloat(e.target.value) || 0;
-                              setSettings({
-                                ...settings,
-                                generalMaxSize: mb * 1024 * 1024,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, generalMaxSize: value });
+                              const mb = parseFloat(value);
+                              if (!isNaN(mb) && mb > 0) {
+                                setSettings({
+                                  ...settings,
+                                  generalMaxSize: mb * 1024 * 1024,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const mb = parseFloat(e.target.value);
+                              if (isNaN(mb) || mb <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  generalMaxSize: (settings.generalMaxSize / (1024 * 1024)).toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            min="1"
+                            min="0.1"
                             step="0.1"
                           />
                           <p className="text-xs text-gray-500 mt-1">
@@ -1226,12 +1410,26 @@ export default function AdminDashboard() {
                           </label>
                           <input
                             type="number"
-                            value={settings.generalMaxFiles}
+                            value={inputValues.generalMaxFiles || ""}
                             onChange={(e) => {
-                              setSettings({
-                                ...settings,
-                                generalMaxFiles: parseInt(e.target.value) || 0,
-                              });
+                              const value = e.target.value;
+                              setInputValues({ ...inputValues, generalMaxFiles: value });
+                              const num = parseInt(value);
+                              if (!isNaN(num) && num > 0) {
+                                setSettings({
+                                  ...settings,
+                                  generalMaxFiles: num,
+                                });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const num = parseInt(e.target.value);
+                              if (isNaN(num) || num <= 0) {
+                                setInputValues({
+                                  ...inputValues,
+                                  generalMaxFiles: settings.generalMaxFiles.toString(),
+                                });
+                              }
                             }}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             min="1"
@@ -1239,207 +1437,6 @@ export default function AdminDashboard() {
                           <p className="text-xs text-gray-500 mt-1">
                             Users can upload up to {settings.generalMaxFiles} files at once
                           </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Feature Control Section */}
-                    <div className="border rounded-lg p-6 bg-gradient-to-br from-purple-50 to-blue-50">
-                      <div className="flex items-center gap-3 mb-6">
-                        <SettingsIcon className="w-5 h-5 text-purple-600" />
-                        <h3 className="text-lg font-semibold text-gray-800">Feature Access Control</h3>
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Real-time</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-6">
-                        Control which features are free or require sign-in. Checked = Free, Unchecked = Requires Sign-in
-                      </p>
-
-                      {/* Image Converter Features */}
-                      <div className="mb-6">
-                        <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                          <Image className="w-4 h-4" />
-                          Image Converter
-                        </h4>
-                        <div className="space-y-3 pl-6">
-                          <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-all">
-                            <input
-                              type="checkbox"
-                              checked={settings.features?.imageConverter?.socialPreset ?? false}
-                              onChange={(e) => {
-                                setSettings({
-                                  ...settings,
-                                  features: {
-                                    ...settings.features,
-                                    imageConverter: {
-                                      ...settings.features?.imageConverter,
-                                      socialPreset: e.target.checked,
-                                    },
-                                  },
-                                });
-                              }}
-                              className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Social Preset</span>
-                              <p className="text-xs text-gray-500">Format preset optimized for social media</p>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${settings.features?.imageConverter?.socialPreset ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {settings.features?.imageConverter?.socialPreset ? 'Free' : 'Sign-in Required'}
-                            </span>
-                          </label>
-
-                          <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-all">
-                            <input
-                              type="checkbox"
-                              checked={settings.features?.imageConverter?.advancedOptions ?? false}
-                              onChange={(e) => {
-                                setSettings({
-                                  ...settings,
-                                  features: {
-                                    ...settings.features,
-                                    imageConverter: {
-                                      ...settings.features?.imageConverter,
-                                      advancedOptions: e.target.checked,
-                                    },
-                                  },
-                                });
-                              }}
-                              className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Advanced Options</span>
-                              <p className="text-xs text-gray-500">Resize, watermark, metadata, custom names</p>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${settings.features?.imageConverter?.advancedOptions ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {settings.features?.imageConverter?.advancedOptions ? 'Free' : 'Sign-in Required'}
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Image Compress Features */}
-                      <div className="mb-6">
-                        <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                          <Image className="w-4 h-4" />
-                          Image Compress
-                        </h4>
-                        <div className="space-y-3 pl-6">
-                          <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-all">
-                            <input
-                              type="checkbox"
-                              checked={settings.features?.imageCompress?.webpFormat ?? false}
-                              onChange={(e) => {
-                                setSettings({
-                                  ...settings,
-                                  features: {
-                                    ...settings.features,
-                                    imageCompress: {
-                                      ...settings.features?.imageCompress,
-                                      webpFormat: e.target.checked,
-                                    },
-                                  },
-                                });
-                              }}
-                              className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">WEBP Format</span>
-                              <p className="text-xs text-gray-500">Convert to WEBP format for compression</p>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${settings.features?.imageCompress?.webpFormat ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {settings.features?.imageCompress?.webpFormat ? 'Free' : 'Sign-in Required'}
-                            </span>
-                          </label>
-
-                          <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-all">
-                            <input
-                              type="checkbox"
-                              checked={settings.features?.imageCompress?.targetFileSize ?? false}
-                              onChange={(e) => {
-                                setSettings({
-                                  ...settings,
-                                  features: {
-                                    ...settings.features,
-                                    imageCompress: {
-                                      ...settings.features?.imageCompress,
-                                      targetFileSize: e.target.checked,
-                                    },
-                                  },
-                                });
-                              }}
-                              className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Target File Size</span>
-                              <p className="text-xs text-gray-500">Compress to a specific file size</p>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${settings.features?.imageCompress?.targetFileSize ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {settings.features?.imageCompress?.targetFileSize ? 'Free' : 'Sign-in Required'}
-                            </span>
-                          </label>
-
-                          <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-all">
-                            <input
-                              type="checkbox"
-                              checked={settings.features?.imageCompress?.advancedOptions ?? false}
-                              onChange={(e) => {
-                                setSettings({
-                                  ...settings,
-                                  features: {
-                                    ...settings.features,
-                                    imageCompress: {
-                                      ...settings.features?.imageCompress,
-                                      advancedOptions: e.target.checked,
-                                    },
-                                  },
-                                });
-                              }}
-                              className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">Advanced Options</span>
-                              <p className="text-xs text-gray-500">Progressive JPEG, optimize palette, strip metadata, lossless</p>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${settings.features?.imageCompress?.advancedOptions ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {settings.features?.imageCompress?.advancedOptions ? 'Free' : 'Sign-in Required'}
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Video Convert Features */}
-                      <div>
-                        <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                          <FileVideo className="w-4 h-4" />
-                          Video Convert
-                        </h4>
-                        <div className="space-y-3 pl-6">
-                          <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-all">
-                            <input
-                              type="checkbox"
-                              checked={settings.features?.videoConvert?.webmFormat ?? false}
-                              onChange={(e) => {
-                                setSettings({
-                                  ...settings,
-                                  features: {
-                                    ...settings.features,
-                                    videoConvert: {
-                                      ...settings.features?.videoConvert,
-                                      webmFormat: e.target.checked,
-                                    },
-                                  },
-                                });
-                              }}
-                              className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700">WEBM Format</span>
-                              <p className="text-xs text-gray-500">Convert videos to WEBM format</p>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${settings.features?.videoConvert?.webmFormat ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {settings.features?.videoConvert?.webmFormat ? 'Free' : 'Sign-in Required'}
-                            </span>
-                          </label>
                         </div>
                       </div>
                     </div>

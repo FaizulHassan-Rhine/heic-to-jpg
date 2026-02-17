@@ -55,45 +55,91 @@ export default async function handler(req, res) {
       if (generalMaxSize !== undefined) settings.generalMaxSize = generalMaxSize;
       if (generalMaxFiles !== undefined) settings.generalMaxFiles = generalMaxFiles;
 
-      // Update feature flags if provided
+      // Update feature flags if provided - Deep merge all features dynamically
       if (features !== undefined) {
         if (!settings.features) {
           settings.features = {};
         }
-        // Merge feature flags (deep merge for nested objects)
-        if (features.imageConverter) {
-          if (!settings.features.imageConverter) {
-            settings.features.imageConverter = {};
+        
+        // Helper function to check if advancedOptions needs migration
+        const needsMigration = (toolFeatures) => {
+          return toolFeatures && typeof toolFeatures.advancedOptions === 'boolean';
+        };
+        
+        // Check which tools need migration (have boolean advancedOptions)
+        const toolsToMigrate = [];
+        Object.keys(settings.features || {}).forEach(toolId => {
+          if (needsMigration(settings.features[toolId])) {
+            toolsToMigrate.push(toolId);
           }
-          if (features.imageConverter.socialPreset !== undefined) {
-            settings.features.imageConverter.socialPreset = features.imageConverter.socialPreset;
+        });
+        
+        // If we need to migrate, use $unset to remove old boolean fields first
+        if (toolsToMigrate.length > 0) {
+          const unsetFields = {};
+          toolsToMigrate.forEach(toolId => {
+            unsetFields[`features.${toolId}.advancedOptions`] = "";
+          });
+          
+          // Use findOneAndUpdate with $unset to remove old boolean fields
+          await Settings.findOneAndUpdate(
+            { _id: settings._id },
+            { $unset: unsetFields },
+            { new: true }
+          );
+          
+          // Reload settings after migration
+          settings = await Settings.findById(settings._id);
+          if (!settings.features) {
+            settings.features = {};
           }
-          if (features.imageConverter.advancedOptions !== undefined) {
-            settings.features.imageConverter.advancedOptions = features.imageConverter.advancedOptions;
-          }
+          
+          // Initialize advancedOptions as objects for migrated tools
+          toolsToMigrate.forEach(toolId => {
+            if (!settings.features[toolId]) {
+              settings.features[toolId] = {};
+            }
+            settings.features[toolId].advancedOptions = {};
+          });
         }
-        if (features.imageCompress) {
-          if (!settings.features.imageCompress) {
-            settings.features.imageCompress = {};
+        
+        // Deep merge function for nested objects
+        const deepMerge = (target, source) => {
+          for (const key in source) {
+            if (source[key] !== undefined && source[key] !== null) {
+              // If source value is an object (and not array/null), recursively merge
+              if (typeof source[key] === 'object' && !Array.isArray(source[key]) && source[key].constructor === Object) {
+                // Special handling for advancedOptions - ensure it's an object
+                if (key === 'advancedOptions') {
+                  // If target has advancedOptions as boolean, convert to object
+                  if (typeof target[key] === 'boolean') {
+                    target[key] = {};
+                  }
+                  // If target doesn't have advancedOptions, initialize as object
+                  if (!target[key]) {
+                    target[key] = {};
+                  }
+                } else {
+                  // For other keys, initialize if needed
+                  if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+                    target[key] = {};
+                  }
+                }
+                // Recursively merge
+                deepMerge(target[key], source[key]);
+              } else {
+                // Otherwise, directly assign (for primitives)
+                target[key] = source[key];
+              }
+            }
           }
-          if (features.imageCompress.webpFormat !== undefined) {
-            settings.features.imageCompress.webpFormat = features.imageCompress.webpFormat;
-          }
-          if (features.imageCompress.targetFileSize !== undefined) {
-            settings.features.imageCompress.targetFileSize = features.imageCompress.targetFileSize;
-          }
-          if (features.imageCompress.advancedOptions !== undefined) {
-            settings.features.imageCompress.advancedOptions = features.imageCompress.advancedOptions;
-          }
-        }
-        if (features.videoConvert) {
-          if (!settings.features.videoConvert) {
-            settings.features.videoConvert = {};
-          }
-          if (features.videoConvert.webmFormat !== undefined) {
-            settings.features.videoConvert.webmFormat = features.videoConvert.webmFormat;
-          }
-        }
+        };
+        
+        // Deep merge all features
+        deepMerge(settings.features, features);
+        
+        // Mark features as modified so Mongoose saves nested object changes
+        settings.markModified('features');
       }
 
       await settings.save();
@@ -104,7 +150,11 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error("Settings API error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Error details:", error.message, error.stack);
+    return res.status(500).json({ 
+      error: "Internal server error",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 
