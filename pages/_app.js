@@ -22,7 +22,7 @@ export default function App({ Component, pageProps }) {
       </Head>
       <AuthContextProvider>
         <Component {...pageProps} />
-        {process.env.VERCEL && <Analytics />}
+        <Analytics />
         <Toaster position="top-center" toastOptions={{ duration: 3000, style: { zIndex: 9999 } }} />
       </AuthContextProvider>
     </>
