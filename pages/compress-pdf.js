@@ -387,7 +387,7 @@ export default function CompressPdf() {
 
                                     <Button
                                         size="lg"
-                                        className="w-full md:w-auto px-12 py-6 text-lg bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200"
+                                        className="w-full md:w-auto px-12 py-6 text-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-200"
                                         onClick={compressPdf}
                                         disabled={processing}
                                     >

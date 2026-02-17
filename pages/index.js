@@ -11,11 +11,11 @@ import Link from "next/link";
 
 export default function Home() {
   const tools = [
-    { name: "Image Converter", href: "/convert", icon: Image, color: "text-blue-600" },
+    { name: "Image Converter", href: "/convert", icon: Image, color: "text-green-600" },
     { name: "Image Compressor", href: "/compress", icon: Image, color: "text-green-600" },
-    { name: "Video Converter", href: "/video-convert", icon: Video, color: "text-purple-600" },
-    { name: "Document Tools", href: "/doc-to-pdf", icon: FileText, color: "text-orange-600" },
-    { name: "Audio Converter", href: "/audio-convert", icon: Music, color: "text-pink-600" },
+    { name: "Video Converter", href: "/video-convert", icon: Video, color: "text-green-600" },
+    { name: "Document Tools", href: "/doc-to-pdf", icon: FileText, color: "text-green-600" },
+    { name: "Audio Converter", href: "/audio-convert", icon: Music, color: "text-green-600" },
   ];
 
   const features = [

@@ -343,7 +343,7 @@ export default function TextToSpeech() {
 
           <div className="grid gap-8">
             {/* Text Input Area (styled like dropzone) */}
-            <Card className="border-2 border-dashed border-gray-300 hover:border-orange-500 bg-white shadow-sm transition-all">
+            <Card className="border-2 border-dashed border-gray-300 hover:border-green-500 bg-white shadow-sm transition-all">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Enter Text</label>
@@ -358,7 +358,7 @@ export default function TextToSpeech() {
                     else toast.error(`Maximum ${MAX_CHARS} characters allowed`);
                   }}
                   placeholder="Type or paste your text here..."
-                  className="w-full h-48 p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-800 text-base leading-relaxed"
+                  className="w-full h-48 p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-800 text-base leading-relaxed"
                 />
               </CardContent>
             </Card>
@@ -371,7 +371,7 @@ export default function TextToSpeech() {
                 <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                   <CardContent className="p-6 space-y-6">
                     <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                      <Volume2 className="w-6 h-6 text-orange-600" /> Voice Settings
+                      <Volume2 className="w-6 h-6 text-green-600" /> Voice Settings
                     </div>
 
                     {/* Language */}
@@ -382,7 +382,7 @@ export default function TextToSpeech() {
                       <select
                         value={selectedLang}
                         onChange={(e) => { if (isSpeaking) stop(); setSelectedLang(e.target.value); }}
-                        className="w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                        className="w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
                       >
                         {Object.entries(LANGUAGE_GROUPS).map(([group, langs]) => (
                           <optgroup key={group} label={group}>
@@ -399,7 +399,7 @@ export default function TextToSpeech() {
                           <select
                             value={selectedVoice || ""}
                             onChange={(e) => { if (isSpeaking) stop(); setSelectedVoice(e.target.value); }}
-                            className="w-full p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                            className="w-full p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
                           >
                             {filteredVoices.map((voice) => (
                               <option key={voice.name} value={voice.name}>
@@ -418,34 +418,34 @@ export default function TextToSpeech() {
                     <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Gauge className="h-4 w-4" /> Speed</span>
-                        <span className="text-lg font-bold text-orange-600">{rate.toFixed(1)}x</span>
+                        <span className="text-lg font-bold text-green-600">{rate.toFixed(1)}x</span>
                       </div>
                       <input type="range" min="0.5" max="2" step="0.1" value={rate}
                         onChange={(e) => setRate(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
 
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Type className="h-4 w-4" /> Pitch</span>
-                        <span className="text-lg font-bold text-orange-600">{pitch.toFixed(1)}</span>
+                        <span className="text-lg font-bold text-green-600">{pitch.toFixed(1)}</span>
                       </div>
                       <input type="range" min="0.5" max="2" step="0.1" value={pitch}
                         onChange={(e) => setPitch(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
 
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Volume2 className="h-4 w-4" /> Volume</span>
-                        <span className="text-lg font-bold text-orange-600">{Math.round(volume * 100)}%</span>
+                        <span className="text-lg font-bold text-green-600">{Math.round(volume * 100)}%</span>
                       </div>
                       <input type="range" min="0" max="1" step="0.05" value={volume}
                         onChange={(e) => setVolume(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
                     </div>
 
                     <Button
                       onClick={!isSpeaking ? speak : stop}
                       className={cn(
                         "w-full h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base",
-                        isSpeaking ? "bg-red-600 hover:bg-red-700 text-white" : "bg-orange-600 hover:bg-orange-700 text-white"
+                        isSpeaking ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white" : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
                       )}
                       disabled={!text.trim()}
                     >
@@ -474,7 +474,7 @@ export default function TextToSpeech() {
                         <div className="flex items-center gap-3 mb-4">
                           <div className="flex gap-1">
                             {[...Array(8)].map((_, i) => (
-                              <div key={i} className="w-1 bg-orange-500 rounded-full animate-pulse"
+                              <div key={i} className="w-1 bg-green-500 rounded-full animate-pulse"
                                 style={{ height: `${12 + Math.random() * 16}px`, animationDelay: `${i * 0.12}s` }} />
                             ))}
                           </div>
@@ -482,11 +482,11 @@ export default function TextToSpeech() {
                             {isPaused ? "Paused" : "Speaking..."}
                           </span>
                           {isPaused ? (
-                            <Button onClick={resume} size="sm" className="ml-auto bg-orange-600 hover:bg-orange-700 text-white">
+                            <Button onClick={resume} size="sm" className="ml-auto bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white">
                               <Play className="h-3 w-3 mr-1" /> Resume
                             </Button>
                           ) : (
-                            <Button onClick={pause} size="sm" variant="outline" className="ml-auto border-yellow-500 text-yellow-600">
+                            <Button onClick={pause} size="sm" variant="outline" className="ml-auto border-green-500 text-green-600">
                               <Pause className="h-3 w-3 mr-1" /> Pause
                             </Button>
                           )}
@@ -504,7 +504,7 @@ export default function TextToSpeech() {
                           onClick={downloadSpeech}
                           variant="outline"
                           disabled={!text.trim() || isDownloading}
-                          className="border-orange-600 text-orange-700 hover:bg-orange-50"
+                          className="border-green-600 text-green-700 hover:bg-green-50"
                         >
                           {isDownloading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
                           {isDownloading ? "Generating..." : "Download MP3"}

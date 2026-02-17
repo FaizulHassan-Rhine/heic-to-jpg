@@ -212,7 +212,7 @@ export default function UrlShortener() {
 
           <div className="grid gap-8">
             {/* Input Area (styled like dropzone) */}
-            <Card className="border-2 border-dashed border-gray-300 hover:border-rose-500 bg-white shadow-sm transition-all">
+            <Card className="border-2 border-dashed border-gray-300 hover:border-green-500 bg-white shadow-sm transition-all">
               <CardContent className="p-6">
                 <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 block">Enter URL</label>
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -224,13 +224,13 @@ export default function UrlShortener() {
                       onChange={(e) => setUrl(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && shortenUrl()}
                       placeholder="Enter your long URL here..."
-                      className="w-full pl-10 pr-4 py-3 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500 text-base"
+                      className="w-full pl-10 pr-4 py-3 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base"
                     />
                   </div>
                   <Button
                     onClick={shortenUrl}
                     disabled={isLoading || !url.trim()}
-                    className="bg-rose-600 hover:bg-rose-700 text-white px-8 py-3 text-base h-12 shadow-md hover:shadow-lg font-semibold"
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-3 text-base h-12 shadow-lg hover:shadow-xl font-semibold"
                   >
                     {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Shortening...</> : "Shorten URL"}
                   </Button>
@@ -238,15 +238,15 @@ export default function UrlShortener() {
 
                 {/* Result */}
                 {shortUrl && (
-                  <div className="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-lg">
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-5 w-5 text-rose-600" />
-                      <span className="text-sm font-medium text-rose-700">Shortened URL</span>
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-700">Shortened URL</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <a href={shortUrl} target="_blank" rel="noopener noreferrer"
-                        className="text-rose-700 font-semibold text-lg hover:underline break-all flex-1">{shortUrl}</a>
-                      <Button onClick={() => copyToClipboard(shortUrl)} size="sm" className="bg-rose-600 hover:bg-rose-700 text-white flex-shrink-0">
+                        className="text-green-700 font-semibold text-lg hover:underline break-all flex-1">{shortUrl}</a>
+                      <Button onClick={() => copyToClipboard(shortUrl)} size="sm" className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white flex-shrink-0">
                         <Copy className="h-4 w-4 mr-1" /> Copy
                       </Button>
                       <Button onClick={() => window.open(shortUrl, "_blank")} size="sm" variant="outline" className="flex-shrink-0">
@@ -275,14 +275,14 @@ export default function UrlShortener() {
                 {history.map((item) => (
                   <Card key={item.id} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all">
                     <div className="p-4 flex gap-5 items-center">
-                      <div className="w-16 h-16 bg-rose-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-rose-100">
-                        <Link2 className="w-7 h-7 text-rose-400" />
+                      <div className="w-16 h-16 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-green-100">
+                        <Link2 className="w-7 h-7 text-green-400" />
                       </div>
 
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
                           <a href={item.short} target="_blank" rel="noopener noreferrer"
-                            className="text-rose-700 font-semibold hover:underline truncate">{item.short}</a>
+                            className="text-green-700 font-semibold hover:underline truncate">{item.short}</a>
                           <button onClick={() => copyToClipboard(item.short)} className="text-gray-400 hover:text-gray-600 flex-shrink-0" title="Copy">
                             <Copy className="h-3.5 w-3.5" />
                           </button>
@@ -293,7 +293,7 @@ export default function UrlShortener() {
 
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button variant="ghost" size="icon" onClick={() => toggleQr(item.id, item.short)} className="h-8 w-8">
-                          <QrCode className={cn("h-4 w-4", showQr[item.id] ? "text-rose-600" : "text-gray-400")} />
+                          <QrCode className={cn("h-4 w-4", showQr[item.id] ? "text-green-600" : "text-gray-400")} />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => window.open(item.short, "_blank")} className="h-8 w-8">
                           <ExternalLink className="h-4 w-4 text-gray-400" />

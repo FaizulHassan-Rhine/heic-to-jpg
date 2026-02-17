@@ -321,7 +321,7 @@ export default function ImageToPdf() {
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-8">
                   <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-red-600" /> PDF Settings
+                    <Settings2 className="w-6 h-6 text-green-600" /> PDF Settings
                   </div>
 
                   {/* Page Size */}
@@ -335,7 +335,7 @@ export default function ImageToPdf() {
                           className={cn(
                             "py-2 text-sm rounded-lg transition-all font-medium border",
                             pageSize === size
-                              ? "bg-red-50 border-red-200 text-red-700 font-semibold"
+                              ? "bg-green-50 border-green-200 text-green-700 font-semibold"
                               : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                           )}
                         >
@@ -357,7 +357,7 @@ export default function ImageToPdf() {
                             className={cn(
                               "py-2 text-sm rounded-lg transition-all font-medium border",
                               orientation === mode
-                                ? "bg-red-50 border-red-200 text-red-700 font-semibold"
+                                ? "bg-green-50 border-green-200 text-green-700 font-semibold"
                                 : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                             )}
                           >
@@ -379,7 +379,7 @@ export default function ImageToPdf() {
                           className={cn(
                             "py-2 text-sm rounded-lg transition-all font-medium border",
                             margin === m
-                              ? "bg-red-50 border-red-200 text-red-700 font-semibold"
+                              ? "bg-green-50 border-green-200 text-green-700 font-semibold"
                               : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                           )}
                         >
@@ -392,7 +392,7 @@ export default function ImageToPdf() {
                   <Button
                     onClick={processAll}
                     disabled={processing}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Converting... </>
@@ -438,7 +438,7 @@ export default function ImageToPdf() {
 
                             <div className="flex gap-2">
                               {res?.status === "done" && (
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100" onClick={() => {
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" onClick={() => {
                                   const url = URL.createObjectURL(res.blob);
                                   const a = document.createElement("a");
                                   a.href = url;
@@ -448,7 +448,7 @@ export default function ImageToPdf() {
                                   <Download className="w-4 h-4" />
                                 </Button>
                               )}
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600 hover:bg-gray-50" onClick={() => removeFile(file.name)}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
@@ -460,7 +460,7 @@ export default function ImageToPdf() {
                             </Badge>
                             <ArrowRight className="w-3 h-3 text-gray-300" />
                             {res?.status === "done" ? (
-                              <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100">
+                              <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
                                 PDF Ready ({formatSize(res.size)})
                               </Badge>
                             ) : (
@@ -478,12 +478,12 @@ export default function ImageToPdf() {
                       {res?.status === "processing" && (
                         <div className="px-4 pb-4 space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-red-600 font-medium">Processing...</span>
-                            <span className="text-red-600 font-bold">{Math.round(res.progress || 0)}%</span>
+                            <span className="text-green-600 font-medium">Processing...</span>
+                            <span className="text-green-600 font-bold">{Math.round(res.progress || 0)}%</span>
                           </div>
-                          <div className="h-2 bg-red-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-red-600 transition-all duration-300 ease-out"
+                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>

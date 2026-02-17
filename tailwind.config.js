@@ -16,7 +16,7 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ["IBM Plex Mono", "monospace"],
+        sans: ["Plus Jakarta Sans", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

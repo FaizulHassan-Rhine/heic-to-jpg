@@ -296,14 +296,14 @@ export default function VideoTrim() {
               "video/webm": [".webm", ".WEBM"]
             }}
             borderColor="border-gray-300"
-            hoverColor="hover:border-rose-500"
+            hoverColor="hover:border-green-500"
             className="max-w-3xl mx-auto"
           />
         ) : (
           <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
             {/* Main Player Area */}
             <div className="space-y-6">
-              <Card className="overflow-hidden border-rose-100 shadow-md">
+              <Card className="overflow-hidden border-green-100 shadow-md">
                 <div className="bg-black aspect-video relative flex items-center justify-center">
                   <video
                     ref={videoRef}
@@ -346,24 +346,24 @@ export default function VideoTrim() {
                   >
                     {/* Active Range */}
                     <div
-                      className="absolute top-0 bottom-0 bg-rose-100/50 border-x border-rose-400"
+                      className="absolute top-0 bottom-0 bg-green-100/50 border-x border-green-400"
                       style={{ left: `${startPercent}%`, width: `${endPercent - startPercent}%` }}
                     >
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 pointer-events-none text-rose-800 text-xs font-bold">
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 pointer-events-none text-green-800 text-xs font-bold">
                         DRAG HANDLES
                       </div>
                     </div>
 
                     {/* Drag Handles */}
                     <div
-                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-rose-600 hover:bg-rose-700 cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
+                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
                       style={{ left: `${startPercent}%` }}
                       onMouseDown={(e) => handleTimelineMouseDown(e, "start")}
                     >
                       <div className="w-0.5 h-6 bg-white/50 rounded-full" />
                     </div>
                     <div
-                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-rose-600 hover:bg-rose-700 cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
+                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
                       style={{ left: `${endPercent}%` }}
                       onMouseDown={(e) => handleTimelineMouseDown(e, "end")}
                     >
@@ -417,14 +417,14 @@ export default function VideoTrim() {
               <Card className="border-0 shadow-lg ring-1 ring-gray-100 h-fit lg:sticky lg:top-24">
                 <CardContent className="p-6 space-y-6">
                   <div className="flex items-center gap-2 font-bold text-xl text-gray-900 border-b pb-4">
-                    <Settings2 className="w-5 h-5 text-rose-600" /> Options
+                    <Settings2 className="w-5 h-5 text-green-600" /> Options
                   </div>
 
                   <div className="space-y-4">
                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Start Time</label>
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-rose-500" />
+                        <Clock className="w-4 h-4 text-green-500" />
                         <span className="font-mono text-lg font-medium text-gray-900">
                           {formatTimeDetailed(startTime)}
                         </span>
@@ -434,7 +434,7 @@ export default function VideoTrim() {
                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">End Time</label>
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-rose-500" />
+                        <Clock className="w-4 h-4 text-green-500" />
                         <span className="font-mono text-lg font-medium text-gray-900">
                           {formatTimeDetailed(endTime)}
                         </span>
@@ -450,7 +450,7 @@ export default function VideoTrim() {
                   <Button
                     onClick={trimVideo}
                     disabled={processing || (ffmpegLoading && !ffmpegReady)}
-                    className="w-full bg-rose-600 hover:bg-rose-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Trimming... </>
@@ -468,13 +468,13 @@ export default function VideoTrim() {
               </Card>
 
               {processing && (
-                <Card className="border-rose-100 bg-rose-50 animate-in fade-in slide-in-from-bottom-2">
+                <Card className="border-green-100 bg-green-50 animate-in fade-in slide-in-from-bottom-2">
                   <CardContent className="p-4">
-                    <div className="flex justify-between text-xs font-semibold text-rose-700 mb-2">
+                    <div className="flex justify-between text-xs font-semibold text-green-700 mb-2">
                       <span>Processing...</span>
                       <span>{progress}%</span>
                     </div>
-                    <Progress value={progress} className="h-2 bg-rose-200" indicatorClassName="bg-rose-600" />
+                    <Progress value={progress} className="h-2 bg-green-200" indicatorClassName="bg-gradient-to-r from-green-500 to-emerald-600" />
                   </CardContent>
                 </Card>
               )}

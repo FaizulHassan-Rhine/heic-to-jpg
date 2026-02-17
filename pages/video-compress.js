@@ -261,7 +261,7 @@ export default function VideoCompress() {
             description="MP4, MOV, MKV, WebM • Max 500MB"
             accept={{ 'video/*': [] }}
             borderColor="border-gray-300"
-            hoverColor="hover:border-blue-500"
+            hoverColor="hover:border-green-500"
           />
 
           {files.length > 0 && (
@@ -271,7 +271,7 @@ export default function VideoCompress() {
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
                   <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-blue-600" /> Compression
+                    <Settings2 className="w-6 h-6 text-green-600" /> Compression
                   </div>
 
                   {/* Quality */}
@@ -285,7 +285,7 @@ export default function VideoCompress() {
                           className={cn(
                             "p-2 text-sm rounded-lg transition-all font-medium border text-left",
                             quality === p.value
-                              ? "bg-blue-50 border-blue-200 text-blue-700 ring-1 ring-blue-200"
+                              ? "bg-green-50 border-green-200 text-green-700 ring-1 ring-green-200"
                               : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                           )}
                         >
@@ -331,7 +331,7 @@ export default function VideoCompress() {
                   <Button
                     onClick={processAll}
                     disabled={processing || (ffmpegLoading && !ffmpegReady)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> stop </> // Actually usually we can't stop easily
@@ -359,8 +359,8 @@ export default function VideoCompress() {
                   return (
                     <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all">
                       <div className="p-4 flex gap-5 items-center">
-                        <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-blue-100">
-                          <FileVideo className="w-8 h-8 text-blue-400" />
+                        <div className="w-16 h-16 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-green-100">
+                          <FileVideo className="w-8 h-8 text-green-400" />
                         </div>
 
                         <div className="flex-1 min-w-0 space-y-2">
@@ -369,7 +369,7 @@ export default function VideoCompress() {
 
                             <div className="flex gap-2">
                               {res?.status === "done" && (
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100" onClick={() => {
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" onClick={() => {
                                   const url = URL.createObjectURL(res.blob);
                                   const a = document.createElement("a");
                                   a.href = url;
@@ -414,9 +414,9 @@ export default function VideoCompress() {
                             <span className="text-blue-600 font-medium">Processing...</span>
                             <span className="text-blue-600 font-bold">{res.progress || 0}%</span>
                           </div>
-                          <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-blue-600 transition-all duration-300 ease-out"
+                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>

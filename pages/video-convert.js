@@ -393,7 +393,7 @@ export default function VideoConvert() {
               "video/webm": [".webm", ".WEBM"]
             }}
             borderColor="border-gray-300"
-            hoverColor="hover:border-purple-500"
+            hoverColor="hover:border-green-500"
           />
 
           {files.length > 0 && (
@@ -403,7 +403,7 @@ export default function VideoConvert() {
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
                   <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-purple-600" /> Convert Settings
+                    <Settings2 className="w-6 h-6 text-green-600" /> Convert Settings
                   </div>
 
                   {/* Format Grid */}
@@ -431,13 +431,13 @@ export default function VideoConvert() {
                             className={cn(
                               "p-2 text-sm rounded-lg transition-all font-medium border text-left flex items-start gap-2 relative",
                               targetFormat === f.value
-                                ? "bg-purple-50 border-purple-200 text-purple-700 ring-1 ring-purple-200"
+                                ? "bg-emerald-50 border-emerald-200 text-emerald-700 ring-1 ring-emerald-200"
                                 : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50",
                               requiresAuth && "opacity-75"
                             )}
                             style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
                           >
-                            <Icon className={cn("w-4 h-4 mt-0.5 flex-shrink-0", targetFormat === f.value ? "text-purple-600" : "text-gray-400")} />
+                            <Icon className={cn("w-4 h-4 mt-0.5 flex-shrink-0", targetFormat === f.value ? "text-green-600" : "text-gray-400")} />
                             <div className="flex-1">
                               <div className="font-semibold">{f.label}</div>
                               <div className="text-[10px] opacity-70 font-normal">{f.desc}</div>
@@ -459,7 +459,7 @@ export default function VideoConvert() {
                           type="checkbox"
                           checked={muteAudio}
                           onChange={(e) => setMuteAudio(e.target.checked)}
-                          className="w-4 h-4 accent-purple-600"
+                          className="w-4 h-4 accent-green-600"
                         />
                         <div>
                           <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -473,7 +473,7 @@ export default function VideoConvert() {
                   <Button
                     onClick={processAll}
                     disabled={processing || (ffmpegLoading && !ffmpegReady)}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> stop </>
@@ -502,8 +502,8 @@ export default function VideoConvert() {
                   return (
                     <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all">
                       <div className="p-4 flex gap-5 items-center">
-                        <div className="w-16 h-16 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-purple-100">
-                          {isMp3 ? <FileAudio className="w-8 h-8 text-purple-400" /> : <Film className="w-8 h-8 text-purple-400" />}
+                        <div className="w-16 h-16 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-emerald-100">
+                          {isMp3 ? <FileAudio className="w-8 h-8 text-emerald-400" /> : <Film className="w-8 h-8 text-emerald-400" />}
                         </div>
 
                         <div className="flex-1 min-w-0 space-y-2">
@@ -512,7 +512,7 @@ export default function VideoConvert() {
 
                             <div className="flex gap-2">
                               {res?.status === "done" && (
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-purple-600 bg-purple-50 hover:bg-purple-100" onClick={() => {
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" onClick={() => {
                                   const url = URL.createObjectURL(res.blob);
                                   const a = document.createElement("a");
                                   a.href = url;
@@ -536,13 +536,13 @@ export default function VideoConvert() {
 
                             {res?.status === "done" ? (
                               <>
-                                <Badge className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100 font-bold uppercase">
+                                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 font-bold uppercase">
                                   {res.ext}
                                 </Badge>
                                 <span className="text-gray-500 text-xs font-mono">{formatSize(res.size)}</span>
                               </>
                             ) : (
-                              <span className="text-purple-600 font-medium text-xs bg-purple-50 px-2 py-0.5 rounded">
+                              <span className="text-green-600 font-medium text-xs bg-emerald-50 px-2 py-0.5 rounded">
                                 To {targetFormat}
                               </span>
                             )}
@@ -558,12 +558,12 @@ export default function VideoConvert() {
                       {res?.status === "processing" && (
                         <div className="px-4 pb-4 space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-purple-600 font-medium">Processing...</span>
-                            <span className="text-purple-600 font-bold">{res.progress || 0}%</span>
+                            <span className="text-green-600 font-medium">Processing...</span>
+                            <span className="text-green-600 font-bold">{res.progress || 0}%</span>
                           </div>
-                          <div className="h-2 bg-purple-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-purple-600 transition-all duration-300 ease-out"
+                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>

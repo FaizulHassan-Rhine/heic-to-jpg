@@ -292,7 +292,7 @@ export default function SpeechToText() {
                       "w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
                       isListening
                         ? "bg-red-500 hover:bg-red-600 animate-pulse shadow-red-200"
-                        : "bg-sky-600 hover:bg-sky-700 shadow-sky-200"
+                        : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-green-200"
                     )}
                   >
                     {isListening ? <Square className="h-10 w-10 text-white" /> : <Mic className="h-10 w-10 text-white" />}

@@ -417,7 +417,7 @@ export default function ExtractText() {
               "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
             }}
             borderColor="border-gray-300"
-            hoverColor="hover:border-teal-500"
+            hoverColor="hover:border-green-500"
           />
 
           {files.length > 0 && (
@@ -427,7 +427,7 @@ export default function ExtractText() {
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
                   <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <ScanText className="w-6 h-6 text-teal-600" /> OCR Options
+                    <ScanText className="w-6 h-6 text-green-600" /> OCR Options
                   </div>
 
                   <div className="space-y-3">
@@ -436,7 +436,7 @@ export default function ExtractText() {
                         type="checkbox"
                         checked={useProOCR}
                         onChange={(e) => setUseProOCR(e.target.checked)}
-                        className="w-5 h-5 accent-teal-600"
+                        className="w-5 h-5 accent-green-600"
                       />
                       <div>
                         <span className="font-semibold text-gray-800 block text-sm">Enhanced Engine</span>

@@ -420,7 +420,7 @@ export default function MergePdf() {
                     <div className="container mx-auto px-4 py-8 max-w-5xl">
                         {/* Header */}
                         <div className="text-center mb-8">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
                                 <Merge className="w-3.5 h-3.5" />
                                 100% Client-side • No upload to server
                             </div>
@@ -442,8 +442,8 @@ export default function MergePdf() {
                                 "w-full border-2 border-dashed rounded-2xl transition-all duration-300 cursor-pointer mb-8",
                                 "flex flex-col items-center justify-center py-12 px-8",
                                 "bg-gradient-to-br from-background to-muted/20",
-                                "hover:border-primary/50 hover:bg-gradient-to-br hover:from-primary/5 hover:to-primary/10",
-                                "hover:shadow-xl hover:shadow-primary/10 hover:scale-[1.005]",
+                                "hover:border-green-500/50 hover:bg-gradient-to-br hover:from-green-50 hover:to-green-100",
+                                "hover:shadow-xl hover:shadow-green-200 hover:scale-[1.005]",
                                 "group",
                                 loadingFiles && "opacity-60 pointer-events-none"
                             )}
@@ -458,12 +458,12 @@ export default function MergePdf() {
                             />
                             <div className="mb-4 p-4 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 group-hover:from-primary/20 group-hover:to-primary/30 transition-all duration-300 group-hover:scale-110">
                                 {loadingFiles ? (
-                                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                                    <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
                                 ) : (
-                                    <FileUp className="h-8 w-8 text-primary" />
+                                    <FileUp className="h-8 w-8 text-green-600" />
                                 )}
                             </div>
-                            <p className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors">
+                            <p className="text-lg font-semibold mb-1 group-hover:text-green-600 transition-colors">
                                 {loadingFiles ? "Loading PDF files..." : "Drop PDF files here"}
                             </p>
                             <p className="text-sm text-muted-foreground">
@@ -535,9 +535,9 @@ export default function MergePdf() {
                                         }}
                                         className={cn(
                                             "flex items-center gap-4 p-4 rounded-xl border-2 bg-card transition-all duration-200",
-                                            "hover:shadow-md hover:border-primary/20",
+                                            "hover:shadow-md hover:border-green-200",
                                             dragOverIndex === idx &&
-                                            "border-primary bg-primary/5 shadow-lg shadow-primary/10",
+                                            "border-green-500 bg-green-50 shadow-lg shadow-green-200",
                                             dragSourceIndex === idx && "opacity-50"
                                         )}
                                     >
@@ -547,8 +547,8 @@ export default function MergePdf() {
                                         </div>
 
                                         {/* Order Number */}
-                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <span className="text-sm font-bold text-primary">
+                                        <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                            <span className="text-sm font-bold text-green-700">
                                                 {idx + 1}
                                             </span>
                                         </div>
@@ -664,7 +664,7 @@ export default function MergePdf() {
                                                 checked={splitMode}
                                                 onChange={(e) => setSplitMode(e.target.checked)}
                                                 disabled={merging}
-                                                className="w-4 h-4 accent-primary"
+                                                className="w-4 h-4 accent-green-600"
                                             />
                                             <span className="text-sm font-medium">Split Mode (One PDF per page)</span>
                                         </label>
@@ -677,7 +677,7 @@ export default function MergePdf() {
                                                     checked={addPageNumbers}
                                                     onChange={(e) => setAddPageNumbers(e.target.checked)}
                                                     disabled={merging}
-                                                    className="w-4 h-4 accent-primary"
+                                                    className="w-4 h-4 accent-green-600"
                                                 />
                                                 <span className="text-sm font-medium">Add Page Numbers</span>
                                             </label>
@@ -694,7 +694,7 @@ export default function MergePdf() {
                                 {merging && (
                                     <div className="w-full max-w-md">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                            <Loader2 className="w-4 h-4 animate-spin text-green-600" />
                                             <span className="text-sm font-medium">
                                                 {splitMode ? "Splitting PDFs..." : "Merging PDFs..."} {mergeProgress}%
                                             </span>
@@ -708,7 +708,7 @@ export default function MergePdf() {
                                         size="lg"
                                         onClick={handleMerge}
                                         disabled={merging}
-                                        className="gap-2 px-10 shadow-lg shadow-primary/20 text-base"
+                                        className="gap-2 px-10 shadow-lg shadow-green-200 text-base bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
                                     >
                                         {merging ? (
                                             <>

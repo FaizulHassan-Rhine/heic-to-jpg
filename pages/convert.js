@@ -642,7 +642,7 @@ export default function ConvertImage() {
               "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
             }}
             borderColor="border-gray-300"
-            hoverColor="hover:border-purple-500"
+            hoverColor="hover:border-green-500"
           />
 
           {/* 2. Controls & List */}
@@ -669,9 +669,9 @@ export default function ConvertImage() {
                     )}
                   </div>
                   {selectedFile && (
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
-                      <div className="text-xs text-purple-600 font-medium mb-1">Editing Settings For:</div>
-                      <div className="text-sm font-semibold text-purple-900 truncate">{selectedFile}</div>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4">
+                      <div className="text-xs text-emerald-600 font-medium mb-1">Editing Settings For:</div>
+                      <div className="text-sm font-semibold text-emerald-900 truncate">{selectedFile}</div>
                     </div>
                   )}
                   {!selectedFile && files.length > 0 && (
@@ -741,7 +741,7 @@ export default function ConvertImage() {
                             className={cn(
                               "p-2 rounded-lg border-2 transition-all text-center text-xs relative",
                               current.formatPreset === preset.id
-                                ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm"
+                                ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
                                 : "border-gray-200 hover:border-gray-300 text-gray-600",
                               requiresAuth && "opacity-75"
                             )}
@@ -774,7 +774,7 @@ export default function ConvertImage() {
                             }}
                             className={cn(
                               "flex items-center justify-between px-3 py-3 text-sm rounded-lg border-2 transition-all uppercase font-medium",
-                              current.targetFormat === fmt ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm" : "border-gray-200 hover:border-gray-300 text-gray-600"
+                              current.targetFormat === fmt ? "border-green-500 bg-green-50 text-green-700 shadow-sm" : "border-gray-200 hover:border-gray-300 text-gray-600"
                             )}
                           >
                             {fmt}
@@ -789,7 +789,7 @@ export default function ConvertImage() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <label className="text-sm font-medium text-gray-600">Quality</label>
-                      <span className="text-sm font-bold text-purple-600">{getCurrentSettings().quality}%</span>
+                      <span className="text-sm font-bold text-green-600">{getCurrentSettings().quality}%</span>
                     </div>
                     <input
                       type="range"
@@ -797,7 +797,7 @@ export default function ConvertImage() {
                       max="100"
                       value={getCurrentSettings().quality}
                       onChange={(e) => updateCurrentSettings({ quality: Number(e.target.value) })}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
                     />
                     <div className="flex justify-between text-xs text-gray-500">
                       <span>Low</span>
@@ -816,7 +816,7 @@ export default function ConvertImage() {
                           type="checkbox"
                           checked={getCurrentSettings().preserveTransparency}
                           onChange={(e) => updateCurrentSettings({ preserveTransparency: e.target.checked })}
-                          className="w-4 h-4 accent-purple-600"
+                          className="w-4 h-4 accent-green-600"
                         />
                         <span className="text-sm font-medium text-gray-700">Preserve Transparency</span>
                       </label>
@@ -830,7 +830,7 @@ export default function ConvertImage() {
                           type="checkbox"
                           checked={getCurrentSettings().progressiveJpeg}
                           onChange={(e) => updateCurrentSettings({ progressiveJpeg: e.target.checked })}
-                          className="w-4 h-4 accent-purple-600"
+                          className="w-4 h-4 accent-green-600"
                         />
                         <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
                       </label>
@@ -850,7 +850,7 @@ export default function ConvertImage() {
                             className={cn(
                               "px-3 py-2 text-sm rounded-lg border-2 transition-all font-medium",
                               current.rotation === angle
-                                ? "border-purple-500 bg-purple-50 text-purple-700"
+                                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
                                 : "border-gray-200 hover:border-gray-300 text-gray-600"
                             )}
                           >
@@ -922,7 +922,7 @@ export default function ConvertImage() {
                                       }
                                       updateCurrentSettings({ resizeEnabled: e.target.checked });
                                     }}
-                                    className="w-4 h-4 accent-purple-600"
+                                    className="w-4 h-4 accent-green-600"
                                   />
                                   <span className="text-sm font-medium text-gray-700">Resize During Conversion</span>
                                   {requiresAuth && (
@@ -1005,7 +1005,7 @@ export default function ConvertImage() {
                                       }
                                       updateCurrentSettings({ preserveMetadata: e.target.checked });
                                     }}
-                                    className="w-4 h-4 accent-purple-600"
+                                    className="w-4 h-4 accent-green-600"
                                   />
                                   <span className="text-sm font-medium text-gray-700">Preserve EXIF Metadata</span>
                                   {requiresAuth && (
@@ -1050,7 +1050,7 @@ export default function ConvertImage() {
                                       }
                                       updateCurrentSettings({ watermarkEnabled: e.target.checked });
                                     }}
-                                    className="w-4 h-4 accent-purple-600"
+                                    className="w-4 h-4 accent-green-600"
                                   />
                                   <span className="text-sm font-medium text-gray-700">Add Watermark</span>
                                   {requiresAuth && (
@@ -1117,7 +1117,7 @@ export default function ConvertImage() {
                                       }
                                       setBatchRename(e.target.checked);
                                     }}
-                                    className="w-4 h-4 accent-purple-600"
+                                    className="w-4 h-4 accent-green-600"
                                   />
                                   <span className="text-sm font-medium text-gray-700">Custom File Names</span>
                                   {requiresAuth && (
@@ -1176,7 +1176,7 @@ export default function ConvertImage() {
                                       }
                                       setShowPreview(e.target.checked);
                                     }}
-                                    className="w-4 h-4 accent-purple-600"
+                                    className="w-4 h-4 accent-green-600"
                                   />
                                   <span className="text-sm font-medium text-gray-700">Show Preview Before Conversion</span>
                                   {requiresAuth && (
@@ -1196,7 +1196,7 @@ export default function ConvertImage() {
                   <Button
                     onClick={processAll}
                     disabled={processing}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white h-11"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-11 shadow-lg hover:shadow-xl transition-all"
                   >
                     {processing ? (
                       <> <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Converting... </>
@@ -1265,8 +1265,8 @@ export default function ConvertImage() {
                       className={cn(
                         "overflow-hidden border-2 shadow-sm hover:shadow-md transition-all cursor-pointer",
                         isSelected 
-                          ? "border-purple-500 bg-purple-50/30 shadow-md" 
-                          : "border-gray-200 hover:border-purple-300"
+                          ? "border-green-500 bg-green-50/30 shadow-md" 
+                          : "border-gray-200 hover:border-green-300"
                       )}
                       onClick={() => setSelectedFile(file.name)}
                     >
@@ -1357,7 +1357,7 @@ export default function ConvertImage() {
 
                             {res?.status === "done" ? (
                               <>
-                                <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200">
+                                <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
                                   {formatSize(res.size)}
                                 </Badge>
                                 {res.percent !== 0 && (
@@ -1368,7 +1368,7 @@ export default function ConvertImage() {
                                     ({res.percent > 0 ? '-' : '+'}{Math.abs(res.percent)}%)
                                   </span>
                                 )}
-                                <Badge variant="outline" className="border-purple-200 text-purple-700 uppercase">
+                                <Badge variant="outline" className="border-emerald-200 text-emerald-700 uppercase">
                                   {res.ext}
                                 </Badge>
                               </>
@@ -1387,12 +1387,12 @@ export default function ConvertImage() {
                       {res?.status === "processing" && (
                         <div className="px-3 pb-3 space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-purple-600 font-medium">Processing...</span>
-                            <span className="text-purple-600 font-bold">{res.progress || 0}%</span>
+                            <span className="text-green-600 font-medium">Processing...</span>
+                            <span className="text-green-600 font-bold">{res.progress || 0}%</span>
                           </div>
-                          <div className="h-2 bg-purple-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-purple-500 transition-all duration-300 ease-out"
+                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>
@@ -1486,10 +1486,10 @@ export default function ConvertImage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <Badge className="bg-purple-100 text-purple-700 border-purple-200">AFTER</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">AFTER</Badge>
                     </h4>
                   </div>
-                  <div className="border-2 border-purple-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
+                  <div className="border-2 border-emerald-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
                     <img 
                       src={viewingFile.afterUrl} 
                       alt="After" 
@@ -1501,7 +1501,7 @@ export default function ConvertImage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Format:</span>
-                      <Badge className="bg-purple-100 text-purple-700 border-purple-200 uppercase">
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 uppercase">
                         {viewingFile.result.ext}
                       </Badge>
                     </div>
@@ -1556,7 +1556,7 @@ export default function ConvertImage() {
                   </div>
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <div className="text-xs text-gray-500 mb-1">Quality</div>
-                    <div className="text-lg font-bold text-purple-600 capitalize">
+                    <div className="text-lg font-bold text-green-600 capitalize">
                       {quality}
                     </div>
                   </div>

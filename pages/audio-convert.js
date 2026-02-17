@@ -356,7 +356,7 @@ export default function AudioConvert() {
             description="or click to browse • MP3, WAV, M4A, OGG, FLAC, AAC"
             disabled={processing}
             borderColor="border-gray-300"
-            hoverColor="hover:border-violet-500"
+            hoverColor="hover:border-green-500"
           />
 
           {/* Settings and File List */}
@@ -366,7 +366,7 @@ export default function AudioConvert() {
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
                   <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-violet-600" />
+                    <Settings2 className="w-6 h-6 text-green-600" />
                     Settings
                   </div>
 
@@ -377,11 +377,11 @@ export default function AudioConvert() {
                         <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Input Format</label>
                         <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <div className="flex items-center gap-2">
-                            <Music className="w-5 h-5 text-violet-600" />
+                            <Music className="w-5 h-5 text-green-600" />
                             <span className="font-semibold text-gray-900">
                               {detectedInputFormat.toUpperCase()}
                             </span>
-                            <Badge variant="secondary" className="ml-auto bg-violet-100 text-violet-700 text-xs">
+                            <Badge variant="secondary" className="ml-auto bg-green-100 text-green-700 text-xs">
                               Auto-detected
                             </Badge>
                           </div>
@@ -414,7 +414,7 @@ export default function AudioConvert() {
                     <Button
                       onClick={handleConvert}
                       disabled={processing || files.length === 0}
-                      className="w-full bg-violet-600 hover:bg-violet-700 text-white h-11 shadow-md hover:shadow-lg transition-all font-semibold"
+                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-11 shadow-lg hover:shadow-xl transition-all font-semibold"
                     >
                       {processing ? (
                         <>
@@ -468,7 +468,7 @@ export default function AudioConvert() {
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-xl text-gray-800">Files ({files.length})</h3>
                   {Object.keys(results).length > 0 && (
-                    <Badge className="bg-violet-100 text-violet-700">
+                    <Badge className="bg-green-100 text-green-700">
                       {successCount} ✓ {errorCount > 0 && `${errorCount} ✗`}
                     </Badge>
                   )}
@@ -528,9 +528,9 @@ export default function AudioConvert() {
                               <span className="text-violet-600 font-medium">Processing...</span>
                               <span className="text-violet-600 font-bold">{Math.round(result.progress || 0)}%</span>
                             </div>
-                            <div className="h-2 bg-violet-100 rounded-full overflow-hidden">
+                            <div className="h-2 bg-green-100 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-violet-600 transition-all duration-300 ease-out"
+                                className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
                                 style={{ width: `${result.progress || 0}%` }}
                               />
                             </div>
