@@ -4,12 +4,13 @@ import { generateFileThumbnails } from "../lib/thumbnailUtils";
 import { blobToBase64, extractBase64 } from "../lib/fileUtils";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import AuthModal from "../components/AuthModal";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
   Loader2, CheckCircle, AlertCircle, Film, Trash2, Upload,
   Download, RotateCcw, FileVideo, FileAudio, FileImage,
-  Settings2, ArrowRight, VolumeX, Music
+  Settings2, ArrowRight, VolumeX, Music, Lock
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -113,6 +114,8 @@ export default function VideoConvert() {
   // Settings
   const [targetFormat, setTargetFormat] = useState("MP4");
   const [muteAudio, setMuteAudio] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState("login");
 
   const handleFilesAdded = (newFiles) => {
     if (files.length + newFiles.length > MAX_FILES) {
@@ -407,22 +410,37 @@ export default function VideoConvert() {
                     <div className="grid grid-cols-2 gap-2">
                       {FORMATS.map(f => {
                         const Icon = f.icon;
+                        const requiresAuth = f.value === "WEBM" && !user;
                         return (
                           <button
                             key={f.value}
-                            onClick={() => setTargetFormat(f.value)}
+                            onClick={() => {
+                              // Require authentication for WEBM format
+                              if (f.value === "WEBM" && !user) {
+                                toast.error("Please sign in to use WEBM format");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                                return;
+                              }
+                              setTargetFormat(f.value);
+                            }}
                             className={cn(
-                              "p-2 text-sm rounded-lg transition-all font-medium border text-left flex items-start gap-2",
+                              "p-2 text-sm rounded-lg transition-all font-medium border text-left flex items-start gap-2 relative",
                               targetFormat === f.value
                                 ? "bg-purple-50 border-purple-200 text-purple-700 ring-1 ring-purple-200"
-                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50",
+                              requiresAuth && "opacity-75"
                             )}
+                            style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
                           >
                             <Icon className={cn("w-4 h-4 mt-0.5 flex-shrink-0", targetFormat === f.value ? "text-purple-600" : "text-gray-400")} />
-                            <div>
+                            <div className="flex-1">
                               <div className="font-semibold">{f.label}</div>
                               <div className="text-[10px] opacity-70 font-normal">{f.desc}</div>
                             </div>
+                            {requiresAuth && (
+                              <Lock className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                            )}
                           </button>
                         );
                       })}
@@ -556,6 +574,13 @@ export default function VideoConvert() {
         </div>
       </main>
       <Footer />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
     </div>
   );
 }

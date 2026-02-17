@@ -38,10 +38,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { firebaseUid, tool, count = 1, fileCount = 1, metadata = {}, files = [] } = req.body;
+    const { firebaseUid, tool, count = 1, fileCount = 1, metadata = {}, files = [], sessionId } = req.body;
+    
+    // Get IP address for anonymous tracking
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0] || 
+                      req.headers['x-real-ip'] || 
+                      req.connection?.remoteAddress || 
+                      null;
 
-    if (!firebaseUid || !tool) {
-      return res.status(400).json({ error: "Firebase UID and tool are required" });
+    if (!tool) {
+      return res.status(400).json({ error: "Tool is required" });
     }
 
     const toolInfo = TOOL_MAP[tool];
@@ -51,10 +57,33 @@ export default async function handler(req, res) {
 
     await connectDB();
 
-    // Get user email for order record
-    const user = await User.findOne({ firebaseUid });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    let userEmail = null;
+    let userId = null;
+    let isAnonymous = false;
+
+    // If user is logged in, get their info
+    if (firebaseUid) {
+      const user = await User.findOne({ firebaseUid });
+      if (user) {
+        userEmail = user.email;
+        userId = firebaseUid;
+        isAnonymous = false;
+      } else {
+        // Firebase UID provided but user not found in DB - treat as anonymous
+        isAnonymous = true;
+        userId = sessionId ? `session_${sessionId}` : `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        userEmail = sessionId ? `anonymous_${sessionId}@guest.com` : "anonymous@guest.com";
+      }
+    } else {
+      // Anonymous user - use session ID or generate temp ID
+      isAnonymous = true;
+      if (sessionId) {
+        userId = `session_${sessionId}`;
+        userEmail = `anonymous_${sessionId}@guest.com`;
+      } else {
+        userId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        userEmail = "anonymous@guest.com";
+      }
     }
 
     // Create one order record with all files
@@ -80,54 +109,76 @@ export default async function handler(req, res) {
     }
     
     const newOrder = {
-      firebaseUid,
-      userEmail: user.email,
+      firebaseUid: userId,
+      userEmail: userEmail,
+      sessionId: sessionId || null,
+      ipAddress: ipAddress,
+      isAnonymous: isAnonymous,
       toolName: toolInfo.name,
       toolPath: tool,
       toolType: toolInfo.type,
       fileCount: orderFiles.length > 0 ? orderFiles.length : fileCount,
       status: "completed",
-      metadata: metadata,
+      metadata: {
+        ...metadata,
+        isAnonymous: isAnonymous,
+        sessionId: sessionId || null,
+      },
       files: orderFiles,
     };
 
     // Insert order
-    const savedOrder = await Order.create(newOrder);
-    console.log("Order created - ID:", savedOrder._id);
-    console.log("Order created - files count:", savedOrder.files?.length || 0);
-    if (savedOrder.files && savedOrder.files.length > 0) {
-      const f = savedOrder.files[0];
-      console.log("Order created - First file saved:", {
-        inputName: f.inputName,
-        outputName: f.outputName,
-        hasInputThumbnail: !!f.inputThumbnail,
-        hasOutputThumbnail: !!f.outputThumbnail,
-        hasOutputFileData: !!f.outputFileData,
-        inputThumbnailLength: f.inputThumbnail?.length || 0,
-        outputThumbnailLength: f.outputThumbnail?.length || 0,
-        outputFileDataLength: f.outputFileData?.length || 0,
-      });
+    try {
+      const savedOrder = await Order.create(newOrder);
+      console.log("✅ Order created successfully - ID:", savedOrder._id);
+      console.log("✅ Order created - isAnonymous:", isAnonymous);
+      console.log("✅ Order created - userId:", userId);
+      console.log("✅ Order created - userEmail:", userEmail);
+      console.log("✅ Order created - sessionId:", sessionId);
+      console.log("✅ Order created - files count:", savedOrder.files?.length || 0);
+      if (savedOrder.files && savedOrder.files.length > 0) {
+        const f = savedOrder.files[0];
+        console.log("✅ Order created - First file saved:", {
+          inputName: f.inputName,
+          outputName: f.outputName,
+          hasInputThumbnail: !!f.inputThumbnail,
+          hasOutputThumbnail: !!f.outputThumbnail,
+          hasOutputFileData: !!f.outputFileData,
+          inputThumbnailLength: f.inputThumbnail?.length || 0,
+          outputThumbnailLength: f.outputThumbnail?.length || 0,
+          outputFileDataLength: f.outputFileData?.length || 0,
+        });
+      }
+    } catch (orderError) {
+      console.error("❌ Error creating order:", orderError);
+      // If it's a validation error, log the details
+      if (orderError.name === 'ValidationError') {
+        console.error("Validation errors:", orderError.errors);
+      }
+      throw orderError; // Re-throw to be caught by outer try-catch
     }
 
-    // Update user stats
-    const updateFields = {
-      $inc: {
-        [`toolUsage.${toolInfo.field}`]: count,
-        totalToolsUsed: count,
-      },
-      $set: {
-        lastActive: new Date(),
-      },
-    };
+    // Update user stats only if user is logged in
+    if (!isAnonymous && firebaseUid) {
+      const updateFields = {
+        $inc: {
+          [`toolUsage.${toolInfo.field}`]: count,
+          totalToolsUsed: count,
+        },
+        $set: {
+          lastActive: new Date(),
+        },
+      };
 
-    // Also increment specific counters based on tool type
-    if (toolInfo.type === "conversion") {
-      updateFields.$inc.totalConversions = count;
-    } else if (toolInfo.type === "compression") {
-      updateFields.$inc.totalCompressions = count;
+      // Also increment specific counters based on tool type
+      if (toolInfo.type === "conversion") {
+        updateFields.$inc.totalConversions = count;
+      } else if (toolInfo.type === "compression") {
+        updateFields.$inc.totalCompressions = count;
+      }
+
+      await User.findOneAndUpdate({ firebaseUid }, updateFields, { new: true });
     }
-
-    await User.findOneAndUpdate({ firebaseUid }, updateFields, { new: true });
 
     return res.status(200).json({ success: true, ordersCreated: 1, filesCount: orderFiles.length });
   } catch (error) {

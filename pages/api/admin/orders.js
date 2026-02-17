@@ -20,15 +20,17 @@ export default async function handler(req, res) {
     const { page = 1, limit = 50, search = "", toolType = "", status = "" } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build query
+    // Build query - include both logged-in and anonymous users
     let query = {};
     if (search) {
       query.$or = [
         { userEmail: { $regex: search, $options: "i" } },
         { toolName: { $regex: search, $options: "i" } },
         { firebaseUid: { $regex: search, $options: "i" } },
+        { sessionId: { $regex: search, $options: "i" } }, // Include sessionId for anonymous users
       ];
     }
+    // Don't filter by userEmail or firebaseUid - show all orders (logged-in and anonymous)
     if (toolType) {
       query.toolType = toolType;
     }
@@ -39,18 +41,23 @@ export default async function handler(req, res) {
     // Get total count
     const totalOrders = await Order.countDocuments(query);
 
-    // Get orders with pagination
+    // Get orders with pagination (include both logged-in and anonymous)
     const orders = await Order.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .lean();
 
+    console.log(`Admin orders query:`, JSON.stringify(query));
+    console.log(`Admin orders found: ${orders.length} out of ${totalOrders} total`);
+
     // Format orders
     const formattedOrders = orders.map((order) => ({
       id: order._id.toString(),
       firebaseUid: order.firebaseUid,
       userEmail: order.userEmail,
+      sessionId: order.sessionId,
+      isAnonymous: order.isAnonymous || false,
       toolName: order.toolName,
       toolPath: order.toolPath,
       toolType: order.toolType,
@@ -58,6 +65,19 @@ export default async function handler(req, res) {
       status: order.status,
       createdAt: order.createdAt,
       metadata: order.metadata || {},
+      files: (order.files || []).map(file => ({
+        inputName: file.inputName,
+        outputName: file.outputName,
+        inputSize: file.inputSize,
+        outputSize: file.outputSize,
+        inputFormat: file.inputFormat,
+        outputFormat: file.outputFormat,
+        inputThumbnail: file.inputThumbnail,
+        outputThumbnail: file.outputThumbnail,
+        hasOutputFileData: !!file.outputFileData,
+        // Include outputFileData for admin (they need to see/download files)
+        outputFileData: file.outputFileData,
+      })),
     }));
 
     return res.status(200).json({

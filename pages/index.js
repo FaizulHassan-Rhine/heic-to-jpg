@@ -1,10 +1,11 @@
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import SEO from "../components/SEO";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { 
   Zap, Shield, Download, Image, Video, FileText, Music, 
-  ArrowRight, CheckCircle, Sparkles, Lock, Clock, Globe
+  ArrowRight, CheckCircle, Sparkles, Lock, Clock, Globe, User, Save, Star
 } from "lucide-react";
 import Link from "next/link";
 
@@ -56,8 +57,47 @@ export default function Home() {
     },
   ];
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
+  
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "ConvertMastery",
+    "description": "Free online file converter and compressor. Convert images, videos, documents, and audio files. Fast, secure, and privacy-first.",
+    "url": siteUrl,
+    "applicationCategory": "UtilityApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "1250"
+    },
+    "featureList": [
+      "Image Conversion",
+      "Video Conversion",
+      "Document Conversion",
+      "Audio Conversion",
+      "File Compression",
+      "Batch Processing",
+      "Privacy-First Processing",
+      "No File Size Limits"
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEO
+        title="Free File Converter & Compressor - Convert Images, Videos, Documents & Audio"
+        description="Convert and compress files for free. Support for HEIC, JPG, PNG, WebP, MP4, PDF, DOCX and more. Fast, secure, privacy-first. Sign up to access all premium features and save your files in My Orders for later use."
+        keywords="free file converter, image converter, video converter, document converter, audio converter, file compressor, HEIC converter, JPG converter, PNG converter, WebP converter, PDF converter, online file tools"
+        url="/"
+        structuredData={structuredData}
+      />
       <Navbar />
       
       <main className="flex-1">
@@ -80,6 +120,10 @@ export default function Home() {
               <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto">
                 Transform your files with our powerful, privacy-first conversion tools. 
                 <span className="font-semibold text-slate-900 dark:text-white"> Free, fast, and secure.</span>
+                <br />
+                <span className="text-lg text-slate-500 dark:text-slate-400 mt-2 block">
+                  <span className="font-semibold text-primary">Sign up</span> to unlock all premium features and save your converted files in <span className="font-semibold">My Orders</span> for easy access later.
+                </span>
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
@@ -100,15 +144,25 @@ export default function Home() {
               <div className="flex flex-wrap items-center justify-center gap-8 mt-12 pt-8 border-t border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                   <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-sm font-medium">No Registration Required</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
                   <span className="text-sm font-medium">100% Free Forever</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                   <CheckCircle className="h-5 w-5 text-green-500" />
                   <span className="text-sm font-medium">No File Size Limits</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-sm font-medium">Privacy-First Processing</span>
+                </div>
+              </div>
+              
+              {/* Sign Up CTA */}
+              <div className="mt-8 p-4 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center justify-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                  <User className="h-4 w-4 text-primary" />
+                  <span>
+                    <span className="font-semibold">Sign up</span> to access all premium features, save files in <span className="font-semibold">My Orders</span>, and use advanced options like watermarking, custom file names, and more!
+                  </span>
                 </div>
               </div>
             </div>
@@ -145,6 +199,64 @@ export default function Home() {
                   </Link>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* Sign Up Benefits Section */}
+        <section className="py-20 bg-gradient-to-br from-primary/5 via-white to-primary/5 dark:from-primary/10 dark:via-slate-900 dark:to-primary/10">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+                Unlock Premium Features with Free Sign Up
+              </h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                Create a free account to access advanced features and save your files for later
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
+              <Card className="border-2 border-primary/20 hover:border-primary/50 transition-all">
+                <CardContent className="pt-6 pb-6 text-center">
+                  <div className="inline-flex p-3 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-500 mb-4">
+                    <Save className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-white">
+                    Save Files in My Orders
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    All your converted and compressed files are saved in your account. Access them anytime from "My Orders" and download again whenever you need.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-primary/20 hover:border-primary/50 transition-all">
+                <CardContent className="pt-6 pb-6 text-center">
+                  <div className="inline-flex p-3 rounded-lg bg-gradient-to-br from-purple-400 to-pink-500 mb-4">
+                    <Star className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-white">
+                    Access All Premium Features
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Unlock advanced options like watermarking, custom file names, format presets, target file sizes, and more premium conversion features.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-primary/20 hover:border-primary/50 transition-all">
+                <CardContent className="pt-6 pb-6 text-center">
+                  <div className="inline-flex p-3 rounded-lg bg-gradient-to-br from-green-400 to-emerald-500 mb-4">
+                    <User className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-white">
+                    Track Your Usage
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Keep track of all your conversions and compressions. View your complete history and manage your files from one convenient dashboard.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
@@ -192,9 +304,12 @@ export default function Home() {
                 <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
                   Ready to Transform Your Files?
                 </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-2xl mx-auto">
+                <p className="text-lg text-slate-600 dark:text-slate-400 mb-4 max-w-2xl mx-auto">
                   Join thousands of users who trust ConvertMastery for their file conversion needs. 
                   Start converting now - it's free and takes seconds.
+                </p>
+                <p className="text-base text-slate-500 dark:text-slate-400 mb-8 max-w-2xl mx-auto">
+                  <span className="font-semibold text-primary">Sign up for free</span> to unlock all premium features, save your files in <span className="font-semibold">My Orders</span>, and access advanced options like watermarking, custom file names, and format presets.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Link href="/convert">

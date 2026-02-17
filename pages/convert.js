@@ -6,11 +6,12 @@ import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import AuthModal from "../components/AuthModal";
 import JSZip from "jszip";
 import {
   Loader2, CheckCircle, Download, AlertCircle, FileImage,
   RefreshCw, Trash2, Upload, RotateCcw, Image as ImageIcon,
-  Settings2, ArrowRight, Eye, X
+  Settings2, ArrowRight, Eye, X, ChevronDown, ChevronUp, Lock
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -19,7 +20,7 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import Head from "next/head";
+import SEO from "../components/SEO";
 
 // ─────────────────────────── HELPERS ───────────────────────────
 
@@ -90,6 +91,9 @@ export default function ConvertImage() {
   const [watermarkText, setWatermarkText] = useState("");
   const [watermarkPosition, setWatermarkPosition] = useState("bottom-right");
   const [showPreview, setShowPreview] = useState(false);
+  const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState("login");
 
   // Get current settings (for selected file or global)
   const getCurrentSettings = () => {
@@ -318,8 +322,8 @@ export default function ConvertImage() {
         const res = await convertSingle(file, progressTracker);
         setResults(prev => ({ ...prev, [file.name]: res }));
         
-        // Track usage if conversion was successful
-        if (res.status === "done" && user && trackUsage) {
+        // Track usage if conversion was successful (for both logged-in and anonymous users)
+        if (res.status === "done" && trackUsage) {
           successCount++;
           // Collect file information
           const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
@@ -383,10 +387,11 @@ export default function ConvertImage() {
       }));
     }
 
-    // Track usage after all conversions complete
-    if (successCount > 0 && user && trackUsage) {
+    // Track usage after all conversions complete (for both logged-in and anonymous users)
+    if (successCount > 0 && trackUsage) {
       console.log("Tracking usage - processedFiles:", processedFiles);
       console.log("Tracking usage - successCount:", successCount);
+      console.log("Tracking usage - user:", user ? "logged-in" : "anonymous");
       trackUsage("/convert", successCount, successCount, {
         tool: "Image Converter",
         filesProcessed: successCount,
@@ -487,11 +492,41 @@ export default function ConvertImage() {
     setViewingFile(null);
   };
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
+  
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Image Converter - ConvertMastery",
+    "description": "Free online image converter. Convert HEIC, JPG, PNG, WebP and more. Fast, secure, privacy-first. Sign up to access advanced features like watermarking, custom file names, and save files in My Orders.",
+    "url": `${siteUrl}/convert`,
+    "applicationCategory": "UtilityApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "HEIC to JPG/PNG/WebP",
+      "Image Format Conversion",
+      "Batch Processing",
+      "Resize During Conversion",
+      "Watermarking",
+      "EXIF Metadata Preservation",
+      "Custom File Names"
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Head>
-        <title>Convert Images - ConvertMastery</title>
-      </Head>
+      <SEO
+        title="Free Image Converter - Convert HEIC, JPG, PNG, WebP Online"
+        description="Convert images between HEIC, JPG, PNG, WebP formats for free. Fast, secure, privacy-first processing. Sign up to unlock advanced features like watermarking, custom file names, and save all your converted files in My Orders."
+        keywords="image converter, HEIC converter, JPG converter, PNG converter, WebP converter, free image converter, online image converter, HEIC to JPG, image format converter"
+        url="/convert"
+        structuredData={structuredData}
+      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
@@ -500,10 +535,17 @@ export default function ConvertImage() {
           <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
             Convert Images
           </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-4">
             Transform HEIC, JPG, PNG, WEBP files instantly.
             Mass conversion with high quality.
           </p>
+          {!user && (
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-4 max-w-2xl mx-auto">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-semibold text-primary">Sign up for free</span> to unlock advanced features like watermarking, custom file names, format presets, and save all your converted files in <span className="font-semibold">My Orders</span> for easy access later.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Main Workspace */}
@@ -575,10 +617,19 @@ export default function ConvertImage() {
                         { id: "social", label: "Social", icon: "📱" },
                       ].map(preset => {
                         const current = getCurrentSettings();
+                        const requiresAuth = preset.id === "social" && !user;
                         return (
                           <button
                             key={preset.id}
                             onClick={() => {
+                              // Require authentication for Social preset only
+                              if (preset.id === "social" && !user) {
+                                toast.error("Please sign in to use Social preset");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                                return;
+                              }
+
                               if (preset.id === "web") {
                                 updateCurrentSettings({
                                   formatPreset: preset.id,
@@ -609,14 +660,21 @@ export default function ConvertImage() {
                               }
                             }}
                             className={cn(
-                              "p-2 rounded-lg border-2 transition-all text-center text-xs",
+                              "p-2 rounded-lg border-2 transition-all text-center text-xs relative",
                               current.formatPreset === preset.id
                                 ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm"
-                                : "border-gray-200 hover:border-gray-300 text-gray-600"
+                                : "border-gray-200 hover:border-gray-300 text-gray-600",
+                              requiresAuth && "opacity-75"
                             )}
+                            style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
                           >
                             <div className="text-lg mb-1">{preset.icon}</div>
                             <div className="font-medium">{preset.label}</div>
+                            {requiresAuth && (
+                              <div className="absolute top-1 right-1 z-10">
+                                <Lock className="w-4 h-4 text-gray-600" />
+                              </div>
+                            )}
                           </button>
                         );
                       })}
@@ -724,143 +782,300 @@ export default function ConvertImage() {
                     </div>
                   </div>
 
-                  {/* Resize Option */}
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={getCurrentSettings().resizeEnabled}
-                        onChange={(e) => updateCurrentSettings({ resizeEnabled: e.target.checked })}
-                        className="w-4 h-4 accent-purple-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Resize During Conversion</span>
-                    </label>
-                    {getCurrentSettings().resizeEnabled && (
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-3 border border-gray-200">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Width (px)</label>
-                            <input
-                              type="number"
-                              value={getCurrentSettings().resizeWidth}
-                              onChange={(e) => updateCurrentSettings({ resizeWidth: Number(e.target.value) })}
-                              className="w-full px-2 py-1 text-sm border rounded-md"
-                              min="1"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Height (px)</label>
-                            <input
-                              type="number"
-                              value={getCurrentSettings().resizeHeight}
-                              onChange={(e) => updateCurrentSettings({ resizeHeight: Number(e.target.value) })}
-                              className="w-full px-2 py-1 text-sm border rounded-md"
-                              min="1"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 mb-1 block">Resize Mode</label>
-                          <select
-                            value={getCurrentSettings().resizeMode}
-                            onChange={(e) => updateCurrentSettings({ resizeMode: e.target.value })}
-                            className="w-full px-2 py-1 text-sm border rounded-md"
+                  {/* Advanced Options Dropdown */}
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setAdvancedOptionsOpen(!advancedOptionsOpen)}
+                      className="w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-gray-50 transition-all"
+                    >
+                      <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <Settings2 className="h-4 w-4" />
+                        Advanced Options
+                      </span>
+                      {advancedOptionsOpen ? (
+                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      )}
+                    </button>
+
+                    {advancedOptionsOpen && (
+                      <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
+                        {/* Resize Option */}
+                        <div className="space-y-3">
+                          <label 
+                            className={cn(
+                              "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                              !user && "opacity-75"
+                            )}
+                            style={!user ? { filter: 'blur(0.5px)' } : {}}
+                            onClick={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                              }
+                            }}
                           >
-                            <option value="fit">Fit (maintain aspect)</option>
-                            <option value="fill">Fill (crop to fit)</option>
-                            <option value="exact">Exact (may distort)</option>
-                          </select>
+                            <input
+                              type="checkbox"
+                              checked={getCurrentSettings().resizeEnabled}
+                              onChange={(e) => {
+                                if (!user) {
+                                  e.preventDefault();
+                                  e.target.checked = false;
+                                  toast.error("Please sign in to use advanced options");
+                                  setAuthModalMode("login");
+                                  setAuthModalOpen(true);
+                                  return;
+                                }
+                                updateCurrentSettings({ resizeEnabled: e.target.checked });
+                              }}
+                              className="w-4 h-4 accent-purple-600"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Resize During Conversion</span>
+                            {!user && (
+                              <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                            )}
+                          </label>
+                          {getCurrentSettings().resizeEnabled && (
+                            <div className="bg-white rounded-lg p-3 space-y-3 border border-gray-200">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Width (px)</label>
+                                  <input
+                                    type="number"
+                                    value={getCurrentSettings().resizeWidth}
+                                    onChange={(e) => updateCurrentSettings({ resizeWidth: Number(e.target.value) })}
+                                    className="w-full px-2 py-1 text-sm border rounded-md"
+                                    min="1"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block">Height (px)</label>
+                                  <input
+                                    type="number"
+                                    value={getCurrentSettings().resizeHeight}
+                                    onChange={(e) => updateCurrentSettings({ resizeHeight: Number(e.target.value) })}
+                                    className="w-full px-2 py-1 text-sm border rounded-md"
+                                    min="1"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Resize Mode</label>
+                                <select
+                                  value={getCurrentSettings().resizeMode}
+                                  onChange={(e) => updateCurrentSettings({ resizeMode: e.target.value })}
+                                  className="w-full px-2 py-1 text-sm border rounded-md"
+                                >
+                                  <option value="fit">Fit (maintain aspect)</option>
+                                  <option value="fill">Fill (crop to fit)</option>
+                                  <option value="exact">Exact (may distort)</option>
+                                </select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Metadata Option */}
+                        <div className="space-y-2">
+                          <label 
+                            className={cn(
+                              "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                              !user && "opacity-75"
+                            )}
+                            style={!user ? { filter: 'blur(0.5px)' } : {}}
+                            onClick={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                              }
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={getCurrentSettings().preserveMetadata}
+                              onChange={(e) => {
+                                if (!user) {
+                                  e.preventDefault();
+                                  e.target.checked = false;
+                                  toast.error("Please sign in to use advanced options");
+                                  setAuthModalMode("login");
+                                  setAuthModalOpen(true);
+                                  return;
+                                }
+                                updateCurrentSettings({ preserveMetadata: e.target.checked });
+                              }}
+                              className="w-4 h-4 accent-purple-600"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Preserve EXIF Metadata</span>
+                            {!user && (
+                              <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                            )}
+                          </label>
+                        </div>
+
+                        {/* Watermark */}
+                        <div className="space-y-2">
+                          <label 
+                            className={cn(
+                              "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                              !user && "opacity-75"
+                            )}
+                            style={!user ? { filter: 'blur(0.5px)' } : {}}
+                            onClick={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                              }
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={getCurrentSettings().watermarkEnabled}
+                              onChange={(e) => {
+                                if (!user) {
+                                  e.preventDefault();
+                                  e.target.checked = false;
+                                  toast.error("Please sign in to use advanced options");
+                                  setAuthModalMode("login");
+                                  setAuthModalOpen(true);
+                                  return;
+                                }
+                                updateCurrentSettings({ watermarkEnabled: e.target.checked });
+                              }}
+                              className="w-4 h-4 accent-purple-600"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Add Watermark</span>
+                            {!user && (
+                              <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                            )}
+                          </label>
+                          {getCurrentSettings().watermarkEnabled && (
+                            <div className="bg-white rounded-lg p-3 space-y-2 border border-gray-200">
+                              <input
+                                type="text"
+                                placeholder="Watermark text"
+                                value={getCurrentSettings().watermarkText}
+                                onChange={(e) => updateCurrentSettings({ watermarkText: e.target.value })}
+                                className="w-full px-2 py-1 text-sm border rounded-md"
+                              />
+                              <select
+                                value={getCurrentSettings().watermarkPosition}
+                                onChange={(e) => updateCurrentSettings({ watermarkPosition: e.target.value })}
+                                className="w-full px-2 py-1 text-sm border rounded-md"
+                              >
+                                <option value="top-left">Top Left</option>
+                                <option value="top-right">Top Right</option>
+                                <option value="bottom-left">Bottom Left</option>
+                                <option value="bottom-right">Bottom Right</option>
+                                <option value="center">Center</option>
+                              </select>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Batch Rename */}
+                        <div className="space-y-2">
+                          <label 
+                            className={cn(
+                              "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                              !user && "opacity-75"
+                            )}
+                            style={!user ? { filter: 'blur(0.5px)' } : {}}
+                            onClick={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                              }
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={batchRename}
+                              onChange={(e) => {
+                                if (!user) {
+                                  e.preventDefault();
+                                  e.target.checked = false;
+                                  toast.error("Please sign in to use advanced options");
+                                  setAuthModalMode("login");
+                                  setAuthModalOpen(true);
+                                  return;
+                                }
+                                setBatchRename(e.target.checked);
+                              }}
+                              className="w-4 h-4 accent-purple-600"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Custom File Names</span>
+                            {!user && (
+                              <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                            )}
+                          </label>
+                          {batchRename && (
+                            <div className="bg-white rounded-lg p-3 space-y-2 border border-gray-200">
+                              <input
+                                type="text"
+                                placeholder="{original} or image_{index}"
+                                value={renamePattern}
+                                onChange={(e) => setRenamePattern(e.target.value)}
+                                className="w-full px-2 py-1 text-sm border rounded-md font-mono text-xs"
+                              />
+                              <p className="text-xs text-gray-500">
+                                Use {"{original}"} for original name, {"{index}"} for number
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Preview Toggle */}
+                        <div className="space-y-2">
+                          <label 
+                            className={cn(
+                              "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                              !user && "opacity-75"
+                            )}
+                            style={!user ? { filter: 'blur(0.5px)' } : {}}
+                            onClick={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                              }
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={showPreview}
+                              onChange={(e) => {
+                                if (!user) {
+                                  e.preventDefault();
+                                  e.target.checked = false;
+                                  toast.error("Please sign in to use advanced options");
+                                  setAuthModalMode("login");
+                                  setAuthModalOpen(true);
+                                  return;
+                                }
+                                setShowPreview(e.target.checked);
+                              }}
+                              className="w-4 h-4 accent-purple-600"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Show Preview Before Conversion</span>
+                            {!user && (
+                              <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                            )}
+                          </label>
                         </div>
                       </div>
                     )}
-                  </div>
-
-                  {/* Metadata Option */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={getCurrentSettings().preserveMetadata}
-                        onChange={(e) => updateCurrentSettings({ preserveMetadata: e.target.checked })}
-                        className="w-4 h-4 accent-purple-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Preserve EXIF Metadata</span>
-                    </label>
-                  </div>
-
-                  {/* Watermark */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={getCurrentSettings().watermarkEnabled}
-                        onChange={(e) => updateCurrentSettings({ watermarkEnabled: e.target.checked })}
-                        className="w-4 h-4 accent-purple-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Add Watermark</span>
-                    </label>
-                    {getCurrentSettings().watermarkEnabled && (
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
-                        <input
-                          type="text"
-                          placeholder="Watermark text"
-                          value={getCurrentSettings().watermarkText}
-                          onChange={(e) => updateCurrentSettings({ watermarkText: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border rounded-md"
-                        />
-                        <select
-                          value={getCurrentSettings().watermarkPosition}
-                          onChange={(e) => updateCurrentSettings({ watermarkPosition: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border rounded-md"
-                        >
-                          <option value="top-left">Top Left</option>
-                          <option value="top-right">Top Right</option>
-                          <option value="bottom-left">Bottom Left</option>
-                          <option value="bottom-right">Bottom Right</option>
-                          <option value="center">Center</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Batch Rename */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={batchRename}
-                        onChange={(e) => setBatchRename(e.target.checked)}
-                        className="w-4 h-4 accent-purple-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Custom File Names</span>
-                    </label>
-                    {batchRename && (
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
-                        <input
-                          type="text"
-                          placeholder="{original} or image_{index}"
-                          value={renamePattern}
-                          onChange={(e) => setRenamePattern(e.target.value)}
-                          className="w-full px-2 py-1 text-sm border rounded-md font-mono text-xs"
-                        />
-                        <p className="text-xs text-gray-500">
-                          Use {"{original}"} for original name, {"{index}"} for number
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Preview Toggle */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={showPreview}
-                        onChange={(e) => setShowPreview(e.target.checked)}
-                        className="w-4 h-4 accent-purple-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Show Preview Before Conversion</span>
-                    </label>
                   </div>
 
                   <Separator />
@@ -1079,6 +1294,13 @@ export default function ConvertImage() {
         </div>
       </main>
       <Footer />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
 
       {/* View Modal - Before/After Comparison */}
       {viewingFile && (

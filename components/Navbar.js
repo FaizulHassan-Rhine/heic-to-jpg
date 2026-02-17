@@ -38,7 +38,7 @@ const OTHER_TOOLS_SECTIONS = [
     title: "Video Tools",
     paths: ["/video-convert", "/video-compress", "/video-trim"],
     items: [
-      { href: "/video-convert", label: "Video Converter" },
+      { href: "/video-convert", label: "Video Converter", popular: true },
       { href: "/video-compress", label: "Video Compressor" },
       { href: "/video-trim", label: "Video Trimmer" },
     ],
@@ -49,14 +49,14 @@ const OTHER_TOOLS_SECTIONS = [
     items: [
       { href: "/audio-convert", label: "Audio Converter" },
       { href: "/text-to-speech", label: "Text to Speech" },
-      { href: "/speech-to-text", label: "Speech to Text" },
+      { href: "/speech-to-text", label: "Speech to Text", popular: true },
     ],
   },
   {
     title: "Utilities",
     paths: ["/qr-barcode", "/url-shortener"],
     items: [
-      { href: "/qr-barcode", label: "QR & Barcode" },
+      { href: "/qr-barcode", label: "QR & Barcode", popular: true },
       { href: "/url-shortener", label: "URL Shortener" },
     ],
   },
@@ -228,7 +228,7 @@ export default function Navbar() {
 
               {openDropdown === "Other Tools" && (
                 <div
-                  className="absolute top-full left-0 pt-1 z-50"
+                  className="absolute top-full right-0 pt-1 z-50"
                   onMouseEnter={() => handleDropdownEnter("Other Tools")}
                   onMouseLeave={handleDropdownLeave}
                 >
@@ -248,13 +248,18 @@ export default function Navbar() {
                             {section.items.map((item) => (
                               <Link key={item.href} href={item.href}>
                                 <div
-                                  className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm ${currentPath === item.href
+                                  className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm flex items-center justify-between ${currentPath === item.href
                                     ? "bg-accent font-medium"
                                     : ""
                                     }`}
                                   onClick={() => setOpenDropdown(null)}
                                 >
-                                  {item.label}
+                                  <span>{item.label}</span>
+                                  {item.popular && (
+                                    <span className="ml-2 px-1 py-0.5 text-[9px] font-semibold bg-orange-500 text-white rounded leading-none">
+                                      Popular
+                                    </span>
+                                  )}
                                 </div>
                               </Link>
                             ))}
@@ -266,6 +271,19 @@ export default function Navbar() {
                 </div>
               )}
             </div>
+
+            {/* My Orders - Only show when user is logged in */}
+            {mounted && !loading && user && (
+              <Link href="/my-orders">
+                <Button
+                  variant={currentPath === "/my-orders" ? "default" : "ghost"}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <Package className="w-4 h-4" />
+                  My Orders
+                </Button>
+              </Link>
+            )}
 
             {/* Auth Buttons / User Menu */}
             {mounted && !loading && (
@@ -297,15 +315,6 @@ export default function Navbar() {
                           <div className="font-semibold text-sm">{user.displayName || "User"}</div>
                           <div className="text-xs text-gray-500 truncate">{user.email}</div>
                         </div>
-                        <Link href="/my-orders">
-                          <button
-                            onClick={() => setUserMenuOpen(false)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-gray-700"
-                          >
-                            <Package className="w-4 h-4" />
-                            My Orders
-                          </button>
-                        </Link>
                         <button
                           onClick={handleSignOut}
                           className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
@@ -395,6 +404,24 @@ export default function Navbar() {
                 </div>
               ))}
 
+              {/* My Orders - Mobile - Only show when user is logged in */}
+              {mounted && !loading && user && (
+                <div className="border-t mt-2 pt-2">
+                  <Link href="/my-orders" className="block">
+                    <div
+                      className={`px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${currentPath === "/my-orders"
+                        ? "text-primary bg-accent/50"
+                        : "text-foreground hover:bg-accent/30"
+                        }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Package className="w-4 h-4" />
+                      My Orders
+                    </div>
+                  </Link>
+                </div>
+              )}
+
               {/* Mobile Auth */}
               {mounted && !loading && (
                 <>
@@ -418,15 +445,6 @@ export default function Navbar() {
                             <div className="text-xs text-gray-500">{user.email}</div>
                           </div>
                         </div>
-                        <Link href="/my-orders" className="block">
-                          <button
-                            onClick={() => setIsMenuOpen(false)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-accent/30 flex items-center gap-2 text-gray-700 rounded mb-2"
-                          >
-                            <Package className="w-4 h-4" />
-                            My Orders
-                          </button>
-                        </Link>
                         <button
                           onClick={() => {
                             handleSignOut();

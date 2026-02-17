@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Disallow admin pages
+Disallow: /admin/
+
+# Disallow API routes
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://convertmastery.com/sitemap.xml
+

@@ -6,11 +6,12 @@ import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import AuthModal from "../components/AuthModal";
 import JSZip from "jszip";
 import {
   Loader2, CheckCircle, Download, AlertCircle, FileImage,
   Zap, RefreshCw, Trash2, Upload, RotateCcw, Image as ImageIcon,
-  Settings2, ArrowRight, Minimize2, Scale, Eye, X
+  Settings2, ArrowRight, Minimize2, Scale, Eye, X, ChevronDown, ChevronUp, Lock
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -19,7 +20,7 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import Head from "next/head";
+import SEO from "../components/SEO";
 
 // ─────────────────────────── HELPERS ───────────────────────────
 
@@ -98,6 +99,9 @@ export default function CompressImage() {
   const [targetFormat, setTargetFormat] = useState("jpg"); // jpg, png, webp
   const [smartCrop, setSmartCrop] = useState(false);
   const [comparisonMode, setComparisonMode] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState("login");
+  const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
 
   // Mode: Percentage
   const [percentageValue, setPercentageValue] = useState(80);
@@ -452,8 +456,11 @@ export default function CompressImage() {
       }));
     }
 
-    // Track usage after all compressions complete
-    if (successCount > 0 && user && trackUsage) {
+    // Track usage after all compressions complete (for both logged-in and anonymous users)
+    if (successCount > 0 && trackUsage) {
+      console.log("Tracking usage - processedFiles:", processedFiles);
+      console.log("Tracking usage - successCount:", successCount);
+      console.log("Tracking usage - user:", user ? "logged-in" : "anonymous");
       trackUsage("/compress", successCount, successCount, {
         tool: "Image Compressor",
         filesProcessed: successCount,
@@ -546,11 +553,41 @@ export default function CompressImage() {
     setViewingFile(null);
   };
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
+  
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Image Compressor - ConvertMastery",
+    "description": "Free online image compressor. Reduce file size while maintaining quality. Support for JPG, PNG, WebP. Fast, secure, privacy-first. Sign up to access advanced features like target file size, progressive JPEG, and save files in My Orders.",
+    "url": `${siteUrl}/compress`,
+    "applicationCategory": "UtilityApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "Image Compression",
+      "Quality Control",
+      "Target File Size",
+      "Progressive JPEG",
+      "Metadata Stripping",
+      "Lossless Compression",
+      "Batch Processing"
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Head>
-        <title>Compress Images - ConvertMastery</title>
-      </Head>
+      <SEO
+        title="Free Image Compressor - Reduce Image File Size Online"
+        description="Compress images to reduce file size while maintaining quality. Support for JPG, PNG, WebP formats. Fast, secure, privacy-first. Sign up to unlock advanced features like target file size, progressive JPEG, and save all your compressed files in My Orders."
+        keywords="image compressor, compress images, reduce image size, image optimizer, JPG compressor, PNG compressor, WebP compressor, free image compression, online image compressor"
+        url="/compress"
+        structuredData={structuredData}
+      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
@@ -559,9 +596,16 @@ export default function CompressImage() {
           <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
             Compress Images
           </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-4">
             Reduce image size by smart scaling and optimization.
           </p>
+          {!user && (
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-4 max-w-2xl mx-auto mt-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-semibold text-primary">Sign up for free</span> to unlock advanced features like target file size, progressive JPEG, WEBP format, and save all your compressed files in <span className="font-semibold">My Orders</span> for easy access later.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-8">
@@ -672,14 +716,41 @@ export default function CompressImage() {
 
                   {/* Target File Size */}
                   <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                    <label 
+                      className={cn(
+                        "flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all relative",
+                        !user && "opacity-75"
+                      )}
+                      style={!user ? { filter: 'blur(0.5px)' } : {}}
+                      onClick={(e) => {
+                        if (!user) {
+                          e.preventDefault();
+                          toast.error("Please sign in to use target file size");
+                          setAuthModalMode("login");
+                          setAuthModalOpen(true);
+                        }
+                      }}
+                    >
                       <input
                         type="checkbox"
                         checked={getCurrentSettings().useTargetSize}
-                        onChange={(e) => updateCurrentSettings({ useTargetSize: e.target.checked })}
+                        onChange={(e) => {
+                          if (!user) {
+                            e.preventDefault();
+                            e.target.checked = false;
+                            toast.error("Please sign in to use target file size");
+                            setAuthModalMode("login");
+                            setAuthModalOpen(true);
+                            return;
+                          }
+                          updateCurrentSettings({ useTargetSize: e.target.checked });
+                        }}
                         className="w-4 h-4 accent-blue-600"
                       />
                       <span className="text-sm font-medium text-gray-700">Target File Size</span>
+                      {!user && (
+                        <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                      )}
                     </label>
                     {getCurrentSettings().useTargetSize && (
                       <input
@@ -807,49 +878,174 @@ export default function CompressImage() {
                     })()}
                   </div>
 
-                  {/* Advanced Options */}
+                  {/* Advanced Options Dropdown */}
                   <div className="space-y-2 border-t pt-4">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Advanced Options</label>
-                    
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={getCurrentSettings().progressiveJpeg}
-                        onChange={(e) => updateCurrentSettings({ progressiveJpeg: e.target.checked })}
-                        className="w-4 h-4 accent-blue-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
-                    </label>
+                    <button
+                      onClick={() => setAdvancedOptionsOpen(!advancedOptionsOpen)}
+                      className="w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-gray-50 transition-all"
+                    >
+                      <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <Settings2 className="h-4 w-4" />
+                        Advanced Options
+                      </span>
+                      {advancedOptionsOpen ? (
+                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      )}
+                    </button>
 
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={getCurrentSettings().optimizePalette}
-                        onChange={(e) => updateCurrentSettings({ optimizePalette: e.target.checked })}
-                        className="w-4 h-4 accent-blue-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Optimize Palette (PNG)</span>
-                    </label>
+                    {advancedOptionsOpen && (
+                      <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
+                        <label 
+                          className={cn(
+                            "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                            !user && "opacity-75"
+                          )}
+                          style={!user ? { filter: 'blur(0.5px)' } : {}}
+                          onClick={(e) => {
+                            if (!user) {
+                              e.preventDefault();
+                              toast.error("Please sign in to use advanced options");
+                              setAuthModalMode("login");
+                              setAuthModalOpen(true);
+                            }
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={getCurrentSettings().progressiveJpeg}
+                            onChange={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                e.target.checked = false;
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                                return;
+                              }
+                              updateCurrentSettings({ progressiveJpeg: e.target.checked });
+                            }}
+                            className="w-4 h-4 accent-blue-600"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
+                          {!user && (
+                            <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                          )}
+                        </label>
 
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={getCurrentSettings().stripMetadata}
-                        onChange={(e) => updateCurrentSettings({ stripMetadata: e.target.checked })}
-                        className="w-4 h-4 accent-blue-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Strip Metadata</span>
-                    </label>
+                        <label 
+                          className={cn(
+                            "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                            !user && "opacity-75"
+                          )}
+                          style={!user ? { filter: 'blur(0.5px)' } : {}}
+                          onClick={(e) => {
+                            if (!user) {
+                              e.preventDefault();
+                              toast.error("Please sign in to use advanced options");
+                              setAuthModalMode("login");
+                              setAuthModalOpen(true);
+                            }
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={getCurrentSettings().optimizePalette}
+                            onChange={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                e.target.checked = false;
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                                return;
+                              }
+                              updateCurrentSettings({ optimizePalette: e.target.checked });
+                            }}
+                            className="w-4 h-4 accent-blue-600"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Optimize Palette (PNG)</span>
+                          {!user && (
+                            <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                          )}
+                        </label>
 
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={getCurrentSettings().losslessCompression}
-                        onChange={(e) => updateCurrentSettings({ losslessCompression: e.target.checked })}
-                        className="w-4 h-4 accent-blue-600"
-                      />
-                      <span className="text-sm font-medium text-gray-700">Lossless Compression</span>
-                    </label>
+                        <label 
+                          className={cn(
+                            "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                            !user && "opacity-75"
+                          )}
+                          style={!user ? { filter: 'blur(0.5px)' } : {}}
+                          onClick={(e) => {
+                            if (!user) {
+                              e.preventDefault();
+                              toast.error("Please sign in to use advanced options");
+                              setAuthModalMode("login");
+                              setAuthModalOpen(true);
+                            }
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={getCurrentSettings().stripMetadata}
+                            onChange={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                e.target.checked = false;
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                                return;
+                              }
+                              updateCurrentSettings({ stripMetadata: e.target.checked });
+                            }}
+                            className="w-4 h-4 accent-blue-600"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Strip Metadata</span>
+                          {!user && (
+                            <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                          )}
+                        </label>
+
+                        <label 
+                          className={cn(
+                            "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                            !user && "opacity-75"
+                          )}
+                          style={!user ? { filter: 'blur(0.5px)' } : {}}
+                          onClick={(e) => {
+                            if (!user) {
+                              e.preventDefault();
+                              toast.error("Please sign in to use advanced options");
+                              setAuthModalMode("login");
+                              setAuthModalOpen(true);
+                            }
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={getCurrentSettings().losslessCompression}
+                            onChange={(e) => {
+                              if (!user) {
+                                e.preventDefault();
+                                e.target.checked = false;
+                                toast.error("Please sign in to use advanced options");
+                                setAuthModalMode("login");
+                                setAuthModalOpen(true);
+                                return;
+                              }
+                              updateCurrentSettings({ losslessCompression: e.target.checked });
+                            }}
+                            className="w-4 h-4 accent-blue-600"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Lossless Compression</span>
+                          {!user && (
+                            <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                          )}
+                        </label>
+                      </div>
+                    )}
                   </div>
 
                   {/* Format Conversion */}
@@ -869,18 +1065,33 @@ export default function CompressImage() {
                         <div className="grid grid-cols-3 gap-2">
                           {['jpg', 'png', 'webp'].map(fmt => {
                             const current = getCurrentSettings();
+                            const requiresAuth = fmt === "webp" && !user;
                             return (
                               <button
                                 key={fmt}
-                                onClick={() => updateCurrentSettings({ targetFormat: fmt })}
+                                onClick={() => {
+                                  // Require authentication for WEBP format
+                                  if (fmt === "webp" && !user) {
+                                    toast.error("Please sign in to use WEBP format");
+                                    setAuthModalMode("login");
+                                    setAuthModalOpen(true);
+                                    return;
+                                  }
+                                  updateCurrentSettings({ targetFormat: fmt });
+                                }}
                                 className={cn(
-                                  "px-2 py-2 text-xs rounded-lg border-2 transition-all uppercase font-medium",
+                                  "px-2 py-2 text-xs rounded-lg border-2 transition-all uppercase font-medium relative",
                                   current.targetFormat === fmt
                                     ? "border-blue-500 bg-blue-50 text-blue-700"
-                                    : "border-gray-200 hover:border-gray-300 text-gray-600"
+                                    : "border-gray-200 hover:border-gray-300 text-gray-600",
+                                  requiresAuth && "opacity-75"
                                 )}
+                                style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
                               >
                                 {fmt}
+                                {requiresAuth && (
+                                  <Lock className="w-4 h-4 text-gray-600 absolute top-1 right-1" />
+                                )}
                               </button>
                             );
                           })}
@@ -986,31 +1197,33 @@ export default function CompressImage() {
                           
                           return (
                             <div key={file.name + idx} className="space-y-2">
-                              <div className="relative aspect-square border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                                {preview && (
-                                  <img 
-                                    src={preview} 
-                                    alt="Before" 
-                                    className="w-full h-full object-contain" 
-                                    style={{ imageRendering: 'auto' }}
-                                  />
-                                )}
-                                <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
-                                  BEFORE
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="relative w-full aspect-square border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                                  {preview && (
+                                    <img 
+                                      src={preview} 
+                                      alt="Before" 
+                                      className="w-full h-full object-cover" 
+                                      style={{ imageRendering: 'auto' }}
+                                    />
+                                  )}
+                                  <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                    BEFORE
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="relative aspect-square border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50">
-                                <img 
-                                  src={afterUrl} 
-                                  alt="After" 
-                                  className="w-full h-full object-contain" 
-                                  style={{ imageRendering: 'auto' }}
-                                  onLoad={() => {
-                                    // URL will be cleaned up when component unmounts
-                                  }}
-                                />
-                                <div className="absolute top-1 left-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">
-                                  AFTER
+                                <div className="relative w-full aspect-square border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                                  <img 
+                                    src={afterUrl} 
+                                    alt="After" 
+                                    className="w-full h-full object-cover" 
+                                    style={{ imageRendering: 'auto' }}
+                                    onLoad={() => {
+                                      // URL will be cleaned up when component unmounts
+                                    }}
+                                  />
+                                  <div className="absolute top-1 left-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                    AFTER
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-center text-xs">
@@ -1336,6 +1549,13 @@ export default function CompressImage() {
           </div>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
     </div>
   );
 }

@@ -4,12 +4,31 @@ const OrderSchema = new mongoose.Schema(
   {
     firebaseUid: {
       type: String,
-      required: true,
+      required: false, // Changed to false for anonymous users
       index: true,
+      default: null,
     },
     userEmail: {
       type: String,
-      required: true,
+      required: false, // Changed to false for anonymous users
+      index: true,
+      default: null,
+    },
+    // Session ID for anonymous users
+    sessionId: {
+      type: String,
+      index: true,
+      default: null,
+    },
+    // IP address for tracking anonymous users
+    ipAddress: {
+      type: String,
+      default: null,
+    },
+    // Flag to identify anonymous orders
+    isAnonymous: {
+      type: Boolean,
+      default: false,
       index: true,
     },
     toolName: {
@@ -65,6 +84,8 @@ const OrderSchema = new mongoose.Schema(
 // Indexes for faster queries
 OrderSchema.index({ firebaseUid: 1, createdAt: -1 });
 OrderSchema.index({ userEmail: 1, createdAt: -1 });
+OrderSchema.index({ sessionId: 1, createdAt: -1 }); // New index for anonymous users
+OrderSchema.index({ isAnonymous: 1, createdAt: -1 }); // New index for filtering
 OrderSchema.index({ toolPath: 1, createdAt: -1 });
 
 // In development, delete cached model to pick up schema changes
