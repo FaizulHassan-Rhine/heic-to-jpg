@@ -1,6 +1,8 @@
 import Busboy from "busboy";
 import convert from "heic-convert";
 import sharp from "sharp";
+import connectDB from "../../lib/mongodb";
+import Settings from "../../models/Settings";
 
 export const config = {
   api: { bodyParser: false },
@@ -65,8 +67,6 @@ export default async function handler(req, res) {
 
 
         // Check file size using dynamic settings from MongoDB
-        const Settings = (await import("../../../models/Settings")).default;
-        const connectDB = (await import("../../../lib/mongodb")).default;
         await connectDB();
         const settings = await Settings.getSettings();
         
