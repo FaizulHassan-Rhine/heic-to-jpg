@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { 
   Settings as SettingsIcon, Save, ArrowLeft, Image, FileVideo, FileText, 
   FileAudio, QrCode, Mic, FileImage, LayoutDashboard, Users, Package, 
-  LogOut, Menu, X, Scissors, ScanLine, Type, Link2, ChevronDown, ChevronUp
+  LogOut, Menu, X, Scissors, ScanLine, Type, Link2, Archive, Lock, ChevronDown, ChevronUp, Shield, Globe, Mail, Phone, Database, Server
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -418,6 +418,320 @@ const ALL_TOOLS = [
         id: "advancedOptions",
         name: "Advanced Options",
         description: "Custom short URLs, QR code generation, analytics",
+      },
+    ],
+  },
+  {
+    id: "fileToZip",
+    name: "File to ZIP",
+    icon: Archive,
+    description: "Convert multiple files into ZIP archives",
+    features: [
+      {
+        id: "highCompression",
+        name: "High Compression",
+        description: "Maximum compression level (level 9)",
+      },
+      {
+        id: "preserveStructure",
+        name: "Preserve Folder Structure",
+        description: "Maintain folder hierarchy in ZIP",
+      },
+      {
+        id: "advancedOptions",
+        name: "Advanced Options",
+        description: "Custom compression settings and ZIP formats",
+      },
+    ],
+  },
+  {
+    id: "pdfUnlockProtect",
+    name: "PDF Unlock/Protect",
+    icon: Lock,
+    description: "Unlock, protect, and manage PDF passwords and permissions",
+    features: [
+      {
+        id: "unlock",
+        name: "Unlock PDF",
+        description: "Remove password protection from PDFs",
+      },
+      {
+        id: "protect",
+        name: "Protect PDF",
+        description: "Add password protection to PDFs",
+      },
+      {
+        id: "changePassword",
+        name: "Change Password",
+        description: "Update existing PDF password",
+      },
+      {
+        id: "ownerPassword",
+        name: "Owner Password",
+        description: "Set separate owner password for permissions control",
+      },
+      {
+        id: "advancedPermissions",
+        name: "Advanced Permissions",
+        description: "Control printing, copying, editing, and other permissions",
+      },
+    ],
+  },
+  {
+    id: "passwordGenerator",
+    name: "Password Generator",
+    icon: Lock,
+    description: "Generate strong, secure passwords with customizable options",
+    features: [
+      {
+        id: "customLength",
+        name: "Custom Length",
+        description: "Set password length from 4 to 128 characters",
+      },
+      {
+        id: "characterTypes",
+        name: "Character Types",
+        description: "Choose uppercase, lowercase, numbers, and symbols",
+      },
+      {
+        id: "securityOptions",
+        name: "Security Options",
+        description: "Exclude similar and ambiguous characters",
+      },
+    ],
+  },
+  {
+    id: "passwordStrengthChecker",
+    name: "Password Strength Checker",
+    icon: Shield,
+    description: "Check password strength and security",
+    features: [
+      {
+        id: "basicCheck",
+        name: "Basic Check",
+        description: "Basic password strength analysis",
+      },
+      {
+        id: "detailedAnalysis",
+        name: "Detailed Analysis",
+        description: "Comprehensive security checks and recommendations",
+      },
+      {
+        id: "crackTimeEstimate",
+        name: "Crack Time Estimate",
+        description: "Estimated time to crack the password",
+      },
+    ],
+  },
+  {
+    id: "ipLookup",
+    name: "IP Address Lookup",
+    icon: Globe,
+    description: "Lookup IP address information and location",
+    features: [
+      {
+        id: "basicInfo",
+        name: "Basic Info",
+        description: "IP address, country, and city information",
+      },
+      {
+        id: "detailedInfo",
+        name: "Detailed Info",
+        description: "ISP, organization, timezone, and coordinates",
+      },
+      {
+        id: "myIpLookup",
+        name: "My IP Lookup",
+        description: "Lookup your own IP address",
+      },
+    ],
+  },
+  {
+    id: "whoisChecker",
+    name: "Whois Checker",
+    icon: Globe,
+    description: "Check domain registration information",
+    features: [
+      {
+        id: "basicInfo",
+        name: "Basic Info",
+        description: "Domain, registrar, and expiration date",
+      },
+      {
+        id: "detailedInfo",
+        name: "Detailed Info",
+        description: "Name servers, status, and dates",
+      },
+      {
+        id: "rawData",
+        name: "Raw Data",
+        description: "Complete raw Whois data",
+      },
+    ],
+  },
+  {
+    id: "metadataRemover",
+    name: "Metadata Remover",
+    icon: FileImage,
+    description: "Remove EXIF metadata and GPS data from images",
+    features: [
+      {
+        id: "exifRemoval",
+        name: "EXIF Removal",
+        description: "Remove EXIF metadata from images",
+      },
+      {
+        id: "gpsRemoval",
+        name: "GPS Removal",
+        description: "Remove GPS location data from images",
+      },
+      {
+        id: "batchRemoval",
+        name: "Batch Removal",
+        description: "Remove metadata from multiple images at once",
+      },
+    ],
+  },
+  {
+    id: "fakeEmailGenerator",
+    name: "Fake Email Generator",
+    icon: Mail,
+    description: "Generate temporary email addresses",
+    features: [
+      {
+        id: "basicGeneration",
+        name: "Basic Generation",
+        description: "Generate random temporary email addresses",
+      },
+      {
+        id: "customDomain",
+        name: "Custom Domain",
+        description: "Use custom email domains",
+      },
+      {
+        id: "emailHistory",
+        name: "Email History",
+        description: "View recently generated email addresses",
+      },
+    ],
+  },
+  {
+    id: "websiteSecurityScore",
+    name: "Website Security Score",
+    icon: Shield,
+    description: "Analyze website security configuration and generate security score",
+    features: [
+      {
+        id: "basicCheck",
+        name: "Basic Check",
+        description: "Basic security checks and validation",
+      },
+      {
+        id: "sslAnalysis",
+        name: "SSL Analysis",
+        description: "SSL/TLS certificate analysis",
+      },
+      {
+        id: "securityHeaders",
+        name: "Security Headers",
+        description: "Check security headers configuration",
+      },
+      {
+        id: "blacklistCheck",
+        name: "Blacklist Check",
+        description: "Check against blacklist databases",
+      },
+    ],
+  },
+  {
+    id: "emailReputationChecker",
+    name: "Email Reputation Checker",
+    icon: Mail,
+    description: "Analyze email address and domain security & trust level",
+    features: [
+      {
+        id: "basicCheck",
+        name: "Basic Check",
+        description: "Basic email format and domain validation",
+      },
+      {
+        id: "domainAnalysis",
+        name: "Domain Analysis",
+        description: "MX records, SPF, DKIM, DMARC checks",
+      },
+      {
+        id: "breachCheck",
+        name: "Breach Check",
+        description: "Check email in known breach databases",
+      },
+    ],
+  },
+  {
+    id: "phoneValidator",
+    name: "Phone Validator",
+    icon: Phone,
+    description: "Validate phone number and detect risk indicators",
+    features: [
+      {
+        id: "formatValidation",
+        name: "Format Validation",
+        description: "E.164 format validation and normalization",
+      },
+      {
+        id: "carrierInfo",
+        name: "Carrier Information",
+        description: "Carrier name, line type, country detection",
+      },
+      {
+        id: "spamCheck",
+        name: "Spam & Abuse Check",
+        description: "Check if reported as spam",
+      },
+    ],
+  },
+  {
+    id: "dataBreachChecker",
+    name: "Data Breach Checker",
+    icon: Database,
+    description: "Check whether email or domain has been exposed in known data breaches",
+    features: [
+      {
+        id: "emailCheck",
+        name: "Email Check",
+        description: "Check email address in breach databases",
+      },
+      {
+        id: "domainCheck",
+        name: "Domain Check",
+        description: "Check domain in breach databases",
+      },
+      {
+        id: "detailedReport",
+        name: "Detailed Report",
+        description: "Detailed breach information and timeline",
+      },
+    ],
+  },
+  {
+    id: "apiStatusChecker",
+    name: "API Status Checker",
+    icon: Server,
+    description: "Analyze API endpoint health, performance, and security configuration",
+    features: [
+      {
+        id: "connectivityCheck",
+        name: "Connectivity Check",
+        description: "DNS resolution, response time, status code",
+      },
+      {
+        id: "securityAnalysis",
+        name: "Security Analysis",
+        description: "SSL, security headers, CORS configuration",
+      },
+      {
+        id: "performanceMetrics",
+        name: "Performance Metrics",
+        description: "Response time, TTFB, availability status",
       },
     ],
   },

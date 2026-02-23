@@ -2,7 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import NextImage from "next/image";
 import { Button } from "./ui/button";
-import { Menu, X, ChevronDown, LogOut, Package } from "lucide-react";
+import { 
+  Menu, X, ChevronDown, LogOut, Package, Image, FileText, Video, 
+  Music, QrCode, Link2, Archive, Lock, Shield, Globe, Mail, Phone, 
+  Database, Server, FileImage, ScanLine, Type, Minimize2, Merge
+} from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "../lib/authContext";
 import AuthModal from "./AuthModal";
@@ -13,21 +17,22 @@ const MAIN_CATEGORIES = [
     label: "Image Tools",
     paths: ["/convert", "/compress", "/image-to-pdf", "/extract-text"],
     items: [
-      { href: "/convert", label: "Image Converter", popular: true },
-      { href: "/compress", label: "Image Compressor", popular: true },
-      { href: "/image-to-pdf", label: "Image to PDF" },
-      { href: "/extract-text", label: "Extract Text (OCR)" },
+      { href: "/convert", label: "Image Converter", popular: true, icon: Image },
+      { href: "/compress", label: "Image Compressor", popular: true, icon: Minimize2 },
+      { href: "/image-to-pdf", label: "Image to PDF", icon: FileImage },
+      { href: "/extract-text", label: "Extract Text (OCR)", icon: ScanLine },
     ],
   },
   {
     label: "Document Tools",
-    paths: ["/doc-to-pdf", "/pdf-to-doc", "/scanner", "/merge-pdf", "/compress-pdf"],
+    paths: ["/doc-to-pdf", "/pdf-to-doc", "/scanner", "/merge-pdf", "/compress-pdf", "/pdf-unlock-protect"],
     items: [
-      { href: "/doc-to-pdf", label: "Doc to PDF", popular: true },
-      { href: "/pdf-to-doc", label: "PDF to DOCX/TXT" },
-      { href: "/merge-pdf", label: "Merge PDF" },
-      { href: "/compress-pdf", label: "Compress PDF" },
-      { href: "/scanner", label: "Document Scanner", popular: true },
+      { href: "/doc-to-pdf", label: "Doc to PDF", popular: true, icon: FileText },
+      { href: "/pdf-to-doc", label: "PDF to DOCX/TXT", icon: Type },
+      { href: "/merge-pdf", label: "Merge PDF", icon: Merge },
+      { href: "/compress-pdf", label: "Compress PDF", icon: Minimize2 },
+      { href: "/pdf-unlock-protect", label: "PDF Unlock/Protect", popular: true, icon: Lock },
+      { href: "/scanner", label: "Document Scanner", popular: true, icon: ScanLine },
     ],
   },
 ];
@@ -38,26 +43,44 @@ const OTHER_TOOLS_SECTIONS = [
     title: "Video Tools",
     paths: ["/video-convert", "/video-compress", "/video-trim"],
     items: [
-      { href: "/video-convert", label: "Video Converter", popular: true },
-      { href: "/video-compress", label: "Video Compressor" },
-      { href: "/video-trim", label: "Video Trimmer" },
+      { href: "/video-convert", label: "Video Converter", popular: true, icon: Video },
+      { href: "/video-compress", label: "Video Compressor", icon: Minimize2 },
+      { href: "/video-trim", label: "Video Trimmer", icon: ScanLine },
     ],
   },
   {
     title: "Audio Tools",
     paths: ["/audio-convert", "/text-to-speech", "/speech-to-text"],
     items: [
-      { href: "/audio-convert", label: "Audio Converter" },
-      { href: "/text-to-speech", label: "Text to Speech" },
-      { href: "/speech-to-text", label: "Speech to Text", popular: true },
+      { href: "/audio-convert", label: "Audio Converter", icon: Music },
+      { href: "/text-to-speech", label: "Text to Speech", icon: Type },
+      { href: "/speech-to-text", label: "Speech to Text", popular: true, icon: Music },
     ],
   },
   {
     title: "Utilities",
-    paths: ["/qr-barcode", "/url-shortener"],
+    paths: ["/qr-barcode", "/url-shortener", "/file-to-zip"],
     items: [
-      { href: "/qr-barcode", label: "QR & Barcode", popular: true },
-      { href: "/url-shortener", label: "URL Shortener" },
+      { href: "/qr-barcode", label: "QR & Barcode", popular: true, icon: QrCode },
+      { href: "/url-shortener", label: "URL Shortener", icon: Link2 },
+      { href: "/file-to-zip", label: "File to ZIP", popular: true, icon: Archive },
+    ],
+  },
+  {
+    title: "Security and Privacy",
+    paths: ["/password-generator", "/password-strength-checker", "/ip-lookup", "/whois-checker", "/metadata-remover", "/fake-email-generator", "/website-security-score", "/email-reputation-checker", "/phone-validator", "/data-breach-checker", "/api-status-checker"],
+    items: [
+      { href: "/password-generator", label: "Password Generator", popular: true, icon: Lock },
+      { href: "/password-strength-checker", label: "Password Strength Checker", icon: Shield },
+      { href: "/ip-lookup", label: "IP Address Lookup", icon: Globe },
+      { href: "/whois-checker", label: "Whois Checker", popular: true, icon: Globe },
+      { href: "/metadata-remover", label: "Metadata Remover", icon: FileImage },
+      { href: "/fake-email-generator", label: "Fake Email Generator", popular: true, icon: Mail },
+      { href: "/website-security-score", label: "Website Security Score", popular: true, icon: Shield },
+      { href: "/email-reputation-checker", label: "Email Reputation Checker", icon: Mail },
+      { href: "/phone-validator", label: "Phone Validator", icon: Phone },
+      { href: "/data-breach-checker", label: "Data Breach Checker", popular: true, icon: Database },
+      { href: "/api-status-checker", label: "API Status Checker", popular: true, icon: Server },
     ],
   },
 ];
@@ -159,7 +182,11 @@ export default function Navbar() {
               >
                 <Button
                   variant={category.paths.includes(currentPath) ? "default" : "ghost"}
-                  className="flex items-center gap-1 text-sm"
+                  className={`flex items-center gap-1 text-sm transition-all duration-200 ${
+                    openDropdown === category.label 
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" 
+                      : "hover:bg-green-50 dark:hover:bg-green-900/20"
+                  }`}
                   onClick={() =>
                     setOpenDropdown((prev) =>
                       prev === category.label ? null : category.label
@@ -175,29 +202,45 @@ export default function Navbar() {
 
                 {openDropdown === category.label && (
                   <div
-                    className="absolute top-full left-0 pt-1 w-64 z-50"
+                    className="absolute top-full left-0 pt-2 z-50"
                     onMouseEnter={() => handleDropdownEnter(category.label)}
                     onMouseLeave={handleDropdownLeave}
                   >
-                    <div className="bg-background border rounded-md shadow-lg overflow-hidden">
-                      {category.items.map((item) => (
-                        <Link key={item.href} href={item.href}>
-                          <div
-                            className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm flex items-center justify-between ${currentPath === item.href
-                              ? "bg-accent font-medium"
-                              : ""
-                              }`}
-                            onClick={() => setOpenDropdown(null)}
-                          >
-                            <span>{item.label}</span>
-                            {item.popular && (
-                              <span className="ml-2 px-1 py-0.5 text-[9px] font-semibold bg-orange-500 text-white rounded leading-none">
-                                Popular
-                              </span>
-                            )}
-                          </div>
-                        </Link>
-                      ))}
+                    <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm transition-all duration-200 min-w-[280px]">
+                      <div className="px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b border-green-100 dark:border-green-800">
+                        <h3 className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">
+                          {category.label}
+                        </h3>
+                      </div>
+                      <div className="py-2">
+                        {category.items.map((item) => {
+                          const Icon = item.icon || FileText;
+                          return (
+                            <Link key={item.href} href={item.href}>
+                              <div
+                                className={`px-4 py-3 hover:bg-green-50 dark:hover:bg-green-900/10 cursor-pointer transition-all duration-200 text-sm flex items-center gap-3 group border-l-4 hover:pl-5 ${
+                                  currentPath === item.href
+                                    ? "bg-green-50 dark:bg-green-900/20 border-green-600 font-semibold"
+                                    : "border-transparent hover:border-green-300"
+                                }`}
+                                onClick={() => setOpenDropdown(null)}
+                              >
+                                <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
+                                  currentPath === item.href 
+                                    ? "text-green-600" 
+                                    : "text-gray-500 group-hover:text-green-600"
+                                }`} />
+                                <span className="flex-1 whitespace-nowrap">{item.label}</span>
+                                {item.popular && (
+                                  <span className="ml-auto px-2 py-0.5 text-[10px] font-semibold bg-orange-500 text-white rounded-md leading-none shadow-sm flex-shrink-0">
+                                    Popular
+                                  </span>
+                                )}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -212,7 +255,11 @@ export default function Navbar() {
             >
               <Button
                 variant={OTHER_TOOLS_PATHS.includes(currentPath) ? "default" : "ghost"}
-                className="flex items-center gap-1 text-sm"
+                className={`flex items-center gap-1 text-sm transition-all duration-200 ${
+                  openDropdown === "Other Tools" 
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" 
+                    : "hover:bg-green-50 dark:hover:bg-green-900/20"
+                }`}
                 onClick={() =>
                   setOpenDropdown((prev) =>
                     prev === "Other Tools" ? null : "Other Tools"
@@ -228,41 +275,50 @@ export default function Navbar() {
 
               {openDropdown === "Other Tools" && (
                 <div
-                  className="absolute top-full right-0 pt-1 z-50"
+                  className="absolute top-full right-0 pt-2 z-50"
                   onMouseEnter={() => handleDropdownEnter("Other Tools")}
                   onMouseLeave={handleDropdownLeave}
                 >
-                  <div className="bg-background border rounded-md shadow-lg overflow-hidden">
+                  <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm animate-in fade-in-0 zoom-in-95 duration-200">
                     <div className="flex gap-0">
                       {OTHER_TOOLS_SECTIONS.map((section, index) => (
                         <div
                           key={section.title}
-                          className={`${index > 0 ? "border-l" : ""} border-gray-200`}
+                          className={`${index > 0 ? "border-l-2 border-gray-200 dark:border-gray-700" : ""}`}
                         >
-                          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                          <div className="px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b-2 border-green-100 dark:border-green-800">
+                            <h3 className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">
                               {section.title}
                             </h3>
                           </div>
-                          <div className="min-w-[200px]">
-                            {section.items.map((item) => (
-                              <Link key={item.href} href={item.href}>
-                                <div
-                                  className={`px-4 py-2.5 hover:bg-accent cursor-pointer transition-colors text-sm flex items-center justify-between ${currentPath === item.href
-                                    ? "bg-accent font-medium"
-                                    : ""
+                          <div className={section.title === "Security and Privacy" ? "min-w-[280px]" : "min-w-[220px]"}>
+                            {section.items.map((item) => {
+                              const Icon = item.icon || FileText;
+                              return (
+                                <Link key={item.href} href={item.href}>
+                              <div
+                                    className={`px-4 py-3 hover:bg-green-50 dark:hover:bg-green-900/10 cursor-pointer transition-all duration-200 text-sm flex items-center gap-3 group border-l-4 hover:pl-5 ${
+                                      currentPath === item.href
+                                        ? "bg-green-50 dark:bg-green-900/20 border-green-600 font-semibold"
+                                        : "border-transparent hover:border-green-300"
                                     }`}
-                                  onClick={() => setOpenDropdown(null)}
-                                >
-                                  <span>{item.label}</span>
-                                  {item.popular && (
-                                    <span className="ml-2 px-1 py-0.5 text-[9px] font-semibold bg-orange-500 text-white rounded leading-none">
-                                      Popular
-                                    </span>
-                                  )}
-                                </div>
-                              </Link>
-                            ))}
+                                    onClick={() => setOpenDropdown(null)}
+                                  >
+                                    <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
+                                      currentPath === item.href 
+                                        ? "text-green-600" 
+                                        : "text-gray-500 group-hover:text-green-600"
+                                    }`} />
+                                    <span className="flex-1 whitespace-nowrap">{item.label}</span>
+                                    {item.popular && (
+                                      <span className="ml-auto px-2 py-0.5 text-[10px] font-semibold bg-orange-500 text-white rounded-md leading-none flex-shrink-0 shadow-sm">
+                                        Popular
+                                      </span>
+                                    )}
+                                  </div>
+                                </Link>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}

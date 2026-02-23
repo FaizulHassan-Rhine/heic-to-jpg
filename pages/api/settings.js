@@ -133,6 +133,74 @@ export default async function handler(req, res) {
           urlShortener: {
             advancedOptions: settings.features?.urlShortener?.advancedOptions ?? false,
           },
+          fileToZip: {
+            highCompression: settings.features?.fileToZip?.highCompression ?? true,
+            preserveStructure: settings.features?.fileToZip?.preserveStructure ?? true,
+            advancedOptions: settings.features?.fileToZip?.advancedOptions ?? false,
+          },
+          pdfUnlockProtect: {
+            unlock: settings.features?.pdfUnlockProtect?.unlock ?? true,
+            protect: settings.features?.pdfUnlockProtect?.protect ?? true,
+            changePassword: settings.features?.pdfUnlockProtect?.changePassword ?? true,
+            ownerPassword: settings.features?.pdfUnlockProtect?.ownerPassword ?? false,
+            advancedPermissions: settings.features?.pdfUnlockProtect?.advancedPermissions ?? false,
+          },
+          passwordGenerator: {
+            customLength: settings.features?.passwordGenerator?.customLength ?? true,
+            characterTypes: settings.features?.passwordGenerator?.characterTypes ?? true,
+            securityOptions: settings.features?.passwordGenerator?.securityOptions ?? true,
+          },
+          passwordStrengthChecker: {
+            basicCheck: settings.features?.passwordStrengthChecker?.basicCheck ?? true,
+            detailedAnalysis: settings.features?.passwordStrengthChecker?.detailedAnalysis ?? true,
+            crackTimeEstimate: settings.features?.passwordStrengthChecker?.crackTimeEstimate ?? true,
+          },
+          ipLookup: {
+            basicInfo: settings.features?.ipLookup?.basicInfo ?? true,
+            detailedInfo: settings.features?.ipLookup?.detailedInfo ?? true,
+            myIpLookup: settings.features?.ipLookup?.myIpLookup ?? true,
+          },
+          whoisChecker: {
+            basicInfo: settings.features?.whoisChecker?.basicInfo ?? true,
+            detailedInfo: settings.features?.whoisChecker?.detailedInfo ?? true,
+            rawData: settings.features?.whoisChecker?.rawData ?? true,
+          },
+          metadataRemover: {
+            exifRemoval: settings.features?.metadataRemover?.exifRemoval ?? true,
+            gpsRemoval: settings.features?.metadataRemover?.gpsRemoval ?? true,
+            batchRemoval: settings.features?.metadataRemover?.batchRemoval ?? false,
+          },
+          fakeEmailGenerator: {
+            basicGeneration: settings.features?.fakeEmailGenerator?.basicGeneration ?? true,
+            customDomain: settings.features?.fakeEmailGenerator?.customDomain ?? true,
+            emailHistory: settings.features?.fakeEmailGenerator?.emailHistory ?? true,
+          },
+          websiteSecurityScore: {
+            basicCheck: settings.features?.websiteSecurityScore?.basicCheck ?? true,
+            sslAnalysis: settings.features?.websiteSecurityScore?.sslAnalysis ?? true,
+            securityHeaders: settings.features?.websiteSecurityScore?.securityHeaders ?? true,
+            blacklistCheck: settings.features?.websiteSecurityScore?.blacklistCheck ?? false,
+          },
+          emailReputationChecker: {
+            basicCheck: settings.features?.emailReputationChecker?.basicCheck ?? true,
+            domainAnalysis: settings.features?.emailReputationChecker?.domainAnalysis ?? true,
+            breachCheck: settings.features?.emailReputationChecker?.breachCheck ?? false,
+          },
+          phoneValidator: {
+            formatValidation: settings.features?.phoneValidator?.formatValidation ?? true,
+            carrierInfo: settings.features?.phoneValidator?.carrierInfo ?? true,
+            spamCheck: settings.features?.phoneValidator?.spamCheck ?? false,
+          },
+          dataBreachChecker: {
+            emailCheck: settings.features?.dataBreachChecker?.emailCheck ?? true,
+            domainCheck: settings.features?.dataBreachChecker?.domainCheck ?? true,
+            detailedReport: settings.features?.dataBreachChecker?.detailedReport ?? false,
+          },
+          apiStatusChecker: {
+            connectivityCheck: settings.features?.apiStatusChecker?.connectivityCheck ?? true,
+            securityAnalysis: settings.features?.apiStatusChecker?.securityAnalysis ?? true,
+            performanceMetrics: settings.features?.apiStatusChecker?.performanceMetrics ?? true,
+          },
         },
       },
     });

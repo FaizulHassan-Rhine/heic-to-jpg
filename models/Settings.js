@@ -316,6 +316,213 @@ const SettingsSchema = new mongoose.Schema(
           default: false, // Requires sign-in by default
         },
       },
+      // File to ZIP features
+      fileToZip: {
+        highCompression: {
+          type: Boolean,
+          default: true, // Free by default (compression level 9)
+        },
+        preserveStructure: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        advancedOptions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // PDF Unlock/Protect features
+      pdfUnlockProtect: {
+        unlock: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        protect: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        changePassword: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        ownerPassword: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+        advancedPermissions: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Password Generator features
+      passwordGenerator: {
+        customLength: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        characterTypes: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        securityOptions: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+      },
+      // Password Strength Checker features
+      passwordStrengthChecker: {
+        basicCheck: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        detailedAnalysis: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        crackTimeEstimate: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+      },
+      // IP Address Lookup features
+      ipLookup: {
+        basicInfo: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        detailedInfo: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        myIpLookup: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+      },
+      // Whois Checker features
+      whoisChecker: {
+        basicInfo: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        detailedInfo: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        rawData: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+      },
+      // Metadata Remover features
+      metadataRemover: {
+        exifRemoval: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        gpsRemoval: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        batchRemoval: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Fake Email Generator features
+      fakeEmailGenerator: {
+        basicGeneration: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        customDomain: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        emailHistory: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+      },
+      // Website Security Score features
+      websiteSecurityScore: {
+        basicCheck: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        sslAnalysis: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        securityHeaders: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        blacklistCheck: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Email Reputation Checker features
+      emailReputationChecker: {
+        basicCheck: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        domainAnalysis: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        breachCheck: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Phone Validator features
+      phoneValidator: {
+        formatValidation: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        carrierInfo: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        spamCheck: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // Data Breach Checker features
+      dataBreachChecker: {
+        emailCheck: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        domainCheck: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        detailedReport: {
+          type: Boolean,
+          default: false, // Requires sign-in by default
+        },
+      },
+      // API Status Checker features
+      apiStatusChecker: {
+        connectivityCheck: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        securityAnalysis: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+        performanceMetrics: {
+          type: Boolean,
+          default: true, // Free by default
+        },
+      },
     },
   },
   {
