@@ -3,10 +3,53 @@ import Head from "next/head";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthContextProvider } from "../lib/authContext";
 import { Toaster } from "react-hot-toast";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+
+// Create a client instance
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        // With SSR, we usually want to set some default staleTime
+        // above 0 to avoid refetching immediately on the client
+        staleTime: 60 * 1000, // 1 minute default
+        cacheTime: 5 * 60 * 1000, // 5 minutes default
+        refetchOnWindowFocus: false,
+        retry: 1,
+      },
+    },
+  });
+}
+
+let browserQueryClient = undefined;
+
+function getQueryClient() {
+  if (typeof window === "undefined") {
+    // Server: always make a new query client
+    return makeQueryClient();
+  } else {
+    // Browser: use singleton pattern to keep the same query client
+    if (!browserQueryClient) browserQueryClient = makeQueryClient();
+    return browserQueryClient;
+  }
+}
 
 export default function App({ Component, pageProps }) {
+  // Create queryClient on mount and reuse it
+  const [queryClient] = useState(() => {
+    if (typeof window === "undefined") {
+      // Server: always make a new query client
+      return makeQueryClient();
+    } else {
+      // Browser: use singleton pattern to keep the same query client
+      if (!browserQueryClient) browserQueryClient = makeQueryClient();
+      return browserQueryClient;
+    }
+  });
+
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/logo.png" />
@@ -25,6 +68,6 @@ export default function App({ Component, pageProps }) {
         <Analytics />
         <Toaster position="top-center" toastOptions={{ duration: 3000, style: { zIndex: 9999 } }} />
       </AuthContextProvider>
-    </>
+    </QueryClientProvider>
   );
 }

@@ -31,10 +31,12 @@ export default async function handler(req, res) {
       const totalOrders = await Order.countDocuments({ firebaseUid });
       
       const orders = await Order.find({ firebaseUid })
+        .select('-files.outputFileData')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
-        .lean();
+        .lean()
+        .allowDiskUse(true);
 
       // Format orders
       const formattedOrders = orders.map((order) => ({

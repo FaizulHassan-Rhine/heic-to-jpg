@@ -9,7 +9,7 @@ import {
   LogOut, Menu, X, Scissors, ScanLine, Type, Link2, ChevronDown, ChevronUp
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { clearSettingsCache } from "../../lib/useSettings";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_ITEMS = [
@@ -430,6 +430,7 @@ export default function FeatureManagement() {
   const [saving, setSaving] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [openDropdowns, setOpenDropdowns] = useState({}); // { [toolId-featureId]: true }
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Check admin authentication
@@ -535,7 +536,8 @@ export default function FeatureManagement() {
         toast.success("Feature settings saved successfully");
         setSettings(data.settings);
         // Clear cache so all pages get updated settings immediately
-        clearSettingsCache();
+        queryClient.invalidateQueries({ queryKey: ["settings"] });
+        queryClient.invalidateQueries({ queryKey: ["adminSettings"] });
       } else {
         console.error("Save failed:", data);
         toast.error(data.error || "Failed to save settings");

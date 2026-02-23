@@ -14,8 +14,14 @@ export default async function handler(req, res) {
     await connectDB();
 
     if (req.method === "GET") {
-      // Get settings
-      const settings = await Settings.getSettings();
+      // Get settings - use lean() to get plain object directly
+      let settings = await Settings.findOne().lean();
+      if (!settings) {
+        // Create default settings if none exist
+        const newSettings = new Settings({});
+        await newSettings.save();
+        settings = newSettings.toObject ? newSettings.toObject() : newSettings;
+      }
       return res.status(200).json({ success: true, settings });
     } else if (req.method === "PUT") {
       // Update settings
@@ -35,25 +41,61 @@ export default async function handler(req, res) {
         features, // Feature flags object
       } = req.body;
 
+      console.log("Received settings update:", {
+        imageMaxSize,
+        imageMaxFiles,
+        documentMaxSize,
+        documentMaxFiles,
+        pdfMaxSize,
+        pdfMaxFiles,
+      });
+
       // Get or create settings
       let settings = await Settings.findOne();
       if (!settings) {
         settings = new Settings({});
       }
 
-      // Update file limit fields if provided
-      if (imageMaxSize !== undefined) settings.imageMaxSize = imageMaxSize;
-      if (imageMaxFiles !== undefined) settings.imageMaxFiles = imageMaxFiles;
-      if (documentMaxSize !== undefined) settings.documentMaxSize = documentMaxSize;
-      if (documentMaxFiles !== undefined) settings.documentMaxFiles = documentMaxFiles;
-      if (pdfMaxSize !== undefined) settings.pdfMaxSize = pdfMaxSize;
-      if (pdfMaxFiles !== undefined) settings.pdfMaxFiles = pdfMaxFiles;
-      if (videoMaxSize !== undefined) settings.videoMaxSize = videoMaxSize;
-      if (videoMaxFiles !== undefined) settings.videoMaxFiles = videoMaxFiles;
-      if (audioMaxSize !== undefined) settings.audioMaxSize = audioMaxSize;
-      if (audioMaxFiles !== undefined) settings.audioMaxFiles = audioMaxFiles;
-      if (generalMaxSize !== undefined) settings.generalMaxSize = generalMaxSize;
-      if (generalMaxFiles !== undefined) settings.generalMaxFiles = generalMaxFiles;
+      // Store file limit updates to apply AFTER migration (if migration happens, it reloads settings)
+      const fileLimitUpdates = {};
+
+      // Collect file limit field updates
+      if (imageMaxSize !== undefined && imageMaxSize !== null) {
+        fileLimitUpdates.imageMaxSize = Number(imageMaxSize);
+      }
+      if (imageMaxFiles !== undefined && imageMaxFiles !== null) {
+        fileLimitUpdates.imageMaxFiles = Number(imageMaxFiles);
+      }
+      if (documentMaxSize !== undefined && documentMaxSize !== null) {
+        fileLimitUpdates.documentMaxSize = Number(documentMaxSize);
+      }
+      if (documentMaxFiles !== undefined && documentMaxFiles !== null) {
+        fileLimitUpdates.documentMaxFiles = Number(documentMaxFiles);
+      }
+      if (pdfMaxSize !== undefined && pdfMaxSize !== null) {
+        fileLimitUpdates.pdfMaxSize = Number(pdfMaxSize);
+      }
+      if (pdfMaxFiles !== undefined && pdfMaxFiles !== null) {
+        fileLimitUpdates.pdfMaxFiles = Number(pdfMaxFiles);
+      }
+      if (videoMaxSize !== undefined && videoMaxSize !== null) {
+        fileLimitUpdates.videoMaxSize = Number(videoMaxSize);
+      }
+      if (videoMaxFiles !== undefined && videoMaxFiles !== null) {
+        fileLimitUpdates.videoMaxFiles = Number(videoMaxFiles);
+      }
+      if (audioMaxSize !== undefined && audioMaxSize !== null) {
+        fileLimitUpdates.audioMaxSize = Number(audioMaxSize);
+      }
+      if (audioMaxFiles !== undefined && audioMaxFiles !== null) {
+        fileLimitUpdates.audioMaxFiles = Number(audioMaxFiles);
+      }
+      if (generalMaxSize !== undefined && generalMaxSize !== null) {
+        fileLimitUpdates.generalMaxSize = Number(generalMaxSize);
+      }
+      if (generalMaxFiles !== undefined && generalMaxFiles !== null) {
+        fileLimitUpdates.generalMaxFiles = Number(generalMaxFiles);
+      }
 
       // Update feature flags if provided - Deep merge all features dynamically
       if (features !== undefined) {
@@ -101,6 +143,13 @@ export default async function handler(req, res) {
             }
             settings.features[toolId].advancedOptions = {};
           });
+          
+          // IMPORTANT: Re-apply file limit updates after migration reload
+          // Migration reloads settings from DB, which resets any changes we made
+          Object.keys(fileLimitUpdates).forEach(key => {
+            settings[key] = fileLimitUpdates[key];
+            settings.markModified(key);
+          });
         }
         
         // Deep merge function for nested objects
@@ -142,9 +191,33 @@ export default async function handler(req, res) {
         settings.markModified('features');
       }
 
-      await settings.save();
+      // Apply file limit updates (if migration didn't happen, apply them now)
+      // If migration happened, they were already applied above
+      if (Object.keys(fileLimitUpdates).length > 0 && !features) {
+        Object.keys(fileLimitUpdates).forEach(key => {
+          const oldValue = settings[key];
+          settings[key] = fileLimitUpdates[key];
+          settings.markModified(key);
+          if (key === 'imageMaxSize') {
+            console.log(`Updating ${key}: ${oldValue} bytes (${oldValue / (1024 * 1024)} MB) -> ${fileLimitUpdates[key]} bytes (${fileLimitUpdates[key] / (1024 * 1024)} MB)`);
+          }
+        });
+      } else if (Object.keys(fileLimitUpdates).length > 0 && features) {
+        // If features were updated, file limits were already applied after migration
+        // Just log the imageMaxSize update
+        if (fileLimitUpdates.imageMaxSize) {
+          console.log(`Updating imageMaxSize: ${settings.imageMaxSize} bytes (${settings.imageMaxSize / (1024 * 1024)} MB) -> ${fileLimitUpdates.imageMaxSize} bytes (${fileLimitUpdates.imageMaxSize / (1024 * 1024)} MB)`);
+        }
+      }
 
-      return res.status(200).json({ success: true, settings });
+      await settings.save();
+      console.log("Settings saved. imageMaxSize in DB:", settings.imageMaxSize, "bytes =", settings.imageMaxSize / (1024 * 1024), "MB");
+
+      // Convert Mongoose document to plain object for JSON serialization
+      const settingsObj = settings.toObject ? settings.toObject() : JSON.parse(JSON.stringify(settings));
+      console.log("Returning settings. imageMaxSize:", settingsObj.imageMaxSize, "bytes =", settingsObj.imageMaxSize / (1024 * 1024), "MB");
+      
+      return res.status(200).json({ success: true, settings: settingsObj });
     } else {
       return res.status(405).json({ error: "Method not allowed" });
     }

@@ -683,7 +683,7 @@ export default function CompressImage() {
               if (settingsLoading) {
                 toast.error("Loading upload settings... Please wait.");
               } else if (!settings) {
-                toast.error("Settings not available. Please refresh the page.");
+                toast.error("Settings are updating automatically... Please wait a moment.");
               } else {
                 const maxFiles = settings.image?.maxFiles;
                 toast.error(`Maximum ${maxFiles} files allowed. You have ${files.length} files.`);

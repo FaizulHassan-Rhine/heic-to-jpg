@@ -8,6 +8,7 @@ import { Button } from "../components/ui/button";
 import { Package, Download, Image, Video, FileText, Music, Search, Loader2, Eye, Trash2, X, File } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { useUserOrders, useOrderDetails, useDeleteOrder } from "../lib/queries/orders";
 
 const TOOL_ICONS = {
   "Image Converter": Image,
@@ -31,18 +32,33 @@ const TOOL_ICONS = {
 
 export default function MyOrders() {
   const { user, loading: authLoading } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState({});
-  const [viewingOrder, setViewingOrder] = useState(null);
+  const [viewingOrderId, setViewingOrderId] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
   const router = useRouter();
+
+  // Use TanStack Query for orders
+  const {
+    data: ordersData,
+    isLoading: ordersLoading,
+    error: ordersError,
+  } = useUserOrders(user?.uid, currentPage, 10);
+
+  // Use TanStack Query for order details
+  const {
+    data: orderDetails,
+    isLoading: orderDetailsLoading,
+  } = useOrderDetails(viewingOrderId, user?.uid);
+
+  // Delete order mutation
+  const deleteOrderMutation = useDeleteOrder();
+
+  const orders = ordersData?.orders || [];
+  const summary = ordersData?.summary || null;
+  const pagination = ordersData?.pagination || {};
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -52,35 +68,10 @@ export default function MyOrders() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user) {
-      fetchOrders();
+    if (ordersError) {
+      toast.error(ordersError.message || "Failed to load orders");
     }
-  }, [user, currentPage]);
-
-  const fetchOrders = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `/api/user/orders?firebaseUid=${user.uid}&page=${currentPage}&limit=10`
-      );
-      const data = await response.json();
-
-      if (data.success) {
-        setOrders(data.orders);
-        setSummary(data.summary);
-        setPagination(data.pagination);
-      } else {
-        toast.error(data.error || "Failed to load orders");
-      }
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      toast.error("Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [ordersError]);
 
   const filteredOrders = orders.filter((order) =>
     order.toolName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -94,38 +85,9 @@ export default function MyOrders() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const handleViewOrder = async (orderId) => {
-    setLoadingOrderDetails(true);
+  const handleViewOrder = (orderId) => {
+    setViewingOrderId(orderId);
     setViewModalOpen(true);
-    try {
-      const response = await fetch(`/api/user/order/${orderId}?firebaseUid=${user.uid}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        // Debug logging
-        if (data.order.files && data.order.files.length > 0) {
-          const firstFile = data.order.files[0];
-          console.log("Order details received - First file:", {
-            inputName: firstFile.inputName,
-            outputName: firstFile.outputName,
-            hasInputThumbnail: !!firstFile.inputThumbnail,
-            hasOutputThumbnail: !!firstFile.outputThumbnail,
-            inputThumbnailLength: firstFile.inputThumbnail?.length || 0,
-            outputThumbnailLength: firstFile.outputThumbnail?.length || 0,
-          });
-        }
-        setViewingOrder(data.order);
-      } else {
-        toast.error(data.error || "Failed to load order details");
-        setViewModalOpen(false);
-      }
-    } catch (error) {
-      console.error("Error fetching order:", error);
-      toast.error("Failed to load order details");
-      setViewModalOpen(false);
-    } finally {
-      setLoadingOrderDetails(false);
-    }
   };
 
   const handleDeleteClick = (orderId) => {
@@ -134,25 +96,18 @@ export default function MyOrders() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!orderToDelete) return;
+    if (!orderToDelete || !user?.uid) return;
 
     try {
-      const response = await fetch(`/api/user/order/${orderToDelete}?firebaseUid=${user.uid}`, {
-        method: "DELETE",
+      await deleteOrderMutation.mutateAsync({
+        orderId: orderToDelete,
+        firebaseUid: user.uid,
       });
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success("Order deleted successfully");
-        fetchOrders(); // Refresh the list
-        setDeleteModalOpen(false);
-        setOrderToDelete(null);
-      } else {
-        toast.error(data.error || "Failed to delete order");
-      }
+      toast.success("Order deleted successfully");
+      setDeleteModalOpen(false);
+      setOrderToDelete(null);
     } catch (error) {
-      console.error("Error deleting order:", error);
-      toast.error("Failed to delete order");
+      toast.error(error.message || "Failed to delete order");
     }
   };
 
@@ -168,7 +123,7 @@ export default function MyOrders() {
     }
 
     try {
-      // Fetch full order details if we only have basic info
+      // Use cached order details if available, otherwise fetch
       let orderData = order;
       if (!order.files || order.files.length === 0) {
         try {
@@ -273,7 +228,7 @@ export default function MyOrders() {
     }
   };
 
-  if (authLoading || loading) {
+  if (authLoading || ordersLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -590,8 +545,7 @@ export default function MyOrders() {
               <button
                 onClick={() => {
                   setViewModalOpen(false);
-                  setViewingOrder(null);
-                  setLoadingOrderDetails(false);
+                  setViewingOrderId(null);
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -599,12 +553,12 @@ export default function MyOrders() {
               </button>
             </div>
             
-            {loadingOrderDetails ? (
+            {orderDetailsLoading ? (
               <div className="p-12 flex flex-col items-center justify-center">
                 <Loader2 className="w-12 h-12 animate-spin text-blue-600 mb-4" />
                 <p className="text-gray-600">Loading order details...</p>
               </div>
-            ) : viewingOrder ? (
+            ) : orderDetails ? (
               <div className="p-6 space-y-6">
               {/* Order Info */}
               <div>
@@ -612,36 +566,36 @@ export default function MyOrders() {
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tool:</span>
-                    <span className="font-semibold text-gray-800">{viewingOrder.toolName}</span>
+                    <span className="font-semibold text-gray-800">{orderDetails.toolName}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Type:</span>
-                    <span className="capitalize text-gray-800">{viewingOrder.toolType}</span>
+                    <span className="capitalize text-gray-800">{orderDetails.toolType}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Status:</span>
                     <span className={`capitalize ${
-                      viewingOrder.status === "completed" ? "text-green-600" : 
-                      viewingOrder.status === "failed" ? "text-red-600" : "text-yellow-600"
+                      orderDetails.status === "completed" ? "text-green-600" : 
+                      orderDetails.status === "failed" ? "text-red-600" : "text-yellow-600"
                     }`}>
-                      {viewingOrder.status}
+                      {orderDetails.status}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Date:</span>
                     <span className="text-gray-800">
-                      {new Date(viewingOrder.createdAt).toLocaleString()}
+                      {new Date(orderDetails.createdAt).toLocaleString()}
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Files Information */}
-              {viewingOrder.files && viewingOrder.files.length > 0 ? (
+              {orderDetails.files && orderDetails.files.length > 0 ? (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Files ({viewingOrder.files.length})</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Files ({orderDetails.files.length})</h3>
                   <div className="space-y-3">
-                    {viewingOrder.files.map((file, index) => (
+                    {orderDetails.files.map((file, index) => (
                       <div key={index} className="bg-gray-50 rounded-lg p-4 space-y-3 border border-gray-200">
                         <div className="flex items-center gap-2 text-sm">
                           <File className="w-4 h-4 text-gray-400" />
@@ -764,12 +718,12 @@ export default function MyOrders() {
               )}
 
               {/* Metadata */}
-              {viewingOrder.metadata && Object.keys(viewingOrder.metadata).length > 0 && (
+              {orderDetails.metadata && Object.keys(orderDetails.metadata).length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Additional Information</h3>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <pre className="text-xs text-gray-700 whitespace-pre-wrap">
-                      {JSON.stringify(viewingOrder.metadata, null, 2)}
+                      {JSON.stringify(orderDetails.metadata, null, 2)}
                     </pre>
                   </div>
                 </div>
@@ -779,13 +733,13 @@ export default function MyOrders() {
               <div className="flex gap-3 pt-4 border-t">
                 <Button
                   variant="outline"
-                  onClick={() => handleDownload(viewingOrder)}
+                  onClick={() => handleDownload(orderDetails)}
                   className="flex-1"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download Files
                 </Button>
-                <Link href={viewingOrder.toolPath} className="flex-1">
+                <Link href={orderDetails.toolPath} className="flex-1">
                   <Button variant="default" className="w-full">
                     Use Tool Again
                   </Button>

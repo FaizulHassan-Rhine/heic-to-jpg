@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-import { clearSettingsCache } from "../../lib/useSettings";
+import { useQueryClient } from "@tanstack/react-query";
 
 const SIDEBAR_ITEMS = [
   { id: "stats", label: "Dashboard", icon: LayoutDashboard },
@@ -41,6 +41,7 @@ export default function AdminDashboard() {
   // Local state for input values (as strings to allow clearing)
   const [inputValues, setInputValues] = useState({});
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Check admin authentication
@@ -128,13 +129,17 @@ export default function AdminDashboard() {
         }
       );
       const data = await response.json();
+      console.log("Orders API response:", data);
       if (data.success) {
-        console.log(`Fetched ${data.orders.length} orders, total: ${data.pagination.total}`);
-        setOrders(data.orders);
-        setOrdersPagination(data.pagination);
+        console.log(`Fetched ${data.orders?.length || 0} orders, total: ${data.pagination?.total || 0}`);
+        console.log("Orders array:", data.orders);
+        setOrders(data.orders || []);
+        setOrdersPagination(data.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 });
       } else {
         console.error("Failed to fetch orders:", data.error);
         toast.error(data.error || "Failed to load orders");
+        setOrders([]);
+        setOrdersPagination({ total: 0, page: 1, limit: 10, totalPages: 0 });
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -312,20 +317,91 @@ export default function AdminDashboard() {
   const saveSettings = async () => {
     setSavingSettings(true);
     try {
+      // Build settings object from current input values to ensure we send the latest values
+      // Convert MB values from inputValues to bytes for the API
+      // ALWAYS use inputValues if they exist, otherwise fall back to current settings
+      const imageMaxSizeMB = inputValues.imageMaxSize !== undefined && inputValues.imageMaxSize !== "" 
+        ? parseFloat(inputValues.imageMaxSize) 
+        : (settings.imageMaxSize / (1024 * 1024));
+      const imageMaxSizeBytes = imageMaxSizeMB * 1024 * 1024;
+
+      const settingsToSave = {
+        imageMaxSize: imageMaxSizeBytes,
+        imageMaxFiles: inputValues.imageMaxFiles !== undefined && inputValues.imageMaxFiles !== ""
+          ? parseInt(inputValues.imageMaxFiles)
+          : settings.imageMaxFiles,
+        documentMaxSize: inputValues.documentMaxSize !== undefined && inputValues.documentMaxSize !== ""
+          ? parseFloat(inputValues.documentMaxSize) * 1024 * 1024
+          : settings.documentMaxSize,
+        documentMaxFiles: inputValues.documentMaxFiles !== undefined && inputValues.documentMaxFiles !== ""
+          ? parseInt(inputValues.documentMaxFiles)
+          : settings.documentMaxFiles,
+        pdfMaxSize: inputValues.pdfMaxSize !== undefined && inputValues.pdfMaxSize !== ""
+          ? parseFloat(inputValues.pdfMaxSize) * 1024 * 1024
+          : settings.pdfMaxSize,
+        pdfMaxFiles: inputValues.pdfMaxFiles !== undefined && inputValues.pdfMaxFiles !== ""
+          ? parseInt(inputValues.pdfMaxFiles)
+          : settings.pdfMaxFiles,
+        videoMaxSize: inputValues.videoMaxSize !== undefined && inputValues.videoMaxSize !== ""
+          ? parseFloat(inputValues.videoMaxSize) * 1024 * 1024
+          : settings.videoMaxSize,
+        videoMaxFiles: inputValues.videoMaxFiles !== undefined && inputValues.videoMaxFiles !== ""
+          ? parseInt(inputValues.videoMaxFiles)
+          : settings.videoMaxFiles,
+        audioMaxSize: inputValues.audioMaxSize !== undefined && inputValues.audioMaxSize !== ""
+          ? parseFloat(inputValues.audioMaxSize) * 1024 * 1024
+          : settings.audioMaxSize,
+        audioMaxFiles: inputValues.audioMaxFiles !== undefined && inputValues.audioMaxFiles !== ""
+          ? parseInt(inputValues.audioMaxFiles)
+          : settings.audioMaxFiles,
+        generalMaxSize: inputValues.generalMaxSize !== undefined && inputValues.generalMaxSize !== ""
+          ? parseFloat(inputValues.generalMaxSize) * 1024 * 1024
+          : settings.generalMaxSize,
+        generalMaxFiles: inputValues.generalMaxFiles !== undefined && inputValues.generalMaxFiles !== ""
+          ? parseInt(inputValues.generalMaxFiles)
+          : settings.generalMaxFiles,
+        // Include features if they exist
+        ...(settings.features && { features: settings.features }),
+      };
+
+      console.log("Saving settings:", {
+        inputValue: inputValues.imageMaxSize,
+        inputValueMB: imageMaxSizeMB,
+        calculatedBytes: imageMaxSizeBytes,
+        calculatedMB: imageMaxSizeBytes / (1024 * 1024),
+        sendingToAPI: settingsToSave.imageMaxSize,
+      });
+
       const response = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(settings),
+        body: JSON.stringify(settingsToSave),
       });
       const data = await response.json();
       if (data.success) {
         toast.success("Settings saved successfully");
         setSettings(data.settings);
+        // Update input values to match the saved settings (convert bytes to MB)
+        setInputValues({
+          imageMaxSize: (data.settings.imageMaxSize / (1024 * 1024)).toString(),
+          imageMaxFiles: data.settings.imageMaxFiles.toString(),
+          documentMaxSize: (data.settings.documentMaxSize / (1024 * 1024)).toString(),
+          documentMaxFiles: data.settings.documentMaxFiles.toString(),
+          pdfMaxSize: (data.settings.pdfMaxSize / (1024 * 1024)).toString(),
+          pdfMaxFiles: data.settings.pdfMaxFiles.toString(),
+          videoMaxSize: (data.settings.videoMaxSize / (1024 * 1024)).toString(),
+          videoMaxFiles: data.settings.videoMaxFiles.toString(),
+          audioMaxSize: (data.settings.audioMaxSize / (1024 * 1024)).toString(),
+          audioMaxFiles: data.settings.audioMaxFiles.toString(),
+          generalMaxSize: (data.settings.generalMaxSize / (1024 * 1024)).toString(),
+          generalMaxFiles: data.settings.generalMaxFiles.toString(),
+        });
         // Clear cache so all pages get updated settings immediately
-        clearSettingsCache();
+        queryClient.invalidateQueries({ queryKey: ["settings"] });
+        queryClient.invalidateQueries({ queryKey: ["adminSettings"] });
       } else {
         toast.error("Failed to save settings");
       }

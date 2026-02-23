@@ -620,9 +620,9 @@ export default function ConvertImage() {
             disabled={settingsLoading || !settings}
             onDisabledClick={() => {
               if (settingsLoading) {
-                toast.error("Loading upload settings from database... Please wait.");
+                toast.error("Loading upload settings... Please wait.");
               } else if (!settings || !settings.image) {
-                toast.error("Settings not available from database. Please refresh the page.");
+                toast.error("Settings are updating automatically... Please wait a moment.");
               } else {
                 const maxFiles = settings.image.maxFiles;
                 toast.error(`Maximum ${maxFiles} files allowed. You have ${files.length} files.`);
