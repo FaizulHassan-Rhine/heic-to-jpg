@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import {
   Menu, X, ChevronDown, LogOut, Package, Image, FileText, Video,
   Music, QrCode, Link2, Archive, Lock, Shield, Globe, Mail, Phone,
-  Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator
+  Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator, MapPin
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "../lib/authContext";
@@ -19,7 +19,7 @@ import {
 
 const ICON_MAP = {
   Image, FileText, Video, Music, QrCode, Link2, Archive, Lock, Shield, Globe,
-  Mail, Phone, Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator,
+  Mail, Phone, Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator, MapPin,
 };
 
 function withIcons(categories) {
@@ -317,7 +317,6 @@ export default function Navbar() {
                           {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
                         </div>
                       )}
-                      <span className="hidden md:inline">{user.displayName || user.email?.split("@")[0]}</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                     {userMenuOpen && (
