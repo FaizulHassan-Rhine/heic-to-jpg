@@ -31,7 +31,7 @@ const formatSize = (bytes) => {
 
 export default function FileToZip() {
   const { user, trackUsage } = useAuth();
-  const { settings, loading: settingsLoading } = useSettings();
+  const { settings } = useSettings();
   const [files, setFiles] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -49,12 +49,6 @@ export default function FileToZip() {
 
   // Handle files added
   const handleFilesAdded = (newFiles) => {
-    if (settingsLoading || !settings || !settings.general) {
-      console.error("Settings not loaded from database:", { settingsLoading, settings: !!settings, hasGeneralSettings: !!settings?.general });
-      toast.error("Settings are updating automatically... Please wait a moment.");
-      return;
-    }
-
     const maxSize = settings.general.maxSize;
     const maxFiles = settings.general.maxFiles;
 
@@ -257,21 +251,15 @@ export default function FileToZip() {
           <CollapsibleDropzone
             files={files}
             setFiles={handleFilesAdded}
-            disabled={settingsLoading || !settings}
+            disabled={false}
             onDisabledClick={() => {
-              if (settingsLoading) {
-                toast.error("Loading upload settings... Please wait.");
-              } else if (!settings || !settings.general) {
-                toast.error("Settings are updating automatically... Please wait a moment.");
-              } else {
-                const maxFiles = settings.general.maxFiles;
-                toast.error(`Maximum ${maxFiles} files allowed. You have ${files.length} files.`);
-              }
+              const maxFiles = settings.general.maxFiles;
+              toast.error(`Maximum ${maxFiles} files allowed. You have ${files.length} files.`);
             }}
             maxFiles={settings?.general?.maxFiles}
             currentFileCount={files.length}
             title="Upload Files to Archive"
-            description={settings && settings.general ? `All file types • Max ${Math.round(settings.general.maxSize / (1024 * 1024))}MB each • Up to ${settings.general.maxFiles} files` : "Loading settings from database..."}
+            description={`All file types • Max ${Math.round(settings.general.maxSize / (1024 * 1024))}MB each • Up to ${settings.general.maxFiles} files`}
             accept={{
               "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".heic"],
               "application/pdf": [".pdf"],

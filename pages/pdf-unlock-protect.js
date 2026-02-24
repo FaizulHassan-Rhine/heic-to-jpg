@@ -31,7 +31,7 @@ const formatSize = (bytes) => {
 
 export default function PdfUnlockProtect() {
   const { user, trackUsage } = useAuth();
-  const { settings, loading: settingsLoading } = useSettings();
+  const { settings } = useSettings();
   const [file, setFile] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -77,11 +77,6 @@ export default function PdfUnlockProtect() {
   const handleFileChange = async (e) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
-
-    if (settingsLoading || !settings || !settings.pdf) {
-      toast.error("Settings are updating automatically... Please wait a moment.");
-      return;
-    }
 
     const maxSize = settings.pdf.maxSize;
     if (selected.size > maxSize) {

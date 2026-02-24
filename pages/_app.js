@@ -4,7 +4,9 @@ import { Analytics } from "@vercel/analytics/next";
 import { AuthContextProvider } from "../lib/authContext";
 import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import ScrollToTop from "../components/ScrollToTop";
+import { settingsQueryKey } from "../lib/queries/settings";
 
 // Create a client instance
 function makeQueryClient() {
@@ -48,6 +50,19 @@ export default function App({ Component, pageProps }) {
     }
   });
 
+  // Prefetch settings as soon as the app mounts so they're cached before any tool page renders
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: settingsQueryKey,
+      queryFn: async () => {
+        const response = await fetch("/api/settings", { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+        const data = await response.json();
+        if (!data.success) throw new Error("Failed to load settings");
+        return data.settings;
+      },
+    });
+  }, [queryClient]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Head>
@@ -64,6 +79,7 @@ export default function App({ Component, pageProps }) {
       </Head>
       <AuthContextProvider>
         <Component {...pageProps} />
+        <ScrollToTop />
         <Analytics />
         <Toaster position="top-center" toastOptions={{ duration: 3000, style: { zIndex: 9999 } }} />
       </AuthContextProvider>

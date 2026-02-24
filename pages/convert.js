@@ -46,7 +46,7 @@ const getFileType = (fileName) => {
 
 export default function ConvertImage() {
   const { user, trackUsage } = useAuth();
-  const { settings, loading: settingsLoading } = useSettings();
+  const { settings } = useSettings();
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -153,14 +153,6 @@ export default function ConvertImage() {
   // ── File Handling ──
 
   const handleFilesAdded = (newFiles) => {
-    // CRITICAL: Block if settings not loaded yet - MUST wait for database
-    if (settingsLoading || !settings || !settings.image) {
-      toast.error("Settings are loading from database. Please wait a moment and try again.");
-      console.error("Settings not loaded from database:", { settingsLoading, settings: !!settings, hasImageSettings: !!settings?.image });
-      return;
-    }
-
-    // Get values directly from database - no fallbacks
     const maxSize = settings.image.maxSize;
     const maxFiles = settings.image.maxFiles;
     
@@ -617,21 +609,15 @@ export default function ConvertImage() {
           <CollapsibleDropzone
             files={files}
             setFiles={handleFilesAdded}
-            disabled={settingsLoading || !settings}
+            disabled={false}
             onDisabledClick={() => {
-              if (settingsLoading) {
-                toast.error("Loading upload settings... Please wait.");
-              } else if (!settings || !settings.image) {
-                toast.error("Settings are updating automatically... Please wait a moment.");
-              } else {
-                const maxFiles = settings.image.maxFiles;
-                toast.error(`Maximum ${maxFiles} files allowed. You have ${files.length} files.`);
-              }
+              const maxFiles = settings.image.maxFiles;
+              toast.error(`Maximum ${maxFiles} files allowed. You have ${files.length} files.`);
             }}
             maxFiles={settings?.image?.maxFiles}
             currentFileCount={files.length}
             title="Upload Images to Convert"
-            description={settings && settings.image ? `JPG, PNG, WebP, HEIC, TIFF • Max ${Math.round(settings.image.maxSize / (1024 * 1024))}MB each • Up to ${settings.image.maxFiles} files` : "Loading settings from database..."}
+            description={`JPG, PNG, WebP, HEIC, TIFF • Max ${Math.round(settings.image.maxSize / (1024 * 1024))}MB each • Up to ${settings.image.maxFiles} files`}
             accept={{
               "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
               "image/png": [".png", ".PNG"],
