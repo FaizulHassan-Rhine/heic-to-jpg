@@ -2,99 +2,54 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import NextImage from "next/image";
 import { Button } from "./ui/button";
-import { 
-  Menu, X, ChevronDown, LogOut, Package, Image, FileText, Video, 
-  Music, QrCode, Link2, Archive, Lock, Shield, Globe, Mail, Phone, 
-  Database, Server, FileImage, ScanLine, Type, Minimize2, Merge
+import {
+  Menu, X, ChevronDown, LogOut, Package, Image, FileText, Video,
+  Music, QrCode, Link2, Archive, Lock, Shield, Globe, Mail, Phone,
+  Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "../lib/authContext";
 import AuthModal from "./AuthModal";
+import {
+  MAIN_CATEGORIES as MAIN_CATEGORIES_CONFIG,
+  OTHER_TOOLS_SECTIONS as OTHER_TOOLS_SECTIONS_CONFIG,
+  OTHER_TOOLS_PATHS,
+  TOOL_CATEGORIES as TOOL_CATEGORIES_CONFIG,
+} from "../lib/toolsConfig";
 
-// Main menu categories (Image Tools and Document Tools)
-const MAIN_CATEGORIES = [
-  {
-    label: "Image Tools",
-    paths: ["/convert", "/compress", "/image-to-pdf", "/extract-text"],
-    items: [
-      { href: "/convert", label: "Image Converter", popular: true, icon: Image },
-      { href: "/compress", label: "Image Compressor", popular: true, icon: Minimize2 },
-      { href: "/image-to-pdf", label: "Image to PDF", icon: FileImage },
-      { href: "/extract-text", label: "Extract Text (OCR)", icon: ScanLine },
-    ],
-  },
-  {
-    label: "Document Tools",
-    paths: ["/doc-to-pdf", "/pdf-to-doc", "/scanner", "/merge-pdf", "/compress-pdf", "/pdf-unlock-protect"],
-    items: [
-      { href: "/doc-to-pdf", label: "Doc to PDF", popular: true, icon: FileText },
-      { href: "/pdf-to-doc", label: "PDF to DOCX/TXT", icon: Type },
-      { href: "/merge-pdf", label: "Merge PDF", icon: Merge },
-      { href: "/compress-pdf", label: "Compress PDF", icon: Minimize2 },
-      { href: "/pdf-unlock-protect", label: "PDF Unlock/Protect", popular: true, icon: Lock },
-      { href: "/scanner", label: "Document Scanner", popular: true, icon: ScanLine },
-    ],
-  },
-];
+const ICON_MAP = {
+  Image, FileText, Video, Music, QrCode, Link2, Archive, Lock, Shield, Globe,
+  Mail, Phone, Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator,
+};
 
-// Other Tools mega menu sections
-const OTHER_TOOLS_SECTIONS = [
-  {
-    title: "Video Tools",
-    paths: ["/video-convert", "/video-compress", "/video-trim"],
-    items: [
-      { href: "/video-convert", label: "Video Converter", popular: true, icon: Video },
-      { href: "/video-compress", label: "Video Compressor", icon: Minimize2 },
-      { href: "/video-trim", label: "Video Trimmer", icon: ScanLine },
-    ],
-  },
-  {
-    title: "Audio Tools",
-    paths: ["/audio-convert", "/text-to-speech", "/speech-to-text"],
-    items: [
-      { href: "/audio-convert", label: "Audio Converter", icon: Music },
-      { href: "/text-to-speech", label: "Text to Speech", icon: Type },
-      { href: "/speech-to-text", label: "Speech to Text", popular: true, icon: Music },
-    ],
-  },
-  {
-    title: "Utilities",
-    paths: ["/qr-barcode", "/url-shortener", "/file-to-zip"],
-    items: [
-      { href: "/qr-barcode", label: "QR & Barcode", popular: true, icon: QrCode },
-      { href: "/url-shortener", label: "URL Shortener", icon: Link2 },
-      { href: "/file-to-zip", label: "File to ZIP", popular: true, icon: Archive },
-    ],
-  },
-  {
-    title: "Security and Privacy",
-    paths: ["/password-generator", "/password-strength-checker", "/ip-lookup", "/whois-checker", "/metadata-remover", "/fake-email-generator", "/website-security-score", "/email-reputation-checker", "/phone-validator", "/data-breach-checker", "/api-status-checker"],
-    items: [
-      { href: "/password-generator", label: "Password Generator", popular: true, icon: Lock },
-      { href: "/password-strength-checker", label: "Password Strength Checker", icon: Shield },
-      { href: "/ip-lookup", label: "IP Address Lookup", icon: Globe },
-      { href: "/whois-checker", label: "Whois Checker", popular: true, icon: Globe },
-      { href: "/metadata-remover", label: "Metadata Remover", icon: FileImage },
-      { href: "/fake-email-generator", label: "Fake Email Generator", popular: true, icon: Mail },
-      { href: "/website-security-score", label: "Website Security Score", popular: true, icon: Shield },
-      { href: "/email-reputation-checker", label: "Email Reputation Checker", icon: Mail },
-      { href: "/phone-validator", label: "Phone Validator", icon: Phone },
-      { href: "/data-breach-checker", label: "Data Breach Checker", popular: true, icon: Database },
-      { href: "/api-status-checker", label: "API Status Checker", popular: true, icon: Server },
-    ],
-  },
-];
+function withIcons(categories) {
+  return categories.map((cat) => ({
+    ...cat,
+    items: cat.items.map((item) => ({
+      ...item,
+      icon: ICON_MAP[item.iconKey] || FileText,
+    })),
+  }));
+}
 
-// All paths for "Other Tools" (for active state detection)
-const OTHER_TOOLS_PATHS = OTHER_TOOLS_SECTIONS.flatMap(section => section.paths);
+function withIconsSections(sections) {
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      icon: ICON_MAP[item.iconKey] || FileText,
+    })),
+  }));
+}
 
-// Combined categories for mobile menu
+const MAIN_CATEGORIES = withIcons(MAIN_CATEGORIES_CONFIG);
+const OTHER_TOOLS_SECTIONS = withIconsSections(OTHER_TOOLS_SECTIONS_CONFIG);
 const TOOL_CATEGORIES = [
   ...MAIN_CATEGORIES,
   {
     label: "Other Tools",
     paths: OTHER_TOOLS_PATHS,
-    items: OTHER_TOOLS_SECTIONS.flatMap(section => section.items),
+    items: OTHER_TOOLS_SECTIONS.flatMap((section) => section.items),
   },
 ];
 
@@ -184,8 +139,8 @@ export default function Navbar() {
                   variant={category.paths.includes(currentPath) ? "default" : "ghost"}
                   className={`flex items-center gap-1 text-sm transition-all duration-200 ${
                     openDropdown === category.label 
-                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" 
-                      : "hover:bg-green-50 dark:hover:bg-green-900/20"
+                      ? "bg-primary/10 text-slate-900 dark:text-slate-100" 
+                      : "hover:bg-primary/5 hover:text-slate-900 dark:hover:text-slate-100"
                   }`}
                   onClick={() =>
                     setOpenDropdown((prev) =>
@@ -206,34 +161,34 @@ export default function Navbar() {
                     onMouseEnter={() => handleDropdownEnter(category.label)}
                     onMouseLeave={handleDropdownLeave}
                   >
-                    <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm transition-all duration-200 min-w-[280px]">
-                      <div className="px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b border-green-100 dark:border-green-800">
-                        <h3 className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl overflow-hidden backdrop-blur-sm transition-all duration-200 min-w-[280px]">
+                      <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+                        <h3 className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                           {category.label}
                         </h3>
                       </div>
-                      <div className="py-2">
+                      <div className="py-1">
                         {category.items.map((item) => {
                           const Icon = item.icon || FileText;
                           return (
                             <Link key={item.href} href={item.href}>
                               <div
-                                className={`px-4 py-3 hover:bg-green-50 dark:hover:bg-green-900/10 cursor-pointer transition-all duration-200 text-sm flex items-center gap-3 group border-l-4 hover:pl-5 ${
+                                className={`px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-all duration-200 text-sm flex items-center gap-3 group border-l-2 ${
                                   currentPath === item.href
-                                    ? "bg-green-50 dark:bg-green-900/20 border-green-600 font-semibold"
-                                    : "border-transparent hover:border-green-300"
+                                    ? "bg-slate-100 dark:bg-slate-800 border-primary font-medium text-slate-900 dark:text-slate-100"
+                                    : "border-transparent text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 group-hover:text-slate-900 dark:group-hover:text-slate-100"
                                 }`}
                                 onClick={() => setOpenDropdown(null)}
                               >
                                 <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
                                   currentPath === item.href 
-                                    ? "text-green-600" 
-                                    : "text-gray-500 group-hover:text-green-600"
+                                    ? "text-primary" 
+                                    : "text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-200"
                                 }`} />
                                 <span className="flex-1 whitespace-nowrap">{item.label}</span>
                                 {item.popular && (
-                                  <span className="ml-auto px-2 py-0.5 text-[10px] font-semibold bg-orange-500 text-white rounded-md leading-none shadow-sm flex-shrink-0">
-                                    Popular
+                                  <span className="ml-auto px-2 py-1 text-[10px] font-semibold bg-orange-400 text-white rounded-sm leading-none shadow-sm flex-shrink-0">
+                                    Trending
                                   </span>
                                 )}
                               </div>
@@ -257,8 +212,8 @@ export default function Navbar() {
                 variant={OTHER_TOOLS_PATHS.includes(currentPath) ? "default" : "ghost"}
                 className={`flex items-center gap-1 text-sm transition-all duration-200 ${
                   openDropdown === "Other Tools" 
-                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" 
-                    : "hover:bg-green-50 dark:hover:bg-green-900/20"
+                    ? "bg-primary/10 text-slate-900 dark:text-slate-100" 
+                    : "hover:bg-primary/5 hover:text-slate-900 dark:hover:text-slate-100"
                 }`}
                 onClick={() =>
                   setOpenDropdown((prev) =>
@@ -279,15 +234,15 @@ export default function Navbar() {
                   onMouseEnter={() => handleDropdownEnter("Other Tools")}
                   onMouseLeave={handleDropdownLeave}
                 >
-                  <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm animate-in fade-in-0 zoom-in-95 duration-200">
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl overflow-hidden backdrop-blur-sm animate-in fade-in-0 zoom-in-95 duration-200">
                     <div className="flex gap-0">
                       {OTHER_TOOLS_SECTIONS.map((section, index) => (
                         <div
                           key={section.title}
-                          className={`${index > 0 ? "border-l-2 border-gray-200 dark:border-gray-700" : ""}`}
+                          className={`${index > 0 ? "border-l border-slate-200 dark:border-slate-700" : ""}`}
                         >
-                          <div className="px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b-2 border-green-100 dark:border-green-800">
-                            <h3 className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">
+                          <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                               {section.title}
                             </h3>
                           </div>
@@ -297,22 +252,22 @@ export default function Navbar() {
                               return (
                                 <Link key={item.href} href={item.href}>
                               <div
-                                    className={`px-4 py-3 hover:bg-green-50 dark:hover:bg-green-900/10 cursor-pointer transition-all duration-200 text-sm flex items-center gap-3 group border-l-4 hover:pl-5 ${
+                                    className={`px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-all duration-200 text-sm flex items-center gap-3 group border-l-2 ${
                                       currentPath === item.href
-                                        ? "bg-green-50 dark:bg-green-900/20 border-green-600 font-semibold"
-                                        : "border-transparent hover:border-green-300"
+                                        ? "bg-slate-100 dark:bg-slate-800 border-primary font-medium text-slate-900 dark:text-slate-100"
+                                        : "border-transparent text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 group-hover:text-slate-900 dark:group-hover:text-slate-100"
                                     }`}
                                     onClick={() => setOpenDropdown(null)}
                                   >
                                     <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
                                       currentPath === item.href 
-                                        ? "text-green-600" 
-                                        : "text-gray-500 group-hover:text-green-600"
+                                        ? "text-primary" 
+                                        : "text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-200"
                                     }`} />
                                     <span className="flex-1 whitespace-nowrap">{item.label}</span>
                                     {item.popular && (
-                                      <span className="ml-auto px-2 py-0.5 text-[10px] font-semibold bg-orange-500 text-white rounded-md leading-none flex-shrink-0 shadow-sm">
-                                        Popular
+                                      <span className="ml-auto px-2 py-1 text-[10px] font-semibold bg-orange-400 text-white rounded-sm leading-none flex-shrink-0 shadow-sm">
+                                        Trending
                                       </span>
                                     )}
                                   </div>
@@ -449,7 +404,7 @@ export default function Navbar() {
                             <span>{item.label}</span>
                             {item.popular && (
                               <span className="ml-2 px-1 py-0.5 text-[9px] font-semibold bg-orange-500 text-white rounded leading-none">
-                                Popular
+                                Trending
                               </span>
                             )}
                           </div>

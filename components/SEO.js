@@ -2,7 +2,7 @@ import Head from "next/head";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
 const siteName = "ConvertMastery";
-const defaultDescription = "Free online file converter and compressor. Convert images, videos, documents, and audio files. Fast, secure, and privacy-first. Sign up to access all features and save your files in My Orders.";
+const defaultDescription = "Free online file converter and compressor. Image, video, document, and audio tools. Security and privacy: password generator, IP lookup, whois, metadata remover, fake email, URL shortener, QR code. Sign up to save files in My Orders.";
 
 export default function SEO({
   title,
@@ -16,7 +16,7 @@ export default function SEO({
 }) {
   const fullTitle = title ? `${title} | ${siteName}` : `${siteName} - Free File Converter & Compressor`;
   const canonicalUrl = url ? `${siteUrl}${url}` : siteUrl;
-  const defaultKeywords = "file converter, image converter, video converter, document converter, audio converter, file compressor, HEIC converter, JPG converter, PNG converter, WebP converter, PDF converter, free online tools, privacy-first, secure file conversion";
+  const defaultKeywords = "file converter, image converter, video converter, document converter, audio converter, file compressor, HEIC converter, password generator, IP lookup, whois checker, metadata remover, fake email, URL shortener, QR code, PDF tools, security tools, privacy tools, free online tools, privacy-first, secure file conversion";
   const metaKeywords = keywords ? `${defaultKeywords}, ${keywords}` : defaultKeywords;
 
   return (

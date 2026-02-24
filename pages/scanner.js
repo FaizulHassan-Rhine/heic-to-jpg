@@ -34,6 +34,9 @@ import {
 	RefreshCw,
 	Sparkles,
 	X,
+	Type,
+	PenLine,
+	Hash,
 } from "lucide-react";
 
 // ─────────────────────────── HELPERS ───────────────────────────
@@ -233,6 +236,124 @@ function canvasToBlob(canvas, type = "image/jpeg", quality = 0.92) {
 
 function canvasToDataURL(canvas, type = "image/jpeg", quality = 0.92) {
 	return canvas.toDataURL(type, quality);
+}
+
+// Draw overlay options (custom text, watermark, signature, page number) onto a canvas
+async function drawOverlaysOnCanvas(canvas, opts) {
+	const {
+		customText = "",
+		customTextColor = "#000000",
+		customTextPosition = "footer",
+		watermarkEnabled = false,
+		watermarkText = "",
+		watermarkColor = "#000000",
+		watermarkPosition: wmPos = "center",
+		signatureDataUrl = null,
+		signaturePosition: sigPos = "bottom-right",
+		signatureMaxWidth = 120,
+		signatureMaxHeight = 50,
+		pageNumEnabled = false,
+		pageNumFormat = "1 of N",
+		pageNumPosition = "bottom-center",
+		pageNumColor = "#000000",
+		pageIndex = 0,
+		totalPages = 1,
+	} = opts || {};
+
+	const out = document.createElement("canvas");
+	out.width = canvas.width;
+	out.height = canvas.height;
+	const ctx = out.getContext("2d");
+	ctx.drawImage(canvas, 0, 0);
+
+	const w = out.width;
+	const h = out.height;
+	const pad = Math.max(12, Math.min(w, h) * 0.02);
+	const fontSize = Math.max(10, Math.min(w, h) * 0.025);
+	const fontSizeSmall = Math.max(9, fontSize * 0.85);
+
+	const isCustomPos = (p) => p && typeof p === "object" && typeof p.xPercent === "number" && typeof p.yPercent === "number";
+
+	// Custom text (header/footer/center or custom xPercent,yPercent)
+	if (customText && customText.trim()) {
+		ctx.save();
+		ctx.font = `bold ${fontSize}px Arial`;
+		ctx.fillStyle = customTextColor;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		let x = w / 2, y = h / 2;
+		if (isCustomPos(customTextPosition)) {
+			x = (customTextPosition.xPercent / 100) * w;
+			y = (customTextPosition.yPercent / 100) * h;
+		} else if (customTextPosition === "header") y = pad + fontSize / 2;
+		else if (customTextPosition === "footer") y = h - pad - fontSize / 2;
+		ctx.fillText(customText.trim(), x, y);
+		ctx.restore();
+	}
+
+	// Watermark (diagonal, center or custom position)
+	if (watermarkEnabled && watermarkText && watermarkText.trim()) {
+		ctx.save();
+		ctx.globalAlpha = 0.35;
+		ctx.font = `bold ${Math.min(48, w * 0.08)}px Arial`;
+		ctx.fillStyle = watermarkColor;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		const wx = isCustomPos(wmPos) ? (wmPos.xPercent / 100) * w : w / 2;
+		const wy = isCustomPos(wmPos) ? (wmPos.yPercent / 100) * h : h / 2;
+		ctx.translate(wx, wy);
+		ctx.rotate(-Math.PI / 4);
+		ctx.fillText(watermarkText.trim(), 0, 0);
+		ctx.restore();
+	}
+
+	// Signature image (async load)
+	if (signatureDataUrl) {
+		await new Promise((resolve, reject) => {
+			const img = new window.Image();
+			img.crossOrigin = "anonymous";
+			img.onload = () => {
+				const scale = Math.min(signatureMaxWidth / img.width, signatureMaxHeight / img.height, 1);
+				const sw = img.width * scale;
+				const sh = img.height * scale;
+				let sx, sy;
+				if (isCustomPos(sigPos)) {
+					sx = (sigPos.xPercent / 100) * w - sw / 2;
+					sy = (sigPos.yPercent / 100) * h - sh / 2;
+				} else {
+					sy = h - sh - pad;
+					if (sigPos === "bottom-right") sx = w - sw - pad;
+					else if (sigPos === "bottom-center") sx = (w - sw) / 2;
+					else sx = pad;
+				}
+				ctx.drawImage(img, sx, sy, sw, sh);
+				resolve();
+			};
+			img.onerror = reject;
+			img.src = signatureDataUrl;
+		});
+	}
+
+	// Page number
+	if (pageNumEnabled && totalPages >= 1) {
+		const num = pageIndex + 1;
+		let label = `${num}`;
+		if (pageNumFormat === "1 of N") label = `${num} of ${totalPages}`;
+		else if (pageNumFormat === "Page 1") label = `Page ${num}`;
+		ctx.save();
+		ctx.font = `${fontSizeSmall}px Arial`;
+		ctx.fillStyle = pageNumColor;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		let y = h - pad - fontSizeSmall / 2;
+		let x = w / 2;
+		if (pageNumPosition === "bottom-left") x = pad + 20;
+		else if (pageNumPosition === "bottom-right") x = w - pad - 20;
+		ctx.fillText(label, x, y);
+		ctx.restore();
+	}
+
+	return out;
 }
 
 // ─────────────────────────── STEP INDICATOR ───────────────────────────
@@ -754,11 +875,113 @@ export default function Scanner() {
 	// Export settings
 	const [exportFormat, setExportFormat] = useState("pdf"); // pdf, jpg, png
 	const [exportQuality, setExportQuality] = useState("high"); // high, medium, low
-	const [watermarkText, setWatermarkText] = useState(""); // Watermark text
+	const [watermarkText, setWatermarkText] = useState("");
 	const [watermarkEnabled, setWatermarkEnabled] = useState(false);
+	const [watermarkColor, setWatermarkColor] = useState("#000000");
+	// Custom text (header/footer/center or custom { xPercent, yPercent })
+	const [customText, setCustomText] = useState("");
+	const [customTextColor, setCustomTextColor] = useState("#000000");
+	const [customTextPosition, setCustomTextPosition] = useState("footer"); // "header"|"footer"|"center"|{ xPercent, yPercent }
+	// Watermark position: "center"|{ xPercent, yPercent }
+	const [watermarkPosition, setWatermarkPosition] = useState("center");
+	// Signature: "bottom-left"|"bottom-center"|"bottom-right"|{ xPercent, yPercent }
+	const [signatureEnabled, setSignatureEnabled] = useState(false);
+	const [signatureDataUrl, setSignatureDataUrl] = useState(null);
+	const [signaturePosition, setSignaturePosition] = useState("bottom-right");
+	// Preview image rect (for overlay positioning on Enhance step)
+	const [previewImageRect, setPreviewImageRect] = useState(null);
+	const [draggingOverlay, setDraggingOverlay] = useState(null); // "text"|"watermark"|"signature"|null
+	const enhancePreviewRef = useRef(null);
+	const enhanceImageRef = useRef(null);
+	// Pagination / page numbers
+	const [pageNumbersEnabled, setPageNumbersEnabled] = useState(false);
+	const [pageNumberFormat, setPageNumberFormat] = useState("1 of N"); // "1", "1 of N", "Page 1"
+	const [pageNumberPosition, setPageNumberPosition] = useState("bottom-center");
+	const [pageNumberColor, setPageNumberColor] = useState("#000000");
+	// Apply overlays to: "all" | "current" (this page only)
+	const [overlayApplyTo, setOverlayApplyTo] = useState("all");
 
 	const cropContainerRef = useRef(null);
 	const fileInputRef = useRef(null);
+	const signatureInputRef = useRef(null);
+
+	// Measure preview image rect on Enhance step for overlay positioning
+	useEffect(() => {
+		if (step !== 2 || !enhancePreviewRef.current || !enhanceImageRef.current) {
+			if (step !== 2) setPreviewImageRect(null);
+			return;
+		}
+		const updateRect = () => {
+			const container = enhancePreviewRef.current;
+			const img = enhanceImageRef.current;
+			if (!container || !img) return;
+			const cr = container.getBoundingClientRect();
+			const ir = img.getBoundingClientRect();
+			setPreviewImageRect({
+				left: ir.left - cr.left,
+				top: ir.top - cr.top,
+				width: ir.width,
+				height: ir.height,
+				containerWidth: cr.width,
+				containerHeight: cr.height,
+			});
+		};
+		const img = enhanceImageRef.current;
+		const runAfterLayout = () => requestAnimationFrame(updateRect);
+		runAfterLayout();
+		if (img && img.complete) runAfterLayout();
+		else if (img) img.addEventListener("load", runAfterLayout);
+		const ro = new ResizeObserver(runAfterLayout);
+		ro.observe(enhancePreviewRef.current);
+		return () => {
+			if (img) img.removeEventListener("load", runAfterLayout);
+			ro.disconnect();
+		};
+	}, [step, activePageIdx, pages]);
+
+	// Drag overlay on Enhance preview: update position from mouse (image-relative %)
+	const getImagePercentFromEvent = useCallback((e) => {
+		const rect = previewImageRect;
+		const container = enhancePreviewRef.current;
+		if (!rect || !container) return null;
+		const cr = container.getBoundingClientRect();
+		const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+		const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+		const mx = clientX - cr.left;
+		const my = clientY - cr.top;
+		const ix = mx - rect.left;
+		const iy = my - rect.top;
+		if (ix < 0 || ix > rect.width || iy < 0 || iy > rect.height) return null;
+		const xPercent = Math.max(0, Math.min(100, (ix / rect.width) * 100));
+		const yPercent = Math.max(0, Math.min(100, (iy / rect.height) * 100));
+		return { xPercent, yPercent };
+	}, [previewImageRect]);
+
+	const handleOverlayDragMove = useCallback((e) => {
+		if (!draggingOverlay) return;
+		e.preventDefault();
+		const pos = getImagePercentFromEvent(e);
+		if (!pos) return;
+		if (draggingOverlay === "text") setCustomTextPosition(pos);
+		else if (draggingOverlay === "watermark") setWatermarkPosition(pos);
+		else if (draggingOverlay === "signature") setSignaturePosition(pos);
+	}, [draggingOverlay, getImagePercentFromEvent]);
+
+	const handleOverlayDragEnd = useCallback(() => setDraggingOverlay(null), []);
+
+	useEffect(() => {
+		if (!draggingOverlay) return;
+		window.addEventListener("mousemove", handleOverlayDragMove);
+		window.addEventListener("mouseup", handleOverlayDragEnd);
+		window.addEventListener("touchmove", handleOverlayDragMove, { passive: false });
+		window.addEventListener("touchend", handleOverlayDragEnd);
+		return () => {
+			window.removeEventListener("mousemove", handleOverlayDragMove);
+			window.removeEventListener("mouseup", handleOverlayDragEnd);
+			window.removeEventListener("touchmove", handleOverlayDragMove);
+			window.removeEventListener("touchend", handleOverlayDragEnd);
+		};
+	}, [draggingOverlay, handleOverlayDragMove, handleOverlayDragEnd]);
 
 	// ── Navigation ──
 	const goToStep = (s) => {
@@ -943,9 +1166,27 @@ export default function Scanner() {
 		setProcessing(true);
 
 		const quality = qualityMap[exportQuality];
+		const applyOverlaysToThisPage = (i) =>
+			overlayApplyTo === "all" || (overlayApplyTo === "current" && i === activePageIdx);
+		const overlayOptsBase = {
+			customText: customText.trim() || "",
+			customTextColor,
+			customTextPosition,
+			watermarkEnabled,
+			watermarkText: watermarkText.trim() || "",
+			watermarkColor,
+			watermarkPosition,
+			signatureDataUrl: signatureEnabled && signatureDataUrl ? signatureDataUrl : null,
+			signaturePosition,
+			signatureMaxWidth: 140,
+			signatureMaxHeight: 56,
+			pageNumEnabled: pageNumbersEnabled,
+			pageNumFormat: pageNumberFormat,
+			pageNumPosition: pageNumberPosition,
+			pageNumColor: pageNumberColor,
+		};
 
 		if (exportFormat === "pdf") {
-			// Dynamically import pdf-lib
 			const { PDFDocument } = await import('pdf-lib');
 			const pdfDoc = await PDFDocument.create();
 
@@ -953,30 +1194,11 @@ export default function Scanner() {
 				let canvas = pages[i].filteredCanvas || pages[i].croppedCanvas;
 				if (!canvas) continue;
 
-				// Apply watermark if enabled
-				if (watermarkEnabled && watermarkText) {
-					const watermarkedCanvas = document.createElement("canvas");
-					watermarkedCanvas.width = canvas.width;
-					watermarkedCanvas.height = canvas.height;
-					const ctx = watermarkedCanvas.getContext("2d");
-					ctx.drawImage(canvas, 0, 0);
-					
-					// Draw watermark
-					ctx.save();
-					ctx.globalAlpha = 0.3;
-					ctx.font = "bold 48px Arial";
-					ctx.fillStyle = "#000000";
-					ctx.textAlign = "center";
-					ctx.textBaseline = "middle";
-					ctx.translate(canvas.width / 2, canvas.height / 2);
-					ctx.rotate(-Math.PI / 4);
-					ctx.fillText(watermarkText, 0, 0);
-					ctx.restore();
-					
-					canvas = watermarkedCanvas;
+				const totalPagesForOverlay = overlayApplyTo === "current" && applyOverlaysToThisPage(i) ? 1 : pages.length;
+				if (applyOverlaysToThisPage(i)) {
+					canvas = await drawOverlaysOnCanvas(canvas, { ...overlayOptsBase, pageIndex: overlayApplyTo === "current" ? 0 : i, totalPages: totalPagesForOverlay });
 				}
 
-				// Convert canvas to blob, then to array buffer
 				const blob = await canvasToBlob(canvas, "image/jpeg", quality);
 				const imageBytes = await blob.arrayBuffer();
 				const image = await pdfDoc.embedJpg(imageBytes);
@@ -1026,30 +1248,10 @@ export default function Scanner() {
 			for (let i = 0; i < pages.length; i++) {
 				let canvas = pages[i].filteredCanvas || pages[i].croppedCanvas;
 				if (!canvas) continue;
-				
-				// Apply watermark if enabled
-				if (watermarkEnabled && watermarkText) {
-					const watermarkedCanvas = document.createElement("canvas");
-					watermarkedCanvas.width = canvas.width;
-					watermarkedCanvas.height = canvas.height;
-					const ctx = watermarkedCanvas.getContext("2d");
-					ctx.drawImage(canvas, 0, 0);
-					
-					// Draw watermark
-					ctx.save();
-					ctx.globalAlpha = 0.3;
-					ctx.font = "bold 48px Arial";
-					ctx.fillStyle = "#000000";
-					ctx.textAlign = "center";
-					ctx.textBaseline = "middle";
-					ctx.translate(canvas.width / 2, canvas.height / 2);
-					ctx.rotate(-Math.PI / 4);
-					ctx.fillText(watermarkText, 0, 0);
-					ctx.restore();
-					
-					canvas = watermarkedCanvas;
+				const totalPagesForOverlay = overlayApplyTo === "current" && applyOverlaysToThisPage(i) ? 1 : pages.length;
+				if (applyOverlaysToThisPage(i)) {
+					canvas = await drawOverlaysOnCanvas(canvas, { ...overlayOptsBase, pageIndex: overlayApplyTo === "current" ? 0 : i, totalPages: totalPagesForOverlay });
 				}
-				
 				const blob = await canvasToBlob(canvas, mimeType, quality);
 				const url = URL.createObjectURL(blob);
 				const a = document.createElement("a");
@@ -1069,7 +1271,29 @@ export default function Scanner() {
 		}
 
 		setProcessing(false);
-	}, [pages, exportFormat, exportQuality, user, trackUsage]);
+	}, [
+		pages,
+		exportFormat,
+		exportQuality,
+		watermarkEnabled,
+		watermarkText,
+		watermarkColor,
+		customText,
+		customTextColor,
+		customTextPosition,
+		signatureEnabled,
+		signatureDataUrl,
+		signaturePosition,
+		pageNumbersEnabled,
+		pageNumberFormat,
+		pageNumberPosition,
+		pageNumberColor,
+		watermarkPosition,
+		overlayApplyTo,
+		activePageIdx,
+		user,
+		trackUsage,
+	]);
 
 	// ── Active Page ──
 	const activePage = pages[activePageIdx] || null;
@@ -1415,14 +1639,119 @@ export default function Scanner() {
 					</div>
 				)}
 
-				{/* Preview with Before/After */}
+				{/* Preview with Before/After and draggable overlays */}
 				<div className="bg-muted/30 rounded-2xl p-4 border">
-					<div className="relative mx-auto overflow-hidden rounded-xl bg-white" style={{ maxHeight: "55vh" }}>
+					<div
+						ref={enhancePreviewRef}
+						className="relative mx-auto overflow-hidden rounded-xl bg-white"
+						style={{ maxHeight: "55vh" }}
+					>
 						<img
+							ref={enhanceImageRef}
 							src={showBefore ? originalUrl : previewUrl}
 							alt="Preview"
 							className="w-full h-auto max-h-[55vh] object-contain transition-opacity duration-300"
 						/>
+						{/* Draggable overlays on preview (only when not showBefore and we have rect) */}
+						{!showBefore && previewImageRect && (
+							<div className="absolute inset-0 pointer-events-none">
+								<div className="absolute pointer-events-auto" style={{
+									left: previewImageRect.left,
+									top: previewImageRect.top,
+									width: previewImageRect.width,
+									height: previewImageRect.height,
+								}}>
+									{customText.trim() && (
+										<div
+											className={cn(
+												"absolute transform -translate-x-1/2 -translate-y-1/2 cursor-move select-none whitespace-nowrap font-bold text-shadow-md",
+												draggingOverlay === "text" && "ring-2 ring-primary ring-offset-1 rounded"
+											)}
+											style={{
+												left: typeof customTextPosition === "object" && customTextPosition
+													? `${customTextPosition.xPercent}%` : "50%",
+												top: typeof customTextPosition === "object" && customTextPosition
+													? `${customTextPosition.yPercent}%` : (customTextPosition === "header" ? "5%" : customTextPosition === "footer" ? "95%" : "50%"),
+												color: customTextColor,
+												fontSize: "clamp(12px, 2.5vw, 18px)",
+											}}
+											onMouseDown={(e) => {
+												e.preventDefault();
+												if (typeof customTextPosition !== "object") {
+													const preset = customTextPosition === "header" ? { xPercent: 50, yPercent: 8 } : customTextPosition === "footer" ? { xPercent: 50, yPercent: 92 } : { xPercent: 50, yPercent: 50 };
+													setCustomTextPosition(preset);
+												}
+												setDraggingOverlay("text");
+											}}
+											onTouchStart={(e) => {
+												e.preventDefault();
+												if (typeof customTextPosition !== "object") {
+													const preset = customTextPosition === "header" ? { xPercent: 50, yPercent: 8 } : customTextPosition === "footer" ? { xPercent: 50, yPercent: 92 } : { xPercent: 50, yPercent: 50 };
+													setCustomTextPosition(preset);
+												}
+												setDraggingOverlay("text");
+											}}
+										>
+											{customText.trim()}
+										</div>
+									)}
+									{watermarkEnabled && watermarkText.trim() && (
+										<div
+											className={cn(
+												"absolute transform -translate-x-1/2 -translate-y-1/2 cursor-move select-none whitespace-nowrap font-bold opacity-60 -rotate-45",
+												draggingOverlay === "watermark" && "ring-2 ring-primary ring-offset-1 rounded"
+											)}
+											style={{
+												left: typeof watermarkPosition === "object" && watermarkPosition
+													? `${watermarkPosition.xPercent}%` : "50%",
+												top: typeof watermarkPosition === "object" && watermarkPosition
+													? `${watermarkPosition.yPercent}%` : "50%",
+												color: watermarkColor,
+												fontSize: "clamp(14px, 3vw, 24px)",
+											}}
+											onMouseDown={(e) => {
+												e.preventDefault();
+												if (typeof watermarkPosition !== "object") setWatermarkPosition({ xPercent: 50, yPercent: 50 });
+												setDraggingOverlay("watermark");
+											}}
+											onTouchStart={(e) => {
+												e.preventDefault();
+												if (typeof watermarkPosition !== "object") setWatermarkPosition({ xPercent: 50, yPercent: 50 });
+												setDraggingOverlay("watermark");
+											}}
+										>
+											{watermarkText.trim()}
+										</div>
+									)}
+									{signatureEnabled && signatureDataUrl && (
+										<div
+											className={cn(
+												"absolute w-24 h-10 transform -translate-x-1/2 -translate-y-1/2 cursor-move select-none",
+												draggingOverlay === "signature" && "ring-2 ring-primary ring-offset-1 rounded"
+											)}
+											style={{
+												left: typeof signaturePosition === "object" && signaturePosition
+													? `${signaturePosition.xPercent}%` : (signaturePosition === "bottom-right" ? "85%" : signaturePosition === "bottom-center" ? "50%" : "15%"),
+												top: typeof signaturePosition === "object" && signaturePosition
+													? `${signaturePosition.yPercent}%` : "92%",
+											}}
+											onMouseDown={(e) => {
+												e.preventDefault();
+												if (typeof signaturePosition !== "object") setSignaturePosition({ xPercent: signaturePosition === "bottom-right" ? 85 : signaturePosition === "bottom-center" ? 50 : 15, yPercent: 92 });
+												setDraggingOverlay("signature");
+											}}
+											onTouchStart={(e) => {
+												e.preventDefault();
+												if (typeof signaturePosition !== "object") setSignaturePosition({ xPercent: signaturePosition === "bottom-right" ? 85 : signaturePosition === "bottom-center" ? 50 : 15, yPercent: 92 });
+												setDraggingOverlay("signature");
+											}}
+										>
+											<img src={signatureDataUrl} alt="Signature" className="w-full h-full object-contain pointer-events-none" />
+										</div>
+									)}
+								</div>
+							</div>
+						)}
 						{/* Before/After toggle */}
 						<button
 							onMouseDown={() => setShowBefore(true)}
@@ -1430,7 +1759,7 @@ export default function Scanner() {
 							onMouseLeave={() => setShowBefore(false)}
 							onTouchStart={() => setShowBefore(true)}
 							onTouchEnd={() => setShowBefore(false)}
-							className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-medium flex items-center gap-1.5 hover:bg-black/80 transition-colors"
+							className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-medium flex items-center gap-1.5 hover:bg-black/80 transition-colors z-10"
 						>
 							{showBefore ? (
 								<EyeOff className="w-3.5 h-3.5" />
@@ -1440,6 +1769,9 @@ export default function Scanner() {
 							{showBefore ? "Original" : "Hold to compare"}
 						</button>
 					</div>
+					{!showBefore && (customText.trim() || (watermarkEnabled && watermarkText.trim()) || (signatureEnabled && signatureDataUrl)) && (
+						<p className="text-xs text-muted-foreground mt-2 text-center">Drag text, watermark, or signature on the preview to move them.</p>
+					)}
 				</div>
 
 				{/* Filter selector */}
@@ -1475,6 +1807,134 @@ export default function Scanner() {
 								)}
 							</button>
 						))}
+					</div>
+				</div>
+
+				{/* Add text, watermark, signature, page numbers – same options as Export */}
+				<div className="space-y-4">
+					<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+						Add text, watermark, signature & page numbers
+					</h3>
+					<p className="text-xs text-muted-foreground">
+						Configure below. Choose whether to apply to this page only or all pages. These settings are used when you export.
+					</p>
+					{/* Apply to */}
+					<div className="flex flex-wrap items-center gap-3">
+						<span className="text-sm font-medium text-foreground">Apply to:</span>
+						<button
+							type="button"
+							onClick={() => setOverlayApplyTo("current")}
+							className={cn(
+								"px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
+								overlayApplyTo === "current"
+									? "bg-primary text-primary-foreground border-primary"
+									: "border-border hover:bg-muted/50"
+							)}
+						>
+							This page only
+						</button>
+						<button
+							type="button"
+							onClick={() => setOverlayApplyTo("all")}
+							className={cn(
+								"px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
+								overlayApplyTo === "all"
+									? "bg-primary text-primary-foreground border-primary"
+									: "border-border hover:bg-muted/50"
+							)}
+						>
+							All pages
+						</button>
+					</div>
+					{/* Add Text */}
+					<div className="bg-muted/30 rounded-xl p-4 border space-y-2">
+						<h4 className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
+							<Type className="w-3.5 h-3.5" /> Add text
+						</h4>
+						<input
+							type="text"
+							placeholder="Text on every page (e.g. title, footer)"
+							value={customText}
+							onChange={(e) => setCustomText(e.target.value)}
+							className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+						/>
+						{customText.trim() && (
+							<div className="flex flex-wrap items-center gap-2">
+								{["#000000", "#666666", "#dc2626", "#2563eb"].map((c) => (
+									<button key={c} type="button" onClick={() => setCustomTextColor(c)} className={cn("w-6 h-6 rounded border-2", customTextColor === c && "ring-2 ring-primary")} style={{ backgroundColor: c }} />
+								))}
+								<label className="flex items-center gap-1 text-xs"><input type="color" value={customTextColor} onChange={(e) => setCustomTextColor(e.target.value)} className="w-6 h-6 rounded border cursor-pointer" /> Color</label>
+								<span className="text-xs text-muted-foreground">Position:</span>
+								{["header", "footer", "center"].map((pos) => (
+									<button key={pos} type="button" onClick={() => setCustomTextPosition(pos)} className={cn("px-2 py-0.5 rounded text-xs capitalize border", customTextPosition === pos ? "bg-primary text-primary-foreground border-primary" : "border-border")}>{pos}</button>
+								))}
+								<button type="button" onClick={() => setCustomTextPosition({ xPercent: 50, yPercent: 50 })} className={cn("px-2 py-0.5 rounded text-xs border", typeof customTextPosition === "object" ? "bg-primary text-primary-foreground border-primary" : "border-border")}>Custom (drag on preview)</button>
+							</div>
+						)}
+					</div>
+					{/* Watermark */}
+					<div className="bg-muted/30 rounded-xl p-4 border space-y-2">
+						<h4 className="text-xs font-semibold text-muted-foreground uppercase">Watermark</h4>
+						<label className="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" checked={watermarkEnabled} onChange={(e) => setWatermarkEnabled(e.target.checked)} className="w-4 h-4 accent-primary" />
+							<span className="text-sm">Add watermark</span>
+						</label>
+						{watermarkEnabled && (
+							<>
+								<input type="text" placeholder="Watermark text" value={watermarkText} onChange={(e) => setWatermarkText(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg" />
+								<div className="flex flex-wrap gap-2">
+									{["#000000", "#666666", "#dc2626"].map((c) => (
+										<button key={c} type="button" onClick={() => setWatermarkColor(c)} className={cn("w-5 h-5 rounded border", watermarkColor === c && "ring-2 ring-primary")} style={{ backgroundColor: c }} />
+									))}
+									<label className="text-xs flex items-center gap-1"><input type="color" value={watermarkColor} onChange={(e) => setWatermarkColor(e.target.value)} className="w-5 h-5 rounded border cursor-pointer" /> Color</label>
+								</div>
+								<div className="flex flex-wrap gap-2 mt-1">
+									<button type="button" onClick={() => setWatermarkPosition("center")} className={cn("px-2 py-0.5 rounded text-xs border", watermarkPosition === "center" ? "bg-primary text-primary-foreground border-primary" : "border-border")}>Center</button>
+									<button type="button" onClick={() => setWatermarkPosition({ xPercent: 50, yPercent: 50 })} className={cn("px-2 py-0.5 rounded text-xs border", typeof watermarkPosition === "object" ? "bg-primary text-primary-foreground border-primary" : "border-border")}>Custom (drag on preview)</button>
+								</div>
+							</>
+						)}
+					</div>
+					{/* Signature */}
+					<div className="bg-muted/30 rounded-xl p-4 border space-y-2">
+						<h4 className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2"><PenLine className="w-3.5 h-3.5" /> Signature</h4>
+						<label className="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" checked={signatureEnabled} onChange={(e) => setSignatureEnabled(e.target.checked)} className="w-4 h-4 accent-primary" />
+							<span className="text-sm">Add signature image</span>
+						</label>
+						{signatureEnabled && (
+							<div className="flex flex-wrap items-center gap-2">
+								<Button type="button" variant="outline" size="sm" onClick={() => signatureInputRef.current?.click()}>{signatureDataUrl ? "Change image" : "Upload PNG/JPG"}</Button>
+								{signatureDataUrl && <img src={signatureDataUrl} alt="Signature" className="h-8 object-contain border rounded bg-white" />}
+								<span className="text-xs text-muted-foreground">Position:</span>
+								{["bottom-left", "bottom-center", "bottom-right"].map((pos) => (
+									<button key={pos} type="button" onClick={() => setSignaturePosition(pos)} className={cn("px-2 py-0.5 rounded text-xs border capitalize", signaturePosition === pos ? "bg-primary text-primary-foreground border-primary" : "border-border")}>{pos.replace("-", " ")}</button>
+								))}
+								<button type="button" onClick={() => setSignaturePosition({ xPercent: 50, yPercent: 85 })} className={cn("px-2 py-0.5 rounded text-xs border", typeof signaturePosition === "object" ? "bg-primary text-primary-foreground border-primary" : "border-border")}>Custom (drag on preview)</button>
+							</div>
+						)}
+					</div>
+					{/* Page numbers */}
+					<div className="bg-muted/30 rounded-xl p-4 border space-y-2">
+						<h4 className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2"><Hash className="w-3.5 h-3.5" /> Page numbers</h4>
+						<label className="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" checked={pageNumbersEnabled} onChange={(e) => setPageNumbersEnabled(e.target.checked)} className="w-4 h-4 accent-primary" />
+							<span className="text-sm">Add page numbers</span>
+						</label>
+						{pageNumbersEnabled && (
+							<div className="flex flex-wrap items-center gap-2">
+								{["1", "1 of N", "Page 1"].map((f) => (
+									<button key={f} type="button" onClick={() => setPageNumberFormat(f)} className={cn("px-2 py-0.5 rounded text-xs border", pageNumberFormat === f ? "bg-primary text-primary-foreground border-primary" : "border-border")}>{f}</button>
+								))}
+								{["bottom-left", "bottom-center", "bottom-right"].map((pos) => (
+									<button key={pos} type="button" onClick={() => setPageNumberPosition(pos)} className={cn("px-2 py-0.5 rounded text-xs border capitalize", pageNumberPosition === pos ? "bg-primary text-primary-foreground border-primary" : "border-border")}>{pos.replace("-", " ")}</button>
+								))}
+								{["#000000", "#666666", "#dc2626"].map((c) => (
+									<button key={c} type="button" onClick={() => setPageNumberColor(c)} className={cn("w-5 h-5 rounded border", pageNumberColor === c && "ring-2 ring-primary")} style={{ backgroundColor: c }} />
+								))}
+								<label className="text-xs flex items-center gap-1"><input type="color" value={pageNumberColor} onChange={(e) => setPageNumberColor(e.target.value)} className="w-5 h-5 rounded border cursor-pointer" /> Color</label>
+							</div>
+						)}
 					</div>
 				</div>
 
@@ -1529,38 +1989,8 @@ export default function Scanner() {
 				</div>
 			</div>
 
-			{/* Export Options */}
+			{/* Export Options: Format & Quality only (text, watermark, signature, page numbers are set on Enhance step) */}
 			<div className="space-y-5">
-				{/* Watermark */}
-				<div className="bg-muted/30 rounded-2xl p-5 border space-y-3">
-					<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-						Watermark
-					</h3>
-					<div className="space-y-3">
-						<label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-all">
-							<input
-								type="checkbox"
-								checked={watermarkEnabled}
-								onChange={(e) => setWatermarkEnabled(e.target.checked)}
-								className="w-5 h-5 accent-primary"
-							/>
-							<div>
-								<span className="font-semibold text-foreground block text-sm">Add Watermark</span>
-								<span className="text-xs text-muted-foreground">Add text watermark to scanned pages</span>
-							</div>
-						</label>
-						{watermarkEnabled && (
-							<input
-								type="text"
-								placeholder="Enter watermark text"
-								value={watermarkText}
-								onChange={(e) => setWatermarkText(e.target.value)}
-								className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-							/>
-						)}
-					</div>
-				</div>
-
 				<div className="grid md:grid-cols-2 gap-5">
 					{/* Format */}
 					<div className="bg-muted/30 rounded-2xl p-5 border space-y-3">

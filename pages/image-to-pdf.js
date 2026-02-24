@@ -7,18 +7,14 @@ import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import { PDFDocument } from "pdf-lib";
 import {
-  Loader2, CheckCircle, AlertCircle, FileImage, Trash2,
-  Upload, Download, RotateCcw, Settings2, FileText, ArrowRight
+  Loader2, FileImage, Trash2, Download, Settings2, FileText
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
-import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import Head from "next/head";
-import JSZip from "jszip";
 
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -34,7 +30,6 @@ const formatSize = (bytes) => {
 export default function ImageToPdf() {
   const { user, trackUsage } = useAuth();
   const [files, setFiles] = useState([]);
-  const [results, setResults] = useState({}); // { [filename]: { status, blob, size, pdfUrl } }
   const [processing, setProcessing] = useState(false);
   const [previewUrls, setPreviewUrls] = useState({});
 
@@ -68,15 +63,12 @@ export default function ImageToPdf() {
 
     setFiles(prev => [...prev, ...valid]);
     setPreviewUrls(prev => ({ ...prev, ...newPreviews }));
+    setCombinedPdfBlob(null); // clear so user converts again
   };
 
   const removeFile = (name) => {
     setFiles(prev => prev.filter(f => f.name !== name));
-    setResults(prev => {
-      const n = { ...prev };
-      delete n[name];
-      return n;
-    });
+    setCombinedPdfBlob(null); // clear combined PDF when files change
     if (previewUrls[name]) {
       URL.revokeObjectURL(previewUrls[name]);
       setPreviewUrls(prev => {
@@ -87,54 +79,49 @@ export default function ImageToPdf() {
     }
   };
 
-  // ── Conversion Logic ──
+  // ── Conversion Logic: single image → single PDF, multiple images → single PDF ──
 
-  const convertSingle = async (file) => {
-    try {
-      const pdfDoc = await PDFDocument.create();
-      let page;
+  const [combinedPdfBlob, setCombinedPdfBlob] = useState(null);
+  const [convertProgress, setConvertProgress] = useState(0); // 0..100 for overall
 
-      // Page sizes in points (72 dpi)
-      // A4: 595.28 x 841.89
-      // Letter: 612 x 792
-      let pageWidth, pageHeight;
+  // Build one PDF with all images as pages (one page per image)
+  const convertAllToSinglePdf = async (fileList) => {
+    const pdfDoc = await PDFDocument.create();
+    const total = fileList.length;
+    let pageWidth, pageHeight;
 
-      if (pageSize === "A4") {
-        pageWidth = 595.28;
-        pageHeight = 841.89;
-      } else if (pageSize === "Letter") {
-        pageWidth = 612;
-        pageHeight = 792;
-      }
+    if (pageSize === "A4") {
+      pageWidth = 595.28;
+      pageHeight = 841.89;
+    } else if (pageSize === "Letter") {
+      pageWidth = 612;
+      pageHeight = 792;
+    }
 
-      if (orientation === "Landscape" && pageSize !== "Fit") {
-        [pageWidth, pageHeight] = [pageHeight, pageWidth];
-      }
+    if (orientation === "Landscape" && pageSize !== "Fit") {
+      [pageWidth, pageHeight] = [pageHeight, pageWidth];
+    }
 
-      // Embed image
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      setConvertProgress(Math.round(((i + 0.5) / total) * 100));
+
       const imageBytes = await file.arrayBuffer();
       let image;
-      if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+      if (file.type === "image/jpeg" || file.type === "image/jpg") {
         image = await pdfDoc.embedJpg(imageBytes);
-      } else if (file.type === 'image/png') {
+      } else if (file.type === "image/png") {
         image = await pdfDoc.embedPng(imageBytes);
       } else {
-        // Try embedding as PNG if unknown (might fail for WEBP/HEIC if PDFlib doesn't support)
-        // Note: pdf-lib only supports JPG and PNG.
-        // If WEBP/HEIC, might need canvas conversion first.
-        // Assuming user uploads JPG/PNG for now or browser converted them in Dropzone...
-        // Wait, my Dropzone doesn't convert automatically yet unless configured. 
-        // But let's assume JPG/PNG for simplicity or try PNG embed.
-        // If error, we'll catch it.
         try {
           image = await pdfDoc.embedPng(imageBytes);
         } catch (e) {
-          throw new Error("Format not supported directly. Please convert to JPG/PNG first.");
+          throw new Error(`"${file.name}": format not supported. Use JPG or PNG.`);
         }
       }
 
       if (pageSize === "Fit") {
-        page = pdfDoc.addPage([image.width + margin * 2, image.height + margin * 2]);
+        const page = pdfDoc.addPage([image.width + margin * 2, image.height + margin * 2]);
         page.drawImage(image, {
           x: margin,
           y: margin,
@@ -142,141 +129,74 @@ export default function ImageToPdf() {
           height: image.height,
         });
       } else {
-        page = pdfDoc.addPage([pageWidth, pageHeight]);
-
-        // Calculate scale to fit within margins
-        const availableWidth = pageWidth - (margin * 2);
-        const availableHeight = pageHeight - (margin * 2);
-
-        const scale = Math.min(
-          availableWidth / image.width,
-          availableHeight / image.height
-        );
-
+        const page = pdfDoc.addPage([pageWidth, pageHeight]);
+        const availableWidth = pageWidth - margin * 2;
+        const availableHeight = pageHeight - margin * 2;
+        const scale = Math.min(availableWidth / image.width, availableHeight / image.height);
         const dims = image.scale(scale);
-
-        // Center content
         const x = margin + (availableWidth - dims.width) / 2;
         const y = margin + (availableHeight - dims.height) / 2;
-
-        page.drawImage(image, {
-          x,
-          y,
-          width: dims.width,
-          height: dims.height,
-        });
+        page.drawImage(image, { x, y, width: dims.width, height: dims.height });
       }
-
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-
-      return {
-        status: "done",
-        blob,
-        size: blob.size,
-        ext: "pdf"
-      };
-
-    } catch (e) {
-      console.error(e);
-      return { status: "error", error: e.message };
     }
+
+    setConvertProgress(100);
+    const pdfBytes = await pdfDoc.save();
+    return new Blob([pdfBytes], { type: "application/pdf" });
   };
 
   const processAll = async () => {
+    if (files.length === 0) return;
     setProcessing(true);
-    const newResults = { ...results };
+    setCombinedPdfBlob(null);
+    setConvertProgress(0);
 
-    // Mark pending
-    for (const f of files) {
-      if (!newResults[f.name] || newResults[f.name].status === "error") {
-        newResults[f.name] = { status: "processing", progress: 0 };
-      }
-    }
-    setResults({ ...newResults });
+    try {
+      const blob = await convertAllToSinglePdf(files);
+      setCombinedPdfBlob(blob);
 
-    const processedFiles = [];
-    for (const file of files) {
-      // Skip if already done
-      if (results[file.name]?.status === "done") continue;
-
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setResults(prev => {
-          const current = prev[file.name]?.progress || 0;
-          if (current < 90) {
-            return {
-              ...prev,
-              [file.name]: { ...prev[file.name], progress: Math.min(current + Math.random() * 15, 90) }
-            };
-          }
-          return prev;
-        });
-      }, 150);
-
-      const res = await convertSingle(file);
-      
-      clearInterval(progressInterval);
-      setResults(prev => ({ 
-        ...prev, 
-        [file.name]: { ...res, progress: 100 } 
-      }));
-      
-      // Collect file information
-      if (res.status === "done") {
-        const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
+      const processedFiles = [];
+      for (const file of files) {
+        const inputExt = file.name.split(".").pop()?.toLowerCase() || "";
         const inputThumbnail = await generateThumbnail(file).catch(() => null);
         processedFiles.push({
           inputName: file.name,
           inputSize: file.size,
           inputFormat: inputExt,
-          outputName: res.name || file.name.replace(/\.[^.]+$/, ".pdf"),
-          outputSize: res.size || 0,
+          outputName: "document.pdf",
+          outputSize: blob.size,
           outputFormat: "pdf",
           inputThumbnail: inputThumbnail || null,
           outputThumbnail: null,
         });
       }
-      
-      // Reset to done status after showing 100%
-      setTimeout(() => {
-        setResults(prev => ({ 
-          ...prev, 
-          [file.name]: res 
-        }));
-      }, 300);
-    }
 
-    // Track usage after all conversions complete
-    const successCount = processedFiles.length;
-    if (successCount > 0 && user && trackUsage) {
-      trackUsage("/image-to-pdf", successCount, successCount, {
-        tool: "Image to PDF",
-        filesProcessed: successCount,
-      }, processedFiles);
+      const successCount = files.length;
+      if (successCount > 0 && user && trackUsage) {
+        trackUsage("/image-to-pdf", successCount, successCount, {
+          tool: "Image to PDF",
+          filesProcessed: successCount,
+        }, processedFiles);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || "Conversion failed.");
+    } finally {
+      setProcessing(false);
+      setConvertProgress(0);
     }
-
-    setProcessing(false);
   };
 
-  const downloadAll = async () => {
-    const zip = new JSZip();
-    let count = 0;
-    files.forEach(f => {
-      const res = results[f.name];
-      if (res?.status === "done") {
-        const name = f.name.substring(0, f.name.lastIndexOf(".")) + ".pdf";
-        zip.file(name, res.blob);
-        count++;
-      }
-    });
-
-    if (count === 0) return;
-    const content = await zip.generateAsync({ type: "blob" });
+  const downloadPdf = () => {
+    if (!combinedPdfBlob) return;
+    const url = URL.createObjectURL(combinedPdfBlob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(content);
-    a.download = "images_to_pdf.zip";
+    a.href = url;
+    a.download = files.length === 1
+      ? (files[0].name.replace(/\.[^.]+$/, "") || "image") + ".pdf"
+      : "images-to-pdf.pdf";
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -408,89 +328,80 @@ export default function ImageToPdf() {
                 <div className="flex justify-between items-end border-b pb-4">
                   <div>
                     <h3 className="font-bold text-2xl text-gray-800">Files</h3>
-                    <p className="text-gray-500 text-sm mt-1">Review and convert to PDF</p>
+                    <p className="text-gray-500 text-sm mt-1">
+                      {files.length === 1 ? "1 image → 1 PDF" : `${files.length} images → 1 PDF`}. Review order and convert.
+                    </p>
                   </div>
-                  {Object.values(results).some(r => r.status === "done") && (
-                    <Button variant="outline" size="sm" onClick={downloadAll} className="h-9">
-                      <Download className="w-4 h-4 mr-2" /> Download Zip
+                  {combinedPdfBlob && (
+                    <Button
+                      onClick={downloadPdf}
+                      className="h-10 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg"
+                    >
+                      <Download className="w-4 h-4 mr-2" /> Download PDF
                     </Button>
                   )}
                 </div>
 
-                {files.map((file, idx) => {
-                  const res = results[file.name];
-                  const preview = previewUrls[file.name];
+                {processing && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm text-green-700 font-medium">
+                      <span>Combining {files.length} image{files.length === 1 ? "" : "s"} into 1 PDF...</span>
+                      <span>{convertProgress}%</span>
+                    </div>
+                    <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300"
+                        style={{ width: `${convertProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
+                {files.map((file, idx) => {
+                  const preview = previewUrls[file.name];
                   return (
                     <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group">
                       <div className="p-4 flex gap-5 items-center">
                         <div className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden relative border border-gray-200">
                           {preview ? (
-                            <img src={preview} className="w-full h-full object-cover" />
+                            <img src={preview} className="w-full h-full object-cover" alt="" />
                           ) : (
                             <FileImage className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                          )}
+                          {files.length > 1 && (
+                            <span className="absolute top-1 left-1 w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">
+                              {idx + 1}
+                            </span>
                           )}
                         </div>
 
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="flex justify-between items-start">
                             <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
-
-                            <div className="flex gap-2">
-                              {res?.status === "done" && (
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" onClick={() => {
-                                  const url = URL.createObjectURL(res.blob);
-                                  const a = document.createElement("a");
-                                  a.href = url;
-                                  a.download = file.name.split('.')[0] + ".pdf";
-                                  a.click();
-                                }}>
-                                  <Download className="w-4 h-4" />
-                                </Button>
-                              )}
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600 hover:bg-gray-50" onClick={() => removeFile(file.name)}>
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600 hover:bg-gray-50 flex-shrink-0" onClick={() => removeFile(file.name)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
-
                           <div className="flex flex-wrap items-center gap-3 text-sm">
                             <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
                               {formatSize(file.size)}
                             </Badge>
-                            <ArrowRight className="w-3 h-3 text-gray-300" />
-                            {res?.status === "done" ? (
-                              <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
-                                PDF Ready ({formatSize(res.size)})
-                              </Badge>
-                            ) : (
+                            {files.length > 1 && (
+                              <span className="text-gray-500 text-xs">Page {idx + 1} in PDF</span>
+                            )}
+                            {!combinedPdfBlob && !processing && (
                               <span className="text-gray-400 italic text-xs">Ready to convert</span>
                             )}
-
-                            {res?.status === "error" && (
-                              <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200">
-                                Error: {res.error}
+                            {combinedPdfBlob && (
+                              <Badge className="bg-green-100 text-green-700 border-green-200">
+                                In PDF
                               </Badge>
                             )}
                           </div>
                         </div>
                       </div>
-                      {res?.status === "processing" && (
-                        <div className="px-4 pb-4 space-y-1">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-green-600 font-medium">Processing...</span>
-                            <span className="text-green-600 font-bold">{Math.round(res.progress || 0)}%</span>
-                          </div>
-                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
-                              style={{ width: `${res.progress || 0}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
                     </Card>
-                  )
+                  );
                 })}
               </div>
             </div>

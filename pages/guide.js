@@ -1,14 +1,27 @@
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import SEO from "../components/SEO";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Zap, Shield, Download, FileImage, CheckCircle, ArrowRight, Users, Clock, Smartphone, Monitor } from "lucide-react";
 import { Button } from "../components/ui/button";
 import Link from "next/link";
+import { MAIN_CATEGORIES, OTHER_TOOLS_SECTIONS } from "../lib/toolsConfig";
 
 export default function Guide() {
+  const allCategoriesForGuide = [
+    ...MAIN_CATEGORIES.map((cat) => ({ title: cat.label, items: cat.items })),
+    ...OTHER_TOOLS_SECTIONS.map((sec) => ({ title: sec.title, items: sec.items })),
+  ];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEO
+        title="Documentation & Guide - All Tools"
+        description="Complete guide to ConvertMastery: image, video, document, and audio conversion; security and privacy tools (password generator, IP lookup, whois, metadata remover); utilities (QR code, URL shortener). How to use each tool."
+        keywords="ConvertMastery guide, file converter guide, image converter, video converter, document tools, security tools, privacy tools, how to convert HEIC, how to compress PDF"
+        url="/guide"
+      />
       <Navbar />
       
       <main className="flex-1">
@@ -19,7 +32,7 @@ export default function Guide() {
               Complete Guide to ConvertMastery
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Learn everything you need to know about converting and compressing images with our powerful, free tool.
+              Learn how to use our image, video, document, and audio tools—plus security, privacy, and utility tools. All free and privacy-first.
             </p>
           </div>
 
@@ -304,6 +317,43 @@ export default function Guide() {
                   </p>
                 </CardContent>
               </Card>
+            </div>
+          </section>
+
+          {/* All Tools by Category */}
+          <section id="all-tools" className="space-y-12">
+            <div className="text-center space-y-2">
+              <h2 className="text-4xl font-bold">All Tools by Category</h2>
+              <p className="text-lg text-muted-foreground">
+                Quick links to every converter, compressor, and utility on ConvertMastery
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              {allCategoriesForGuide.map((group) => (
+                <Card key={group.title} className="border-2">
+                  <CardHeader>
+                    <CardTitle>{group.title}</CardTitle>
+                    <CardDescription>
+                      {group.items.length} tool{group.items.length !== 1 ? "s" : ""}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {group.items.map((item) => (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </section>
 

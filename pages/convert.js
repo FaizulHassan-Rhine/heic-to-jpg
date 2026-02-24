@@ -940,7 +940,7 @@ export default function ConvertImage() {
                                     type="number"
                                     value={getCurrentSettings().resizeWidth}
                                     onChange={(e) => updateCurrentSettings({ resizeWidth: Number(e.target.value) })}
-                                    className="w-full px-2 py-1 text-sm border rounded-md"
+                                    className="input-theme"
                                     min="1"
                                   />
                                 </div>
@@ -950,7 +950,7 @@ export default function ConvertImage() {
                                     type="number"
                                     value={getCurrentSettings().resizeHeight}
                                     onChange={(e) => updateCurrentSettings({ resizeHeight: Number(e.target.value) })}
-                                    className="w-full px-2 py-1 text-sm border rounded-md"
+                                    className="input-theme"
                                     min="1"
                                   />
                                 </div>
@@ -960,7 +960,7 @@ export default function ConvertImage() {
                                 <select
                                   value={getCurrentSettings().resizeMode}
                                   onChange={(e) => updateCurrentSettings({ resizeMode: e.target.value })}
-                                  className="w-full px-2 py-1 text-sm border rounded-md"
+                                  className="input-theme"
                                 >
                                   <option value="fit">Fit (maintain aspect)</option>
                                   <option value="fill">Fill (crop to fit)</option>
@@ -1066,12 +1066,12 @@ export default function ConvertImage() {
                                 placeholder="Watermark text"
                                 value={getCurrentSettings().watermarkText}
                                 onChange={(e) => updateCurrentSettings({ watermarkText: e.target.value })}
-                                className="w-full px-2 py-1 text-sm border rounded-md"
+                                className="input-theme"
                               />
                               <select
                                 value={getCurrentSettings().watermarkPosition}
                                 onChange={(e) => updateCurrentSettings({ watermarkPosition: e.target.value })}
-                                className="w-full px-2 py-1 text-sm border rounded-md"
+                                className="input-theme"
                               >
                                 <option value="top-left">Top Left</option>
                                 <option value="top-right">Top Right</option>

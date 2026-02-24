@@ -56,4 +56,36 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Site-wide themed dropdowns and date/time pickers */
+  select:not([class*="rounded-none"]),
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    @apply min-w-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary;
+  }
+  select:not([class*="rounded-none"]):hover,
+  input[type="date"]:hover,
+  input[type="time"]:hover,
+  input[type="datetime-local"]:hover {
+    @apply border-slate-300 dark:border-slate-600;
+  }
+}
+
+@layer components {
+  /* Optional class for number/text inputs and to enforce theme on any input */
+  select.input-theme,
+  input.input-theme[type="date"],
+  input.input-theme[type="time"],
+  input.input-theme[type="datetime-local"],
+  input.input-theme[type="number"],
+  input.input-theme[type="text"] {
+    @apply w-full min-w-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary;
+  }
+  select.input-theme:hover,
+  input.input-theme[type="date"]:hover,
+  input.input-theme[type="time"]:hover,
+  input.input-theme[type="datetime-local"]:hover {
+    @apply border-slate-300 dark:border-slate-600;
+  }
 }

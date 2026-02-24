@@ -3,20 +3,27 @@ import Footer from "../components/Footer";
 import SEO from "../components/SEO";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { 
-  Zap, Shield, Download, Image, Video, FileText, Music, 
-  ArrowRight, CheckCircle, Sparkles, Lock, Clock, Globe, User, Save, Star
+import {
+  Zap, Shield, Download, Image, Video, FileText, Music,
+  ArrowRight, CheckCircle, Sparkles, Lock, Clock, Globe, User, Save, Star,
+  FileImage, ScanLine, Type, Minimize2, Merge, QrCode, Link2, Archive,
+  Mail, Phone, Database, Server, Calculator
 } from "lucide-react";
 import Link from "next/link";
+import { MAIN_CATEGORIES, OTHER_TOOLS_SECTIONS } from "../lib/toolsConfig";
+
+const ICON_MAP = {
+  Image, FileText, Video, Music, QrCode, Link2, Archive, Lock, Shield, Globe,
+  Mail, Phone, Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator,
+};
+
+// Six categories for landing – each card links to first tool in that category
+const LANDING_CATEGORIES = [
+  ...MAIN_CATEGORIES.map((c) => ({ label: c.label, href: c.items[0].href, iconKey: c.items[0].iconKey })),
+  ...OTHER_TOOLS_SECTIONS.map((s) => ({ label: s.title, href: s.items[0].href, iconKey: s.items[0].iconKey })),
+];
 
 export default function Home() {
-  const tools = [
-    { name: "Image Converter", href: "/convert", icon: Image, color: "text-green-600" },
-    { name: "Image Compressor", href: "/compress", icon: Image, color: "text-green-600" },
-    { name: "Video Converter", href: "/video-convert", icon: Video, color: "text-green-600" },
-    { name: "Document Tools", href: "/doc-to-pdf", icon: FileText, color: "text-green-600" },
-    { name: "Audio Converter", href: "/audio-convert", icon: Music, color: "text-green-600" },
-  ];
 
   const features = [
     {
@@ -58,12 +65,12 @@ export default function Home() {
   ];
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
-  
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "ConvertMastery",
-    "description": "Free online file converter and compressor. Convert images, videos, documents, and audio files. Fast, secure, and privacy-first.",
+    "description": "Free online file converter and compressor. Convert images, videos, documents, and audio. Security and privacy tools: password generator, IP lookup, whois, metadata remover, and more. Fast, secure, privacy-first.",
     "url": siteUrl,
     "applicationCategory": "UtilityApplication",
     "operatingSystem": "Web Browser",
@@ -78,11 +85,12 @@ export default function Home() {
       "ratingCount": "1250"
     },
     "featureList": [
-      "Image Conversion",
-      "Video Conversion",
-      "Document Conversion",
-      "Audio Conversion",
-      "File Compression",
+      "Image Conversion & Compression",
+      "Video Conversion, Compression & Trim",
+      "Document Conversion, Merge, Compress, PDF Tools",
+      "Audio Conversion, Text to Speech, Speech to Text",
+      "Utilities: QR & Barcode, URL Shortener, File to ZIP",
+      "Security and Privacy: Password Generator, IP Lookup, Whois, Metadata Remover, Fake Email, Security Score, Data Breach Checker, API Status",
       "Batch Processing",
       "Privacy-First Processing",
       "No File Size Limits"
@@ -92,9 +100,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Free File Converter & Compressor - Convert Images, Videos, Documents & Audio"
-        description="Convert and compress files for free. Support for HEIC, JPG, PNG, WebP, MP4, PDF, DOCX and more. Fast, secure, privacy-first. Sign up to access all premium features and save your files in My Orders for later use."
-        keywords="free file converter, image converter, video converter, document converter, audio converter, file compressor, HEIC converter, JPG converter, PNG converter, WebP converter, PDF converter, online file tools"
+        title="Free File Converter, Compressor & Privacy Tools - Images, Video, Document, Audio, Security"
+        description="Convert and compress files for free. Image, video, document, and audio tools. Security and privacy: password generator, IP lookup, whois, metadata remover, fake email, URL shortener, QR code. HEIC, JPG, PNG, WebP, MP4, PDF, DOCX. Sign up to save files in My Orders."
+        keywords="free file converter, image converter, video converter, document converter, audio converter, file compressor, HEIC converter, password generator, IP lookup, whois checker, metadata remover, fake email generator, URL shortener, QR code, PDF tools, security tools, privacy tools, online file tools"
         url="/"
         structuredData={structuredData}
       />
@@ -174,25 +182,25 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-                All-in-One Conversion Platform
+                All-in-One Conversion & Privacy Tools
               </h2>
               <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                Convert images, videos, documents, and audio files with professional-grade tools
+                Convert images, videos, documents, and audio. Plus security, privacy, and utility tools—all in one place.
               </p>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
-              {tools.map((tool) => {
-                const Icon = tool.icon;
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              {LANDING_CATEGORIES.map((cat) => {
+                const Icon = ICON_MAP[cat.iconKey] || FileText;
                 return (
-                  <Link key={tool.href} href={tool.href}>
+                  <Link key={cat.href} href={cat.href}>
                     <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer group h-full">
                       <CardContent className="pt-6 pb-6 text-center">
-                        <div className={`${tool.color} mb-3 flex justify-center`}>
+                        <div className="text-green-600 mb-3 flex justify-center">
                           <Icon className="h-8 w-8 group-hover:scale-110 transition-transform" />
                         </div>
-                        <h3 className="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-primary transition-colors">
-                          {tool.name}
+                        <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
+                          {cat.label}
                         </h3>
                       </CardContent>
                     </Card>
