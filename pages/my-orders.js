@@ -338,7 +338,7 @@ export default function MyOrders() {
         </Card>
 
         {/* Orders List */}
-        {filteredOrders.length === 0 && !loading ? (
+        {filteredOrders.length === 0 && !ordersLoading ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />

@@ -123,7 +123,10 @@ export default function DistanceCalculatorPage() {
         destFormatted: d.formatted,
       });
     } catch (e) {
-      setError(e.message || "Failed to calculate distance.");
+      const msg = e.message || "Failed to calculate distance.";
+      setError(msg.includes("REQUEST_DENIED") || msg.includes("request was denied")
+        ? "Distance calculation is unavailable. Enable the Distance Matrix API for your Google Maps API key in Google Cloud Console and ensure billing is set up."
+        : msg);
     } finally {
       setLoading(false);
     }
