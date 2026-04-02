@@ -171,7 +171,12 @@ export default function Navbar() {
                         {category.items.map((item) => {
                           const Icon = item.icon || FileText;
                           return (
-                            <Link key={item.href} href={item.href}>
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              target={item.newTab ? "_blank" : undefined}
+                              rel={item.newTab ? "noopener noreferrer" : undefined}
+                            >
                               <div
                                 className={`px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-all duration-200 text-sm flex items-center gap-3 group border-l-2 ${
                                   currentPath === item.href
@@ -250,7 +255,12 @@ export default function Navbar() {
                             {section.items.map((item) => {
                               const Icon = item.icon || FileText;
                               return (
-                                <Link key={item.href} href={item.href}>
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  target={item.newTab ? "_blank" : undefined}
+                                  rel={item.newTab ? "noopener noreferrer" : undefined}
+                                >
                               <div
                                     className={`px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-all duration-200 text-sm flex items-center gap-3 group border-l-2 ${
                                       currentPath === item.href
@@ -392,7 +402,13 @@ export default function Navbar() {
                   {mobileExpanded === category.label && (
                     <div className="bg-accent/10 border-l-2 border-primary/20 ml-4">
                       {category.items.map((item) => (
-                        <Link key={item.href} href={item.href} className="block">
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block"
+                          target={item.newTab ? "_blank" : undefined}
+                          rel={item.newTab ? "noopener noreferrer" : undefined}
+                        >
                           <div
                             className={`px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${currentPath === item.href
                               ? "text-primary font-medium bg-accent/40"

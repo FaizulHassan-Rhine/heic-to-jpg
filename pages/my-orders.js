@@ -13,6 +13,7 @@ import { useUserOrders, useOrderDetails, useDeleteOrder } from "../lib/queries/o
 const TOOL_ICONS = {
   "Image Converter": Image,
   "Image Compressor": Image,
+  "Background Remover": Image,
   "Video Converter": Video,
   "Video Compressor": Video,
   "Video Trimmer": Video,
@@ -28,6 +29,7 @@ const TOOL_ICONS = {
   "Speech to Text": Music,
   "QR & Barcode": Package,
   "URL Shortener": Package,
+  "Resume / CV Builder": FileText,
 };
 
 export default function MyOrders() {
