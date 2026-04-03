@@ -1,3 +1,5 @@
+const path = require('path');
+
 module.exports = {
   reactStrictMode: true,
   // Use standalone output for better server deployment (cPanel, VPS, etc.)
@@ -48,6 +50,24 @@ module.exports = {
         fullySpecified: false,
       },
     });
+
+    // Client: use ort.min.mjs (non-bundled) instead of ort.bundle.min.mjs. The bundle relies on
+    // import.meta.url + Webpack's RelativeURL and throws: url.replace is not a function (#22113).
+    // Server: stub — this page only loads ORT in the browser (dynamic import in event handlers).
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'onnxruntime-web': path.resolve(
+          __dirname,
+          'node_modules/onnxruntime-web/dist/ort.min.mjs'
+        ),
+      };
+    } else {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'onnxruntime-web': false,
+      };
+    }
 
     if (!isServer) {
       config.resolve.fallback = {

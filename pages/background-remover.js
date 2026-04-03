@@ -26,8 +26,81 @@ export default function BackgroundRemoverPage() {
     if (url && url.startsWith("blob:")) URL.revokeObjectURL(url);
   };
 
+  function toErrorMessage(err) {
+    if (err == null) return "Failed to remove background.";
+    if (typeof err === "string") return err;
+    if (err instanceof Error) return err.message || String(err);
+    return String(err);
+  }
+
+  /** Transformers.js hub helpers expect a real string URL; never pass URL objects or odd types. */
+  function toFetchableUrlString(u) {
+    if (u == null || u === "") throw new Error("Missing image URL.");
+    if (typeof u === "string") return u;
+    if (typeof URL !== "undefined" && u instanceof URL) return u.href;
+    return String(u);
+  }
+
+  /**
+   * Re-encode as standard 8-bit RGBA PNG via canvas, then return a fresh blob: URL.
+   * blob: URLs are universally fetchable by rembg / Transformers.js without any URL string issues.
+   * The caller must revoke the returned blob URL after processing.
+   */
+  function createNormalizedBlobUrl(file) {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const w = img.naturalWidth;
+          const h = img.naturalHeight;
+          if (!w || !h) {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("Invalid image dimensions."));
+            return;
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          if (!ctx) {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("Could not create canvas context."));
+            return;
+          }
+          ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(objectUrl);
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error("Could not encode image as PNG."));
+              return;
+            }
+            resolve(URL.createObjectURL(blob));
+          }, "image/png");
+        } catch (err) {
+          URL.revokeObjectURL(objectUrl);
+          reject(err);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Could not decode image (unsupported or corrupt file)."));
+      };
+      img.src = objectUrl;
+    });
+  }
+
   const loadLibrary = async () => {
     if (rembgRef.current) return rembgRef.current;
+    // Load onnxruntime-web BEFORE rembg so wasmPaths is set; use extern-wasm build via webpack conditionNames.
+    const ort = await import("onnxruntime-web");
+    if (typeof window !== "undefined" && ort.env?.wasm && !ort.env.wasm.wasmPaths) {
+      ort.env.wasm.wasmPaths = `${window.location.origin}/onnxruntime-web/`;
+    }
+    try {
+      const { env } = await import("@huggingface/transformers");
+      env.useBrowserCache = false;
+    } catch (_) {}
     const mod = await import("rembg-webgpu");
     rembgRef.current = mod;
     try {
@@ -101,16 +174,28 @@ export default function BackgroundRemoverPage() {
     if (!target) return;
 
     setError("");
+    let unsub = null;
+    let tempBlobUrl = null;
     try {
       const mod = await loadLibrary();
-      const unsub = mod.subscribeToProgress((s) => {
+      unsub = mod.subscribeToProgress((s) => {
         setPhase(s.phase || "idle");
         setProgress(typeof s.progress === "number" ? s.progress : 0);
       });
       setProcessingLabel(positionLabel || target.name);
       setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "processing", error: "" } : it)));
-      const result = await mod.removeBackground(target.sourceUrl);
-      unsub();
+
+      // Normalise image to a fresh blob: URL (standard 8-bit RGBA PNG).
+      // blob: URLs are universally fetchable; data: URLs can trip up in some environments.
+      let inferenceUrl;
+      try {
+        tempBlobUrl = await createNormalizedBlobUrl(target.file);
+        inferenceUrl = tempBlobUrl;
+      } catch {
+        inferenceUrl = toFetchableUrlString(target.sourceUrl);
+      }
+
+      const result = await mod.removeBackground(inferenceUrl);
       setItems((prev) =>
         prev.map((it) =>
           it.id === itemId
@@ -127,10 +212,16 @@ export default function BackgroundRemoverPage() {
       setPhase("ready");
       setProgress(100);
     } catch (e) {
-      const msg = e?.message || "Failed to remove background.";
+      const msg = toErrorMessage(e);
       setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "error", error: msg } : it)));
       toast.error(`Failed: ${target.name}`);
       setPhase("error");
+    } finally {
+      if (tempBlobUrl) {
+        try { URL.revokeObjectURL(tempBlobUrl); } catch (_) {}
+        tempBlobUrl = null;
+      }
+      try { unsub?.(); } catch (_) {}
     }
   };
 
@@ -156,7 +247,7 @@ export default function BackgroundRemoverPage() {
         toast.success("Bulk processing finished.");
       }
     } catch (e) {
-      setError(e?.message || "Bulk processing failed.");
+      setError(toErrorMessage(e) || "Bulk processing failed.");
     } finally {
       setProcessing(false);
       setProcessingLabel("");
@@ -167,7 +258,7 @@ export default function BackgroundRemoverPage() {
     if (!item?.outputUrl) return;
     const a = document.createElement("a");
     a.href = item.outputUrl;
-    a.download = `${item.name.replace(/\.[^/.]+$/, "")}-no-bg.png`;
+    a.download = `${String(item.name ?? "image").replace(/\.[^/.]+$/, "")}-no-bg.png`;
     a.click();
   };
 
