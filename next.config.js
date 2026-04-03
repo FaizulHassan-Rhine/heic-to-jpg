@@ -39,6 +39,16 @@ module.exports = {
     ];
   },
   webpack: (config, { isServer }) => {
+    // onnxruntime-web / @huggingface/transformers ship .mjs bundles; webpack must treat them as ESM
+    config.module.rules.push({
+      test: /\.mjs$/,
+      include: /node_modules/,
+      type: 'javascript/auto',
+      resolve: {
+        fullySpecified: false,
+      },
+    });
+
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
