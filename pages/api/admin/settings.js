@@ -55,50 +55,71 @@ export default async function handler(req, res) {
       if (!settings) {
         settings = new Settings({});
       }
+      // Migration uses findOneAndUpdate({ _id }) — document must be persisted first
+      if (!settings._id) {
+        await settings.save();
+      }
 
       // Store file limit updates to apply AFTER migration (if migration happens, it reloads settings)
       const fileLimitUpdates = {};
 
+      const safeNum = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
+
       // Collect file limit field updates
       if (imageMaxSize !== undefined && imageMaxSize !== null) {
-        fileLimitUpdates.imageMaxSize = Number(imageMaxSize);
+        const n = safeNum(imageMaxSize);
+        if (n !== null) fileLimitUpdates.imageMaxSize = n;
       }
       if (imageMaxFiles !== undefined && imageMaxFiles !== null) {
-        fileLimitUpdates.imageMaxFiles = Number(imageMaxFiles);
+        const n = safeNum(imageMaxFiles);
+        if (n !== null) fileLimitUpdates.imageMaxFiles = Math.round(n);
       }
       if (documentMaxSize !== undefined && documentMaxSize !== null) {
-        fileLimitUpdates.documentMaxSize = Number(documentMaxSize);
+        const n = safeNum(documentMaxSize);
+        if (n !== null) fileLimitUpdates.documentMaxSize = n;
       }
       if (documentMaxFiles !== undefined && documentMaxFiles !== null) {
-        fileLimitUpdates.documentMaxFiles = Number(documentMaxFiles);
+        const n = safeNum(documentMaxFiles);
+        if (n !== null) fileLimitUpdates.documentMaxFiles = Math.round(n);
       }
       if (pdfMaxSize !== undefined && pdfMaxSize !== null) {
-        fileLimitUpdates.pdfMaxSize = Number(pdfMaxSize);
+        const n = safeNum(pdfMaxSize);
+        if (n !== null) fileLimitUpdates.pdfMaxSize = n;
       }
       if (pdfMaxFiles !== undefined && pdfMaxFiles !== null) {
-        fileLimitUpdates.pdfMaxFiles = Number(pdfMaxFiles);
+        const n = safeNum(pdfMaxFiles);
+        if (n !== null) fileLimitUpdates.pdfMaxFiles = Math.round(n);
       }
       if (videoMaxSize !== undefined && videoMaxSize !== null) {
-        fileLimitUpdates.videoMaxSize = Number(videoMaxSize);
+        const n = safeNum(videoMaxSize);
+        if (n !== null) fileLimitUpdates.videoMaxSize = n;
       }
       if (videoMaxFiles !== undefined && videoMaxFiles !== null) {
-        fileLimitUpdates.videoMaxFiles = Number(videoMaxFiles);
+        const n = safeNum(videoMaxFiles);
+        if (n !== null) fileLimitUpdates.videoMaxFiles = Math.round(n);
       }
       if (audioMaxSize !== undefined && audioMaxSize !== null) {
-        fileLimitUpdates.audioMaxSize = Number(audioMaxSize);
+        const n = safeNum(audioMaxSize);
+        if (n !== null) fileLimitUpdates.audioMaxSize = n;
       }
       if (audioMaxFiles !== undefined && audioMaxFiles !== null) {
-        fileLimitUpdates.audioMaxFiles = Number(audioMaxFiles);
+        const n = safeNum(audioMaxFiles);
+        if (n !== null) fileLimitUpdates.audioMaxFiles = Math.round(n);
       }
       if (generalMaxSize !== undefined && generalMaxSize !== null) {
-        fileLimitUpdates.generalMaxSize = Number(generalMaxSize);
+        const n = safeNum(generalMaxSize);
+        if (n !== null) fileLimitUpdates.generalMaxSize = n;
       }
       if (generalMaxFiles !== undefined && generalMaxFiles !== null) {
-        fileLimitUpdates.generalMaxFiles = Number(generalMaxFiles);
+        const n = safeNum(generalMaxFiles);
+        if (n !== null) fileLimitUpdates.generalMaxFiles = Math.round(n);
       }
 
       // Update feature flags if provided - Deep merge all features dynamically
-      if (features !== undefined) {
+      if (features !== undefined && features !== null) {
         if (!settings.features) {
           settings.features = {};
         }
@@ -153,11 +174,17 @@ export default async function handler(req, res) {
         }
         
         // Deep merge function for nested objects
+        const isPlainObject = (val) => {
+          if (val === null || typeof val !== "object" || Array.isArray(val)) return false;
+          const proto = Object.getPrototypeOf(val);
+          return proto === Object.prototype || proto === null;
+        };
         const deepMerge = (target, source) => {
+          if (!source || typeof source !== "object") return;
           for (const key in source) {
             if (source[key] !== undefined && source[key] !== null) {
-              // If source value is an object (and not array/null), recursively merge
-              if (typeof source[key] === 'object' && !Array.isArray(source[key]) && source[key].constructor === Object) {
+              // If source value is a plain object, recursively merge
+              if (isPlainObject(source[key])) {
                 // Special handling for advancedOptions - ensure it's an object
                 if (key === 'advancedOptions') {
                   // If target has advancedOptions as boolean, convert to object
@@ -191,23 +218,20 @@ export default async function handler(req, res) {
         settings.markModified('features');
       }
 
-      // Apply file limit updates (if migration didn't happen, apply them now)
-      // If migration happened, they were already applied above
-      if (Object.keys(fileLimitUpdates).length > 0 && !features) {
-        Object.keys(fileLimitUpdates).forEach(key => {
+      // Always apply file/batch limits when the client sent them.
+      // Previously we only applied when `!features`, but the dashboard always sends `features`
+      // alongside limits — so limits were skipped and save could fail or ignore edits.
+      if (Object.keys(fileLimitUpdates).length > 0) {
+        Object.keys(fileLimitUpdates).forEach((key) => {
           const oldValue = settings[key];
           settings[key] = fileLimitUpdates[key];
           settings.markModified(key);
-          if (key === 'imageMaxSize') {
-            console.log(`Updating ${key}: ${oldValue} bytes (${oldValue / (1024 * 1024)} MB) -> ${fileLimitUpdates[key]} bytes (${fileLimitUpdates[key] / (1024 * 1024)} MB)`);
+          if (key === "imageMaxSize" && oldValue != null && Number.isFinite(oldValue)) {
+            console.log(
+              `Updating ${key}: ${oldValue} bytes (${oldValue / (1024 * 1024)} MB) -> ${fileLimitUpdates[key]} bytes (${fileLimitUpdates[key] / (1024 * 1024)} MB)`
+            );
           }
         });
-      } else if (Object.keys(fileLimitUpdates).length > 0 && features) {
-        // If features were updated, file limits were already applied after migration
-        // Just log the imageMaxSize update
-        if (fileLimitUpdates.imageMaxSize) {
-          console.log(`Updating imageMaxSize: ${settings.imageMaxSize} bytes (${settings.imageMaxSize / (1024 * 1024)} MB) -> ${fileLimitUpdates.imageMaxSize} bytes (${fileLimitUpdates.imageMaxSize / (1024 * 1024)} MB)`);
-        }
       }
 
       await settings.save();

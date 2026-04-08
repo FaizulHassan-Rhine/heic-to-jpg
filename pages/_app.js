@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import ScrollToTop from "../components/ScrollToTop";
+import FloatingHermesButton from "../components/FloatingHermesButton";
 import { settingsQueryKey } from "../lib/queries/settings";
 
 // Create a client instance
@@ -79,6 +80,7 @@ export default function App({ Component, pageProps }) {
       </Head>
       <AuthContextProvider>
         <Component {...pageProps} />
+        <FloatingHermesButton />
         <ScrollToTop />
         <Analytics />
         <Toaster position="top-center" toastOptions={{ duration: 3000, style: { zIndex: 9999 } }} />

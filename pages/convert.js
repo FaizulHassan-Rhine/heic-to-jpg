@@ -18,7 +18,6 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
-import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import SEO from "../components/SEO";
@@ -40,6 +39,14 @@ const getFileType = (fileName) => {
   if (['png'].includes(ext)) return 'png';
   if (['webp'].includes(ext)) return 'webp';
   return 'unknown';
+};
+
+/** Safe base name for ZIP download (no path chars; .zip added later). */
+const sanitizeZipBaseName = (raw) => {
+  const trimmed = (raw ?? "").trim() || "converted_images";
+  const withoutZip = trimmed.replace(/\.zip$/i, "");
+  const safe = withoutZip.replace(/[/\\?%*:|"<>]/g, "_").replace(/\s+/g, " ");
+  return safe.slice(0, 200) || "converted_images";
 };
 
 // ─────────────────────────── COMPONENT ───────────────────────────
@@ -96,6 +103,7 @@ export default function ConvertImage() {
   const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState("login");
+  const [zipFileName, setZipFileName] = useState("converted_images");
 
   // Get current settings (for selected file or global)
   const getCurrentSettings = () => {
@@ -483,7 +491,7 @@ export default function ConvertImage() {
     const content = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(content);
-    a.download = "converted_images.zip";
+    a.download = `${sanitizeZipBaseName(zipFileName)}.zip`;
     a.click();
     toast.success(`Downloaded ${count} file${count > 1 ? 's' : ''}`);
   };
@@ -497,6 +505,7 @@ export default function ConvertImage() {
     setViewingFile(null);
     setSelectedFile(null);
     setFileSettings({});
+    setZipFileName("converted_images");
     toast.success("All files cleared");
   };
 
@@ -635,37 +644,43 @@ export default function ConvertImage() {
           {files.length > 0 && (
             <div className="grid md:grid-cols-[360px_1fr] gap-8 items-start">
 
-              {/* Sidebar: Settings */}
-              <Card className="md:sticky md:top-24 h-fit overflow-hidden">
-                <CardContent className="p-5 space-y-6">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="flex items-center gap-2 font-semibold text-lg text-gray-800 flex-1 min-w-0">
-                      <Settings2 className="w-5 h-5 flex-shrink-0" /> 
-                      <span className="truncate">Output Settings</span>
+              {/* Sidebar: Settings — scrollable body; Convert All pinned at bottom */}
+              <Card className="flex h-fit max-h-[min(92vh,calc(100vh-5.5rem))] flex-col overflow-hidden border border-slate-200/90 shadow-sm md:sticky md:top-24">
+                <CardContent className="flex min-h-0 flex-1 flex-col gap-0 p-0">
+                  <div className="shrink-0 space-y-4 border-b border-slate-100/80 px-5 pb-4 pt-5">
+                    <div className="flex items-center gap-2 w-full">
+                      <div className="flex items-center gap-2 font-semibold text-lg text-gray-800 flex-1 min-w-0">
+                        <Settings2 className="w-5 h-5 flex-shrink-0" />
+                        <span className="truncate">Output Settings</span>
+                      </div>
+                      {selectedFile && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedFile(null)}
+                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 whitespace-nowrap flex-shrink-0 h-7 px-2"
+                        >
+                          Clear Selection
+                        </Button>
+                      )}
                     </div>
                     {selectedFile && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedFile(null)}
-                        className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 whitespace-nowrap flex-shrink-0 h-7 px-2"
-                      >
-                        Clear Selection
-                      </Button>
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                        <div className="text-xs text-emerald-600 font-medium mb-1">Editing Settings For:</div>
+                        <div className="text-sm font-semibold text-emerald-900 truncate">{selectedFile}</div>
+                      </div>
+                    )}
+                    {!selectedFile && files.length > 0 && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <div className="text-xs text-gray-600 font-medium mb-1">Global Settings</div>
+                        <div className="text-sm text-gray-500">Click a file to edit individual settings</div>
+                      </div>
                     )}
                   </div>
-                  {selectedFile && (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4">
-                      <div className="text-xs text-emerald-600 font-medium mb-1">Editing Settings For:</div>
-                      <div className="text-sm font-semibold text-emerald-900 truncate">{selectedFile}</div>
-                    </div>
-                  )}
-                  {!selectedFile && files.length > 0 && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
-                      <div className="text-xs text-gray-600 font-medium mb-1">Global Settings</div>
-                      <div className="text-sm text-gray-500">Click a file to edit individual settings</div>
-                    </div>
-                  )}
+
+                  <div
+                    className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-4 [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300/90 [&::-webkit-scrollbar-track]:bg-transparent"
+                  >
 
                   {/* Format Presets */}
                   <div className="space-y-3">
@@ -1177,63 +1192,108 @@ export default function ConvertImage() {
                     })()}
                   </div>
 
-                  <Separator />
-
-                  <Button
-                    onClick={processAll}
-                    disabled={processing}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-11 shadow-lg hover:shadow-xl transition-all"
-                  >
-                    {processing ? (
-                      <> <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Converting... </>
-                    ) : (
-                      <> <RefreshCw className="w-4 h-4 mr-2" /> Convert All </>
-                    )}
-                  </Button>
+                  </div>
                 </CardContent>
               </Card>
 
               {/* Main: File List */}
               <div className="space-y-4">
                 {/* Header with Stats and Actions */}
-                <Card className="border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                        <ImageIcon className="w-5 h-5 text-gray-400" />
-                        Files
-                      </h3>
-                      <div className="flex gap-2">
-                        {Object.values(results).some(r => r.status === "done") && (
-                          <Button variant="outline" size="sm" onClick={downloadAll}>
-                            <Download className="w-4 h-4 mr-2" /> Download All
-                          </Button>
+                <Card className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
+                  <CardContent className="p-5 sm:p-6">
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                      {/* Left: title + status pills */}
+                      <div className="min-w-0 flex-1 space-y-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                            <ImageIcon className="h-4 w-4" strokeWidth={2} />
+                          </span>
+                          <h3 className="text-lg font-semibold tracking-tight text-slate-900">Files</h3>
+                        </div>
+                        <div className="flex w-full min-w-0 flex-nowrap items-center justify-between text-sm">
+                          <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap sm:gap-2">
+                            <span className="text-slate-500 font-medium">Total</span>
+                            <span className="inline-flex min-w-[1.75rem] items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-slate-700">
+                              {files.length}
+                            </span>
+                          </div>
+                          <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap sm:gap-2">
+                            <span className="text-slate-500 font-medium">Completed</span>
+                            <span className="inline-flex min-w-[1.75rem] items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-emerald-800">
+                              {Object.values(results).filter((r) => r.status === "done").length}
+                            </span>
+                          </div>
+                          <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap sm:gap-2">
+                            <span className="text-slate-500 font-medium">Processing</span>
+                            <span className="inline-flex min-w-[1.75rem] items-center justify-center rounded-full border border-violet-200/80 bg-violet-50 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-violet-800">
+                              {Object.values(results).filter((r) => r.status === "processing").length}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: ZIP + actions */}
+                      <div className="flex w-full flex-col gap-3 sm:min-w-[300px] lg:max-w-md lg:items-end">
+                        {Object.values(results).some((r) => r.status === "done") && (
+                          <div className="w-full rounded-xl border border-slate-200/90 bg-slate-50/70 p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.6)]">
+                            <label
+                              htmlFor="zip-file-name"
+                              className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+                            >
+                              ZIP file name
+                            </label>
+                            <input
+                              id="zip-file-name"
+                              type="text"
+                              value={zipFileName}
+                              onChange={(e) => setZipFileName(e.target.value)}
+                              placeholder="converted_images"
+                              autoComplete="off"
+                              className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                            />
+                            <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                              Saved as <span className="rounded bg-white px-1 font-mono text-[0.8rem] text-slate-600 ring-1 ring-slate-200/80">.zip</span>
+                              <span className="text-slate-400"> — </span>
+                              edit before Download All
+                            </p>
+                          </div>
                         )}
-                        <Button variant="outline" size="sm" onClick={clearAll} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                          <Trash2 className="w-4 h-4 mr-2" /> Clear All
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Stats */}
-                    <div className="flex gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-600 font-medium">Total:</span>
-                        <Badge variant="secondary" className="font-semibold">
-                          {files.length}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-600 font-medium">Completed:</span>
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 font-semibold">
-                          {Object.values(results).filter(r => r.status === "done").length}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-600 font-medium">Processing:</span>
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 font-semibold">
-                          {Object.values(results).filter(r => r.status === "processing").length}
-                        </Badge>
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end">
+                          <Button
+                            size="sm"
+                            onClick={processAll}
+                            disabled={processing}
+                            className="h-9 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-4 font-semibold text-white shadow-md transition-all hover:from-green-600 hover:to-emerald-700 disabled:opacity-60"
+                          >
+                            {processing ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="mr-2 h-4 w-4" /> Convert All
+                              </>
+                            )}
+                          </Button>
+                          {Object.values(results).some((r) => r.status === "done") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={downloadAll}
+                              className="h-9 rounded-lg border-slate-200 bg-white font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+                            >
+                              <Download className="mr-2 h-4 w-4" /> Download All
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearAll}
+                            className="h-9 rounded-lg border-red-200 bg-white font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Clear All
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

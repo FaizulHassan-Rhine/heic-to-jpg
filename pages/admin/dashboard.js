@@ -403,11 +403,11 @@ export default function AdminDashboard() {
         queryClient.invalidateQueries({ queryKey: ["settings"] });
         queryClient.invalidateQueries({ queryKey: ["adminSettings"] });
       } else {
-        toast.error("Failed to save settings");
+        toast.error(data.error || data.details || "Failed to save settings");
       }
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast.error("Failed to save settings");
+      toast.error(error?.message ? `Failed to save settings: ${error.message}` : "Failed to save settings");
     } finally {
       setSavingSettings(false);
     }

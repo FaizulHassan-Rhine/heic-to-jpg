@@ -196,9 +196,10 @@ const SettingsSchema = new mongoose.Schema(
       },
       // Video Compress features
       videoCompress: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // Document to PDF features
@@ -207,16 +208,18 @@ const SettingsSchema = new mongoose.Schema(
           type: Boolean,
           default: false, // Requires sign-in by default
         },
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // PDF to Document features
       pdfToDoc: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // Audio Convert features
@@ -225,9 +228,10 @@ const SettingsSchema = new mongoose.Schema(
           type: Boolean,
           default: false, // Requires sign-in by default
         },
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // QR & Barcode features
@@ -247,16 +251,18 @@ const SettingsSchema = new mongoose.Schema(
           type: Boolean,
           default: false, // Requires sign-in by default
         },
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // Image to PDF features
       imageToPdf: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // Extract Text (OCR) features
@@ -276,44 +282,50 @@ const SettingsSchema = new mongoose.Schema(
       },
       // Video Trim features
       videoTrim: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // Merge PDF features
       mergePdf: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // Compress PDF features
       compressPdf: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // Document Scanner features
       scanner: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // Text to Speech features
       textToSpeech: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // URL Shortener features
       urlShortener: {
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // File to ZIP features
@@ -326,9 +338,10 @@ const SettingsSchema = new mongoose.Schema(
           type: Boolean,
           default: true, // Free by default
         },
+        // Mixed: supports nested per-feature flags (same pattern as imageConverter)
         advancedOptions: {
-          type: Boolean,
-          default: false, // Requires sign-in by default
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
         },
       },
       // PDF Unlock/Protect features
