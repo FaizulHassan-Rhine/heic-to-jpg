@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
@@ -277,12 +276,6 @@ export default function BackgroundRemoverPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Background Remover - Free AI Background Removal"
-        description="Remove image backgrounds for free in your browser with WebGPU acceleration and WASM fallback. Fully client-side and privacy-first."
-        keywords="background remover, remove background online, ai background removal, free background remover"
-        url="/background-remover"
-      />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">

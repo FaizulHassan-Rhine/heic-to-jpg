@@ -20,7 +20,6 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import SEO from "../components/SEO";
 
 // ─────────────────────────── HELPERS ───────────────────────────
 
@@ -583,13 +582,6 @@ export default function ConvertImage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <SEO
-        title="Free Image Converter - Convert HEIC, JPG, PNG, WebP Online"
-        description="Convert images between HEIC, JPG, PNG, WebP formats for free. Fast, secure, privacy-first processing. Sign up to unlock advanced features like watermarking, custom file names, and save all your converted files in My Orders."
-        keywords="image converter, HEIC converter, JPG converter, PNG converter, WebP converter, free image converter, online image converter, HEIC to JPG, image format converter"
-        url="/convert"
-        structuredData={structuredData}
-      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { loadGoogleMaps, geocodeAddress, getCurrentPosition, reverseGeocode } from "../lib/googleMaps";
@@ -92,12 +91,6 @@ export default function CoordinatesFinderPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Coordinates Finder - Get Lat Long from Address or Map Click"
-        description="Find latitude and longitude by searching an address or clicking on the map. Copy coordinates in one click."
-        keywords="coordinates finder, lat long, latitude longitude, get coordinates from address"
-        url="/coordinates-finder"
-      />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">

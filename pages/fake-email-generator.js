@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import AuthModal from "../components/AuthModal";
 import {
@@ -329,12 +328,6 @@ export default function FakeEmailGenerator() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Fake Email Generator - Temporary Email Address Generator | ConvertMastery"
-        description="Generate temporary email addresses for testing, sign-ups, and privacy protection. Receive real emails instantly with inbox support."
-        keywords="fake email generator, temporary email, disposable email, email generator, temp mail, throwaway email, receive emails"
-        url="/fake-email-generator"
-      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">

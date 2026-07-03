@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import {
   Shield, Search, Loader2, AlertTriangle, CheckCircle, Database, Mail, Globe
@@ -72,12 +71,6 @@ export default function DataBreachChecker() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Data Breach Checker - Check Email in Breach Databases | ConvertMastery"
-        description="Check if your email or domain has been exposed in known data breaches. Free data breach checker tool."
-        keywords="data breach checker, breach database, email breach, password breach, have i been pwned"
-        url="/data-breach-checker"
-      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">

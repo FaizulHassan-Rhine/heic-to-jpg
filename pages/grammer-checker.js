@@ -1,17 +1,10 @@
 import Head from "next/head";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 
 export default function GrammerCheckerPage() {
   return (
     <>
-      <SEO
-        title="Grammer Checker"
-        url="/grammer-checker"
-        description="Fix grammar mistakes, improve writing clarity, and paraphrase text instantly with the Grammar Checker tool."
-        keywords="grammar checker, grammar correction, paraphraser, rewrite text, writing improvement"
-      />
       <Head>
         <title>Grammer Checker — ConvertMastery</title>
         <meta

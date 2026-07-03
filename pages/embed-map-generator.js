@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { loadGoogleMaps, geocodeAddress, getCurrentPosition } from "../lib/googleMaps";
@@ -141,12 +140,6 @@ export default function EmbedMapGeneratorPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Embed Map Generator - Get Google Map Iframe Code"
-        description="Generate embed code for Google Maps. Enter an address or coordinates to get an iframe you can paste into your website."
-        keywords="embed google map, map iframe, embed map generator, google maps embed code"
-        url="/embed-map-generator"
-      />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">

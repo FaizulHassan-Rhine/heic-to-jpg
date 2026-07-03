@@ -15,7 +15,6 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import SEO from "../components/SEO";
 
 // ─────────────────────────── HELPERS ───────────────────────────
 
@@ -226,12 +225,6 @@ export default function FileToZip() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="File to Archive Converter - Create ZIP, TAR, TAR.GZ Archives | ConvertMastery"
-        description="Convert multiple files (images, documents, PDFs) into compressed archives. Support for ZIP, TAR, TAR.GZ, and RAR formats with advanced compression levels. Free, fast, and secure."
-        keywords="zip converter, file to zip, create zip archive, tar.gz converter, rar converter, compress files, archive maker, zip files online"
-        url="/file-to-zip"
-      />
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">

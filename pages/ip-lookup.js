@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import {
   Globe, Search, Loader2, MapPin, Server, Wifi, Shield
@@ -92,12 +91,6 @@ export default function IpLookup() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="IP Address Lookup - Find IP Location & Information | ConvertMastery"
-        description="Lookup IP address information including location, ISP, organization, and more. Free IP address lookup tool."
-        keywords="IP lookup, IP address lookup, IP location, IP geolocation, IP information, find IP location"
-        url="/ip-lookup"
-      />
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">

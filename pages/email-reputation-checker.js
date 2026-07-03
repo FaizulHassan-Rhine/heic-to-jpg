@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import {
   Mail, Search, Loader2, Shield, AlertTriangle, CheckCircle, XCircle
@@ -68,12 +67,6 @@ export default function EmailReputationChecker() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Email Reputation Checker - Check Email Trust Score | ConvertMastery"
-        description="Check email address reputation, domain security, and trust level. Free email reputation checker tool."
-        keywords="email reputation, email checker, email trust score, email security, email validation"
-        url="/email-reputation-checker"
-      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">

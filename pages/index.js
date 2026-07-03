@@ -11,11 +11,31 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { MAIN_CATEGORIES, OTHER_TOOLS_SECTIONS } from "../lib/toolsConfig";
+import { organizationSchema, websiteSchema, faqPageSchema, combineSchemas } from "../lib/structuredData";
 
 const ICON_MAP = {
   Image, FileText, Video, Music, QrCode, Link2, Archive, Lock, Shield, Globe,
   Mail, Phone, Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator,
 };
+
+const POPULAR_TOOLS = [
+  { href: "/heic-to-jpg", label: "HEIC to JPG", iconKey: "Image" },
+  { href: "/convert", label: "Image Converter", iconKey: "Image" },
+  { href: "/compress", label: "Image Compressor", iconKey: "Minimize2" },
+  { href: "/merge-pdf", label: "Merge PDF", iconKey: "Merge" },
+  { href: "/compress-pdf", label: "Compress PDF", iconKey: "FileText" },
+  { href: "/password-generator", label: "Password Generator", iconKey: "Lock" },
+  { href: "/qr-code-generator", label: "QR Code Generator", iconKey: "QrCode" },
+  { href: "/image-to-pdf", label: "Image to PDF", iconKey: "FileImage" },
+];
+
+const HOME_FAQS = [
+  { q: "Is ConvertMastery really free?", a: "Yes. All core tools are free to use. Optional sign-up unlocks premium features like My Orders and advanced settings." },
+  { q: "Are my files uploaded to your servers?", a: "Most tools process files locally in your browser. Your files stay on your device for maximum privacy." },
+  { q: "What formats can I convert?", a: "Images (HEIC, JPG, PNG, WebP), videos (MP4, WebM), documents (PDF, DOCX), and audio (MP3, WAV, OGG), plus PDF and security utilities." },
+  { q: "Do I need to install software?", a: "No. ConvertMastery runs entirely in your web browser on any modern device." },
+  { q: "Is ConvertMastery safe for sensitive documents?", a: "We use privacy-first processing. For highly confidential files, review our Privacy Policy and prefer browser-based tools that do not upload data." },
+];
 
 // Six categories for landing – each card links to first tool in that category
 const LANDING_CATEGORIES = [
@@ -64,38 +84,11 @@ export default function Home() {
     },
   ];
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
-
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "ConvertMastery",
-    "description": "Free online file converter and compressor. Convert images, videos, documents, and audio. Security and privacy tools: password generator, IP lookup, whois, metadata remover, and more. Fast, secure, privacy-first.",
-    "url": siteUrl,
-    "applicationCategory": "UtilityApplication",
-    "operatingSystem": "Web Browser",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "ratingCount": "1250"
-    },
-    "featureList": [
-      "Image Conversion & Compression",
-      "Video Conversion, Compression & Trim",
-      "Document Conversion, Merge, Compress, PDF Tools",
-      "Audio Conversion, Text to Speech, Speech to Text",
-      "Utilities: QR & Barcode, URL Shortener, File to ZIP",
-      "Security and Privacy: Password Generator, IP Lookup, Whois, Metadata Remover, Fake Email, Security Score, Data Breach Checker, API Status",
-      "Batch Processing",
-      "Privacy-First Processing",
-      "No File Size Limits"
-    ]
-  };
+  const structuredData = combineSchemas(
+    organizationSchema(),
+    websiteSchema(),
+    faqPageSchema(HOME_FAQS)
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -125,13 +118,14 @@ export default function Home() {
                 </span>
               </h1>
               
-              <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto">
-                Transform your files with our powerful, privacy-first conversion tools. 
-                <span className="font-semibold text-slate-900 dark:text-white"> Free, fast, and secure.</span>
-                <br />
-                <span className="text-lg text-slate-500 dark:text-slate-400 mt-2 block">
-                  <span className="font-semibold text-primary">Sign up</span> to unlock all premium features and save your converted files in <span className="font-semibold">My Orders</span> for easy access later.
-                </span>
+              <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl mx-auto">
+                ConvertMastery is your all-in-one platform for file conversion, compression, PDF management,
+                and privacy tools. Convert HEIC to JPG, compress images to 100 KB, merge PDFs, generate passwords,
+                and more — <span className="font-semibold text-slate-900 dark:text-white">free, fast, and privacy-first.</span>
+              </p>
+              <p className="text-base text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
+                No software to install. Most tools run in your browser so your files never leave your device.
+                <Link href="/about" className="text-primary hover:underline ml-1">Learn more about us</Link>.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
@@ -177,8 +171,98 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Tools Grid Section */}
+        {/* Tool Categories with Links */}
         <section className="py-20 bg-white dark:bg-slate-900">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+                Browse Tools by Category
+              </h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                Image, document, video, audio, security, and utility tools — all free and online.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {[...MAIN_CATEGORIES, ...OTHER_TOOLS_SECTIONS.map((s) => ({ label: s.title, items: s.items }))].map((cat) => (
+                <div key={cat.label}>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3">{cat.label}</h3>
+                  <ul className="space-y-2">
+                    {cat.items.slice(0, 6).map((item) => (
+                      <li key={item.href}>
+                        <Link href={item.href} className="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Popular Tools */}
+        <section className="py-20 bg-slate-50 dark:bg-slate-800/50">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+                Popular Tools
+              </h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">
+                Most-used converters and utilities on ConvertMastery
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+              {POPULAR_TOOLS.map((tool) => {
+                const Icon = ICON_MAP[tool.iconKey] || FileText;
+                return (
+                  <Link key={tool.href} href={tool.href}>
+                    <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg h-full">
+                      <CardContent className="pt-5 pb-5 text-center">
+                        <Icon className="h-7 w-7 mx-auto mb-2 text-primary" aria-hidden />
+                        <span className="font-medium text-sm text-slate-900 dark:text-white">{tool.label}</span>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Why Trust Us + Privacy */}
+        <section className="py-20 bg-white dark:bg-slate-900">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <div className="grid md:grid-cols-2 gap-12">
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Why Trust ConvertMastery?</h2>
+                <ul className="space-y-4 text-slate-600 dark:text-slate-300">
+                  <li className="flex gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" /><span><strong>Transparent policies</strong> — clear <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>, <Link href="/terms-and-conditions" className="text-primary hover:underline">Terms</Link>, and <Link href="/disclaimer" className="text-primary hover:underline">Disclaimer</Link></span></li>
+                  <li className="flex gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" /><span><strong>No hidden fees</strong> — core tools are free with no credit card required</span></li>
+                  <li className="flex gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" /><span><strong>Responsible tools</strong> — security utilities include clear disclaimers and acceptable-use guidance</span></li>
+                  <li className="flex gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" /><span><strong>Helpful content</strong> — every tool includes guides, FAQs, and related resources</span></li>
+                </ul>
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Privacy-First Processing</h2>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
+                  Your privacy matters. ConvertMastery is built so most file conversions and compressions happen
+                  entirely in your browser using modern web technology. Files are not uploaded to our servers
+                  for standard image, video, and PDF tools.
+                </p>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  When server processing is needed, files are handled securely and not stored permanently.
+                  Read our <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link> for
+                  details on cookies, Google Analytics, and Google AdSense.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Tools Grid Section */}
+        <section className="py-20 bg-slate-50 dark:bg-slate-800/50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
@@ -301,6 +385,30 @@ export default function Home() {
                 );
               })}
             </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="py-20 bg-white dark:bg-slate-900">
+          <div className="container mx-auto px-4 max-w-3xl">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+                Frequently Asked Questions
+              </h2>
+            </div>
+            <div className="space-y-4">
+              {HOME_FAQS.map((faq, i) => (
+                <Card key={i}>
+                  <CardContent className="pt-5 pb-5">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">{faq.q}</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 m-0">{faq.a}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <p className="text-center mt-8 text-slate-600 dark:text-slate-400">
+              More guides in our <Link href="/blog" className="text-primary hover:underline">Blog &amp; Guides</Link> section.
+            </p>
           </div>
         </section>
 

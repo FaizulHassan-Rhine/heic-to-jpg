@@ -60,12 +60,13 @@ export default function SEO({
       <meta name="msapplication-TileColor" content="#3b82f6" />
 
       {/* Structured Data (JSON-LD) */}
-      {structuredData && (
+      {structuredData && (Array.isArray(structuredData) ? structuredData : [structuredData]).map((schema, i) => (
         <script
+          key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
-      )}
+      ))}
     </Head>
   );
 }

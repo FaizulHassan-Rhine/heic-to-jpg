@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import {
   Image, Upload, Download, Trash2, Shield, FileImage, Loader2
@@ -102,12 +101,6 @@ export default function MetadataRemover() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Image Metadata Remover - Remove EXIF Data from Images | ConvertMastery"
-        description="Remove EXIF metadata, GPS location, and other sensitive data from images. Protect your privacy by stripping metadata from photos."
-        keywords="metadata remover, EXIF remover, remove EXIF data, image privacy, strip metadata, remove GPS from images"
-        url="/metadata-remover"
-      />
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">

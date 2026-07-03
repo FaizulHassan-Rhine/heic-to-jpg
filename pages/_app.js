@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import ScrollToTop from "../components/ScrollToTop";
 import FloatingHermesButton from "../components/FloatingHermesButton";
+import GlobalSeo from "../components/GlobalSeo";
 import { settingsQueryKey } from "../lib/queries/settings";
 
 // Create a client instance
@@ -80,6 +81,7 @@ export default function App({ Component, pageProps }) {
         />
       </Head>
       <AuthContextProvider>
+        <GlobalSeo />
         <Component {...pageProps} />
         <FloatingHermesButton />
         <ScrollToTop />

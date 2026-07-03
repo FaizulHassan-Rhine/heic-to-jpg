@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from "react";
 import { useAuth } from "../lib/authContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
@@ -230,12 +229,6 @@ export default function SplitPdf() {
 
   return (
     <>
-      <SEO
-        title="Split PDF - Split PDF by Pages Online Free"
-        description="Split a PDF into multiple files by page count. One PDF per page or group pages. Free, client-side, no upload to server."
-        keywords="split PDF, split PDF by pages, PDF splitter, divide PDF, extract PDF pages"
-        url="/split-pdf"
-      />
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">

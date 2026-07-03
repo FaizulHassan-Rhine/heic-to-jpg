@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { loadGoogleMaps, geocodeAddress, getCurrentPosition, reverseGeocode } from "../lib/googleMaps";
@@ -114,12 +113,6 @@ export default function RadiusMapPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Radius Map Tool - Draw a Radius on the Map"
-        description="Enter a location and radius to draw a circle on the map. See the area within a distance in km or miles."
-        keywords="radius map, map radius tool, draw radius on map, distance radius"
-        url="/radius-map"
-      />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import {
   Server, Search, Loader2, Shield, AlertTriangle, CheckCircle, Globe, Lock
@@ -69,12 +68,6 @@ export default function ApiStatusChecker() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="API Status Checker - Analyze API Health & Security | ConvertMastery"
-        description="Check API endpoint health, performance, security configuration, and get comprehensive API status analysis."
-        keywords="API status checker, API health check, API security, API performance, API monitoring"
-        url="/api-status-checker"
-      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">

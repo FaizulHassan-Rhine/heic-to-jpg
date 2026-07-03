@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Select } from "../components/ui/select";
@@ -58,12 +57,6 @@ export default function CalculatorsPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Calculators & Converters - Age, Date, BMI, Currency, Time Zone, Unit Conversion"
-        description="Free online calculators: Age, Date, Time, BMI, Calorie, Body Fat, BMR, Ideal Weight, Unit Conversion (length, weight, volume, temperature), Currency with live rates, Time Zone, Percentage, Discount, Tip."
-        keywords="age calculator, date calculator, BMI calculator, calorie calculator, BMR calculator, currency converter, time zone converter, unit converter, percentage calculator, discount calculator, tip calculator"
-        url="/calculators"
-      />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 lg:gap-10">

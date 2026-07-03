@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { loadGoogleMaps, geocodeAddress, getCurrentPosition, reverseGeocode } from "../lib/googleMaps";
@@ -102,12 +101,6 @@ export default function AddressToLatLongPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Address to Lat Long Converter - Get Coordinates from Address"
-        description="Convert any address or place name to latitude and longitude. Free geocoding using Google Maps API."
-        keywords="address to coordinates, geocode, lat long from address, latitude longitude converter"
-        url="/address-to-latlong"
-      />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">

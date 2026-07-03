@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import {
   Shield, CheckCircle, XCircle, AlertTriangle, Lock
@@ -97,12 +96,6 @@ export default function PasswordStrengthChecker() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Password Strength Checker - Test Your Password Security | ConvertMastery"
-        description="Check the strength and security of your passwords. Get detailed feedback and recommendations to improve password security."
-        keywords="password strength checker, password security, password test, password analyzer, strong password"
-        url="/password-strength-checker"
-      />
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">

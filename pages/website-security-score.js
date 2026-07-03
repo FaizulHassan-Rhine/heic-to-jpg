@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import {
   Shield, Search, Loader2, CheckCircle, XCircle, AlertTriangle, Globe, Lock, Server
@@ -68,12 +67,6 @@ export default function WebsiteSecurityScore() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Website Security Score - Analyze Website Security | ConvertMastery"
-        description="Analyze website security configuration, SSL/TLS, security headers, and get a comprehensive security score. Free website security checker."
-        keywords="website security, security score, SSL checker, security headers, website security analysis, HTTPS checker"
-        url="/website-security-score"
-      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">

@@ -4,6 +4,16 @@ module.exports = {
   reactStrictMode: true,
   // Use standalone output for better server deployment (cPanel, VPS, etc.)
   output: 'standalone',
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.convertmastery.com' }],
+        destination: 'https://convertmastery.com/:path*',
+        permanent: true,
+      },
+    ];
+  },
   // Required headers for FFmpeg WASM (SharedArrayBuffer) - only on video pages
   async headers() {
     return [

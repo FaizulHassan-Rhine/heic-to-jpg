@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import AuthModal from "../components/AuthModal";
 import {
@@ -75,12 +74,6 @@ export default function WhoisChecker() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Whois Checker - Domain Information Lookup | ConvertMastery"
-        description="Check domain registration information, registrar details, expiration dates, and more. Free Whois domain lookup tool."
-        keywords="whois checker, domain lookup, domain information, whois lookup, domain registrar, domain expiration"
-        url="/whois-checker"
-      />
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">

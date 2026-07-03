@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import SEO from "../components/SEO";
 import { useAuth } from "@/lib/authContext";
 import {
   Key, Copy, RefreshCw, CheckCircle, Lock, Shield
@@ -100,12 +99,6 @@ export default function PasswordGenerator() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="Password Generator - Create Strong Secure Passwords | ConvertMastery"
-        description="Generate strong, secure passwords with customizable options. Free password generator with length, character type, and security options."
-        keywords="password generator, strong password, secure password, random password, password creator"
-        url="/password-generator"
-      />
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">

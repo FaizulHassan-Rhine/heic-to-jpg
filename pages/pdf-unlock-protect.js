@@ -15,7 +15,6 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import SEO from "../components/SEO";
 
 // ─────────────────────────── HELPERS ───────────────────────────
 
@@ -254,12 +253,6 @@ export default function PdfUnlockProtect() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO
-        title="PDF Unlock & Password Protection - Secure PDF Tools | ConvertMastery"
-        description="Unlock password-protected PDFs, add password protection, change passwords, and set permissions. Free, secure PDF security tools."
-        keywords="pdf unlock, pdf password protection, remove pdf password, protect pdf, pdf security, pdf permissions"
-        url="/pdf-unlock-protect"
-      />
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">

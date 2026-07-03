@@ -21,7 +21,6 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import SEO from "../components/SEO";
 
 // ─────────────────────────── HELPERS ───────────────────────────
 
@@ -637,13 +636,6 @@ export default function CompressImage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <SEO
-        title="Free Image Compressor - Reduce Image File Size Online"
-        description="Compress images to reduce file size while maintaining quality. Support for JPG, PNG, WebP formats. Fast, secure, privacy-first. Sign up to unlock advanced features like target file size, progressive JPEG, and save all your compressed files in My Orders."
-        keywords="image compressor, compress images, reduce image size, image optimizer, JPG compressor, PNG compressor, WebP compressor, free image compression, online image compressor"
-        url="/compress"
-        structuredData={structuredData}
-      />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">

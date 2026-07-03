@@ -5,6 +5,14 @@
       "memory": 1024
     }
   },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.convertmastery.com" }],
+      "destination": "https://convertmastery.com/:path*",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
