@@ -1,6 +1,7 @@
 import "../styles/globals.css";
 import Head from "next/head";
 import { Analytics } from "@vercel/analytics/next";
+import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AuthContextProvider } from "../lib/authContext";
 import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -82,6 +83,7 @@ export default function App({ Component, pageProps }) {
         <Component {...pageProps} />
         <FloatingHermesButton />
         <ScrollToTop />
+        <GoogleAnalytics />
         <Analytics />
         <Toaster position="top-center" toastOptions={{ duration: 3000, style: { zIndex: 9999 } }} />
       </AuthContextProvider>

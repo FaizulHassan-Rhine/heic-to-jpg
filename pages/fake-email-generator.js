@@ -16,6 +16,12 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import {
+  getTempEmailDomains,
+  createTempEmailAccount,
+  getTempEmailMessages,
+  readTempEmailMessage,
+} from "@/lib/tempEmailApi";
 
 export default function FakeEmailGenerator() {
   const { user, trackUsage } = useAuth();
@@ -53,12 +59,11 @@ export default function FakeEmailGenerator() {
   useEffect(() => {
     const fetchDomains = async () => {
       try {
-        const response = await fetch("/api/temp-email-inbox?action=getDomains");
-        const data = await response.json();
+        const domains = await getTempEmailDomains();
 
-        if (data.success && Array.isArray(data.domains) && data.domains.length > 0) {
-          setAvailableDomains(data.domains);
-          setSelectedDomain(data.domains[0]);
+        if (Array.isArray(domains) && domains.length > 0) {
+          setAvailableDomains(domains);
+          setSelectedDomain(domains[0]);
         } else {
           console.warn("No domains returned from API");
           toast.error("Failed to load email domains. Please refresh the page.");
@@ -106,13 +111,8 @@ export default function FakeEmailGenerator() {
       const address = `${username}@${domain}`;
       const password = generateRandomString(20);
 
-      // Create account and get token via our API proxy
-      const response = await fetch("/api/temp-email-inbox?action=createAccount", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address, password }),
-      });
-      const data = await response.json();
+      // Create account via Mail.tm (browser — Vercel server IPs are blocked)
+      const data = await createTempEmailAccount(address, password);
 
       if (!data.success || !data.token) {
         throw new Error(data.error || "Failed to create email account");
@@ -171,10 +171,7 @@ export default function FakeEmailGenerator() {
 
       setLoadingInbox(true);
       try {
-        const response = await fetch(
-          `/api/temp-email-inbox?action=getMessages&token=${encodeURIComponent(token)}`
-        );
-        const data = await response.json();
+        const data = await getTempEmailMessages(token);
 
         // Log response for debugging
         console.log("Inbox fetch response:", {
@@ -242,12 +239,7 @@ export default function FakeEmailGenerator() {
 
       setLoadingFullMsg(true);
       try {
-        const response = await fetch(
-          `/api/temp-email-inbox?action=readMessage&token=${encodeURIComponent(
-            token
-          )}&messageId=${encodeURIComponent(msg.id)}`
-        );
-        const data = await response.json();
+        const data = await readTempEmailMessage(token, msg.id);
 
         if (data.success) {
           setSelectedEmailMsg({
