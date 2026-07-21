@@ -90,10 +90,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
       onClick={onClose}
     >
       <Card
-        className="w-full max-w-md shadow-2xl mx-auto overflow-hidden transition-all duration-300 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200"
+        className="w-full max-w-md shadow-2xl mx-auto overflow-hidden transition-all duration-300 bg-gradient-to-br from-brand-sky/40 via-card to-muted border-2 border-brand-mid/30"
         onClick={(e) => e.stopPropagation()}
       >
-        <CardHeader className="relative bg-gradient-to-r from-green-500 to-emerald-600 text-white pb-6">
+        <CardHeader className="relative bg-gradient-to-r from-primary to-brand-navy text-white pb-6">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/90 hover:text-white transition-colors"
@@ -108,7 +108,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
               : "Create Account"}
           </CardTitle>
           {!showForgotPassword && (
-            <p className="text-center text-green-100 text-sm mt-2">
+            <p className="text-center text-brand-sky text-sm mt-2">
               {mode === "login"
                 ? "Welcome back! Sign in to continue"
                 : "Join thousands of users converting files effortlessly"}
@@ -119,16 +119,16 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
           {showForgotPassword ? (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                   <input
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                     placeholder="Enter your email"
                     required
                   />
@@ -137,7 +137,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg"
+                className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white font-semibold py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg"
               >
                 {loading ? (
                   <>
@@ -153,7 +153,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                   setShowForgotPassword(false);
                   setResetEmail("");
                 }}
-                className="w-full text-sm text-green-600 hover:text-green-700 transition-colors"
+                className="w-full text-sm text-primary hover:text-brand-navy transition-colors"
               >
                 Back to Sign In
               </button>
@@ -163,16 +163,16 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === "signup" && (
                   <div className="pt-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Display Name
                     </label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                       <input
                         type="text"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg transition-all focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none bg-white"
+                        className="w-full pl-10 pr-4 py-3 border-2 border-border rounded-lg transition-all focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none bg-card"
                         placeholder="Enter your name"
                       />
                     </div>
@@ -180,16 +180,16 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                 )}
 
                 <div className="pt-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Email Address
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg transition-all bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-3 border-2 border-border rounded-lg transition-all bg-card focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                       placeholder="Enter your email"
                       required
                     />
@@ -197,16 +197,16 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg transition-all bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-3 border-2 border-border rounded-lg transition-all bg-card focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none"
                       placeholder="Enter your password"
                       required
                       minLength={6}
@@ -218,7 +218,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                   <button
                     type="button"
                     onClick={() => setShowForgotPassword(true)}
-                    className="text-sm text-green-600 hover:text-green-700 text-right w-full transition-colors"
+                    className="text-sm text-primary hover:text-brand-navy text-right w-full transition-colors"
                   >
                     Forgot Password?
                   </button>
@@ -227,7 +227,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full text-white font-semibold py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                  className="w-full text-white font-semibold py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy"
                 >
                   {loading ? (
                     <>
@@ -244,10 +244,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
 
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-green-200"></div>
+                  <div className="w-full border-t border-brand-mid/30"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white/80 text-gray-600">
+                  <span className="px-2 bg-white/80 text-muted-foreground">
                     Or continue with
                   </span>
                 </div>
@@ -258,7 +258,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                 onClick={handleGoogleSignIn}
                 disabled={loading}
                 variant="outline"
-                className="w-full border-2 border-green-200 hover:bg-green-50 hover:border-green-300 py-3 rounded-lg transition-all"
+                className="w-full border-2 border-brand-mid/30 hover:bg-brand-sky/50 hover:border-brand-mid py-3 rounded-lg transition-all"
               >
                 <svg
                   className="w-5 h-5 mr-2"
@@ -286,7 +286,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                 {loading ? "Signing in..." : "Sign in with Google"}
               </Button>
 
-              <div className="mt-4 text-center text-sm text-gray-700">
+              <div className="mt-4 text-center text-sm text-foreground">
                 {mode === "login" ? (
                   <>
                     Don't have an account?{" "}
@@ -297,7 +297,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                         setEmail("");
                         setPassword("");
                       }}
-                      className="text-green-600 hover:text-green-700 font-semibold transition-colors"
+                      className="text-primary hover:text-brand-navy font-semibold transition-colors"
                     >
                       Sign Up
                     </button>
@@ -313,7 +313,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                         setPassword("");
                         setDisplayName("");
                       }}
-                      className="text-green-600 hover:text-green-700 font-semibold transition-colors"
+                      className="text-primary hover:text-brand-navy font-semibold transition-colors"
                     >
                       Sign In
                     </button>

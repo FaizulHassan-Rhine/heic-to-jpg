@@ -32,29 +32,29 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white shadow-2xl overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-600 text-white pb-6">
+    <div className="min-h-screen bg-gradient-to-br from-brand-sky/50 via-background to-muted flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-card shadow-2xl overflow-hidden border border-border">
+        <CardHeader className="bg-gradient-to-r from-primary to-brand-navy text-white pb-6">
           <CardTitle className="text-3xl font-bold text-center text-white">
             Admin Login
           </CardTitle>
-          <p className="text-center text-green-100 text-sm mt-2">
+          <p className="text-center text-brand-sky text-sm mt-2">
             ConvertMastery Admin Panel
           </p>
         </CardHeader>
-        <CardContent className="bg-white/80 backdrop-blur-sm pt-6">
+        <CardContent className="bg-card/80 backdrop-blur-sm pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-3 border-2 border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none bg-background transition-all"
                   placeholder="Enter admin email"
                   required
                 />
@@ -62,16 +62,16 @@ export default function AdminLogin() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-3 border-2 border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none bg-background transition-all"
                   placeholder="Enter admin password"
                   required
                 />
@@ -81,7 +81,7 @@ export default function AdminLogin() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg"
+              className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white font-semibold py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg"
             >
               {loading ? (
                 <>

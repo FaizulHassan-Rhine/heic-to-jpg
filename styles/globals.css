@@ -4,48 +4,58 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* ConvertMastery navy palette
+       #0F2854 navy | #1C4D8D primary | #4988C4 mid | #BDE8F5 sky */
+    --background: 200 40% 98%;           /* soft white-blue #F5FBFD */
+    --foreground: 218 70% 19%;           /* #0F2854 */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 218 70% 19%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 142 76% 36%;
+    --popover-foreground: 218 70% 19%;
+    --primary: 214 67% 33%;              /* #1C4D8D */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 194 74% 92%;            /* soft sky tint */
+    --secondary-foreground: 218 70% 19%;
+    --muted: 200 35% 95%;
+    --muted-foreground: 214 35% 40%;
+    --accent: 194 74% 85%;               /* #BDE8F5 */
+    --accent-foreground: 218 70% 19%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 209 35% 88%;
+    --input: 209 35% 88%;
+    --ring: 209 51% 53%;                 /* #4988C4 */
     --radius: 0.5rem;
+    --brand-navy: 218 70% 19%;           /* #0F2854 */
+    --brand-mid: 209 51% 53%;            /* #4988C4 */
+    --brand-sky: 194 74% 85%;            /* #BDE8F5 */
+    --brand-success: 175 84% 32%;        /* #0D9488 success only */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 142 76% 36%;
+    --background: 218 70% 8%;
+    --foreground: 194 74% 92%;
+    --card: 218 60% 12%;
+    --card-foreground: 194 74% 92%;
+    --popover: 218 60% 12%;
+    --popover-foreground: 194 74% 92%;
+    --primary: 209 51% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 218 40% 18%;
+    --secondary-foreground: 194 74% 92%;
+    --muted: 218 40% 18%;
+    --muted-foreground: 209 30% 70%;
+    --accent: 214 50% 22%;
+    --accent-foreground: 194 74% 90%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 218 35% 22%;
+    --input: 218 35% 22%;
+    --ring: 209 51% 53%;
+    --brand-navy: 194 74% 90%;
+    --brand-mid: 209 51% 60%;
+    --brand-sky: 214 40% 22%;
+    --brand-success: 175 70% 45%;
   }
 }
 
@@ -54,7 +64,16 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -25%, hsl(194 74% 85% / 0.55), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, hsl(209 51% 53% / 0.12), transparent 50%),
+      radial-gradient(ellipse 40% 30% at 0% 100%, hsl(214 67% 33% / 0.06), transparent 45%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4 {
+    @apply text-foreground;
   }
 
   /* Site-wide themed dropdowns and date/time pickers */
@@ -62,30 +81,74 @@
   input[type="date"],
   input[type="time"],
   input[type="datetime-local"] {
-    @apply min-w-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary;
+    @apply min-w-0 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-brand-mid;
   }
   select:not([class*="rounded-none"]):hover,
   input[type="date"]:hover,
   input[type="time"]:hover,
   input[type="datetime-local"]:hover {
-    @apply border-slate-300 dark:border-slate-600;
+    @apply border-brand-mid/50;
   }
 }
 
 @layer components {
-  /* Optional class for number/text inputs and to enforce theme on any input */
   select.input-theme,
   input.input-theme[type="date"],
   input.input-theme[type="time"],
   input.input-theme[type="datetime-local"],
   input.input-theme[type="number"],
   input.input-theme[type="text"] {
-    @apply w-full min-w-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary;
+    @apply w-full min-w-0 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-brand-mid;
   }
   select.input-theme:hover,
   input.input-theme[type="date"]:hover,
   input.input-theme[type="time"]:hover,
   input.input-theme[type="datetime-local"]:hover {
-    @apply border-slate-300 dark:border-slate-600;
+    @apply border-brand-mid/50;
   }
+}
+
+/* App toast — slide in from top-right */
+@keyframes cm-toast-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(110%, -12px, 0) scale(0.92);
+    filter: blur(4px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes cm-toast-out {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(108%, -10px, 0) scale(0.94);
+  }
+}
+@keyframes cm-toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+.cm-toast-enter {
+  animation: cm-toast-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.cm-toast-leave {
+  animation: cm-toast-out 0.32s cubic-bezier(0.4, 0, 1, 1) both;
+}
+.cm-toast-progress {
+  animation: cm-toast-progress 4.8s linear forwards;
 }

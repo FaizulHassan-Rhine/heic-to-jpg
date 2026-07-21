@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { loadGoogleMaps, geocodeAddress, getCurrentPosition, reverseGeocode } from "../lib/googleMaps";
@@ -90,16 +89,11 @@ export default function CoordinatesFinderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-          <MapPin className="h-8 w-8 text-primary" />
-          Coordinates Finder
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mb-8">
-          Search an address to get its coordinates, or click on the map to get the lat/lng of any point.
-        </p>
+    <ToolPageShell containerClassName="max-w-4xl">
+        <ToolPageHeader
+          title="Coordinates Finder"
+          description="Search an address to get its coordinates, or click on the map to get the lat/lng of any point."
+        />
 
         <Card className="mb-6">
           <CardHeader>
@@ -116,7 +110,7 @@ export default function CoordinatesFinderPage() {
                   setCoords({ lat, lng, formatted });
                 }}
                 placeholder="Address or place"
-                className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                className="flex-1 px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
               <Button onClick={handleSearch} disabled={loading} className="gap-2">
@@ -126,10 +120,10 @@ export default function CoordinatesFinderPage() {
             </div>
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             {coords && (
-              <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+              <div className="space-y-2 p-3 bg-muted/40 dark:bg-muted/50 rounded-lg">
                 <p className="text-sm font-medium">Latitude: {coords.lat.toFixed(6)}</p>
                 <p className="text-sm font-medium">Longitude: {coords.lng.toFixed(6)}</p>
-                <p className="text-xs text-slate-500 break-all">{coords.formatted}</p>
+                <p className="text-xs text-muted-foreground break-all">{coords.formatted}</p>
                 <Button variant="outline" size="sm" onClick={() => copyText(`${coords.lat}, ${coords.lng}`)} className="gap-2">
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   {copied ? "Copied" : "Copy lat, lng"}
@@ -152,8 +146,6 @@ export default function CoordinatesFinderPage() {
             <div ref={mapRef} className="w-full h-[400px] rounded-b-lg" />
           </CardContent>
         </Card>
-      </main>
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

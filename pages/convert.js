@@ -3,15 +3,18 @@ import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
 import { generateFileThumbnails } from "../lib/thumbnailUtils";
 import { blobToBase64, extractBase64 } from "../lib/fileUtils";
-import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
+import ToolSignupBanner from "../components/ToolSignupBanner";
+import ToolWorkspace from "../components/ToolWorkspace";
+import ToolSettingsPanel, { ToolSettingsNotice } from "../components/ToolSettingsPanel";
+import ToolFilesPanel from "../components/ToolFilesPanel";
+import ToolFileRow from "../components/ToolFileRow";
 import AuthModal from "../components/AuthModal";
 import JSZip from "jszip";
 import {
   Loader2, CheckCircle, Download, AlertCircle, FileImage,
-  RefreshCw, Trash2, Upload, RotateCcw, Image as ImageIcon,
+  RefreshCw, Trash2, RotateCcw, Image as ImageIcon,
   Settings2, ArrowRight, Eye, X, ChevronDown, ChevronUp, Lock
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -20,6 +23,7 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { notify } from "../lib/notify";
 
 // ─────────────────────────── HELPERS ───────────────────────────
 
@@ -33,11 +37,72 @@ const formatSize = (bytes) => {
 
 const getFileType = (fileName) => {
   const ext = fileName.split('.').pop().toLowerCase();
-  if (['heic'].includes(ext)) return 'heic';
+  if (['heic', 'heif'].includes(ext)) return 'heic';
   if (['jpg', 'jpeg'].includes(ext)) return 'jpg';
   if (['png'].includes(ext)) return 'png';
   if (['webp'].includes(ext)) return 'webp';
+  if (['avif'].includes(ext)) return 'avif';
+  if (['ico'].includes(ext)) return 'ico';
+  if (['gif'].includes(ext)) return 'gif';
+  if (['bmp'].includes(ext)) return 'bmp';
+  if (['tiff', 'tif'].includes(ext)) return 'tiff';
   return 'unknown';
+};
+
+/**
+ * Decode AVIF (and other browser-supported images) to PNG via canvas.
+ * Needed because some AVIF brands (e.g. "avis") fail in Sharp/libheif on the server.
+ */
+const decodeImageFileToPng = async (file) => {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    // Fallback: HTMLImageElement
+    const url = URL.createObjectURL(file);
+    try {
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Browser cannot decode this image"));
+        img.src = url;
+      });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  const width = bitmap.width || bitmap.naturalWidth;
+  const height = bitmap.height || bitmap.naturalHeight;
+  if (!width || !height) {
+    throw new Error("Could not read image dimensions");
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas not available");
+  ctx.drawImage(bitmap, 0, 0);
+  if (typeof bitmap.close === "function") bitmap.close();
+
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Failed to encode PNG"))),
+      "image/png"
+    );
+  });
+
+  const base = file.name.replace(/\.[^.]+$/, "") || "image";
+  return new File([blob], `${base}.png`, { type: "image/png" });
+};
+
+/** Formats the server Sharp build may fail to decode — pre-convert in the browser */
+const needsBrowserDecode = (file) => {
+  const type = getFileType(file.name);
+  if (type === "avif") return true;
+  if (file.type === "image/avif") return true;
+  return false;
 };
 
 /** Safe base name for ZIP download (no path chars; .zip added later). */
@@ -264,7 +329,6 @@ export default function ConvertImage() {
 
   const convertSingle = async (file, onProgress) => {
     const formData = new FormData();
-    formData.append("file", file);
 
     // Use per-file settings ONLY if the user explicitly customized this file
     // (fileSettings entry only exists if user clicked the file and changed its settings)
@@ -285,10 +349,27 @@ export default function ConvertImage() {
       watermarkPosition,
     };
 
+    // AVIF: decode in browser first — Sharp often rejects "avis"/some camera AVIFs
+    let uploadFile = file;
+    let uploadInputType = getFileType(file.name);
+    if (needsBrowserDecode(file)) {
+      try {
+        uploadFile = await decodeImageFileToPng(file);
+        uploadInputType = "png";
+      } catch (decodeErr) {
+        console.warn("Browser AVIF decode failed:", decodeErr);
+        throw new Error(
+          "Could not read this AVIF in the browser. Open it in Chrome/Edge, or convert to PNG/JPG first."
+        );
+      }
+    }
+
+    formData.append("file", uploadFile);
+
     // Send format and quality separately for better API handling
     formData.append("format", settings.targetFormat);
     formData.append("quality", settings.quality.toString());
-    formData.append("inputType", getFileType(file.name));
+    formData.append("inputType", uploadInputType);
     formData.append("preserveMetadata", settings.preserveMetadata.toString());
     formData.append("rotation", settings.rotation.toString());
     formData.append("preserveTransparency", settings.preserveTransparency.toString());
@@ -331,7 +412,16 @@ export default function ConvertImage() {
         onProgress.callback(100);
       }
 
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        let message = "Conversion failed";
+        try {
+          const errJson = await res.json();
+          if (errJson?.error) message = errJson.error;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(message);
+      }
 
       const blob = await res.blob();
       const ext = res.headers.get("X-Output-Extension") || settings.targetFormat;
@@ -347,7 +437,7 @@ export default function ConvertImage() {
 
     } catch (e) {
       console.error(e);
-      return { status: "error" };
+      return { status: "error", error: e.message || "Conversion failed" };
     }
   };
 
@@ -384,8 +474,9 @@ export default function ConvertImage() {
         setResults(prev => ({ ...prev, [file.name]: res }));
         
         // Track usage if conversion was successful (for both logged-in and anonymous users)
-        if (res.status === "done" && trackUsage) {
+        if (res.status === "done") {
           successCount++;
+          if (trackUsage) {
           // Collect file information
           const inputExt = file.name.split('.').pop()?.toLowerCase() || '';
           const outputExt = res.ext || inputExt;
@@ -427,23 +518,8 @@ export default function ConvertImage() {
             outputFileData: outputFileData,
           };
           
-          console.log(`File ${file.name} - Data prepared:`, {
-            hasInputThumbnail: !!fileInfo.inputThumbnail,
-            hasOutputThumbnail: !!fileInfo.outputThumbnail,
-            hasOutputFileData: !!fileInfo.outputFileData,
-            inputThumbnailLength: fileInfo.inputThumbnail?.length || 0,
-            outputThumbnailLength: fileInfo.outputThumbnail?.length || 0,
-            outputFileDataLength: fileInfo.outputFileData?.length || 0,
-          });
-          
-          console.log(`File ${file.name} - Thumbnails generated:`, {
-            input: !!fileInfo.inputThumbnail,
-            output: !!fileInfo.outputThumbnail,
-            inputSize: fileInfo.inputThumbnail ? fileInfo.inputThumbnail.length : 0,
-            outputSize: fileInfo.outputThumbnail ? fileInfo.outputThumbnail.length : 0,
-          });
-          
           processedFiles.push(fileInfo);
+          }
         }
       }));
     }
@@ -457,6 +533,24 @@ export default function ConvertImage() {
         tool: "Image Converter",
         filesProcessed: successCount,
       }, processedFiles);
+    }
+
+    const failedCount = pending.length - successCount;
+    if (successCount > 0 && failedCount === 0) {
+      notify.success(
+        "Conversion complete",
+        successCount === 1 ? "Ready to download." : `${successCount} files ready.`
+      );
+    } else if (successCount > 0 && failedCount > 0) {
+      notify.warning(
+        "Partially complete",
+        `${successCount} ok · ${failedCount} failed`
+      );
+    } else if (pending.length > 0) {
+      notify.error(
+        "Conversion failed",
+        "Check the file list for details."
+      );
     }
 
     setProcessing(false);
@@ -554,54 +648,22 @@ export default function ConvertImage() {
     setViewingFile(null);
   };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
-  
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "Image Converter - ConvertMastery",
-    "description": "Free online image converter. Convert HEIC, JPG, PNG, WebP and more. Fast, secure, privacy-first. Sign up to access advanced features like watermarking, custom file names, and save files in My Orders.",
-    "url": `${siteUrl}/convert`,
-    "applicationCategory": "UtilityApplication",
-    "operatingSystem": "Web Browser",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "featureList": [
-      "HEIC to JPG/PNG/WebP",
-      "Image Format Conversion",
-      "Batch Processing",
-      "Resize During Conversion",
-      "Watermarking",
-      "EXIF Metadata Preservation",
-      "Custom File Names"
-    ]
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-            Convert Images
-          </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-4">
-            Transform HEIC, JPG, PNG, WEBP files instantly.
-            Mass conversion with high quality.
-          </p>
+    <>
+    <ToolPageShell containerClassName="max-w-7xl">
+        <ToolPageHeader
+          title="Convert Images"
+          description="Transform HEIC, JPG, PNG, WEBP files instantly. Mass conversion with high quality."
+        >
           {!user && (
-            <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-4 max-w-2xl mx-auto">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                <span className="font-semibold text-primary">Sign up for free</span> to unlock advanced features like watermarking, custom file names, format presets, and save all your converted files in <span className="font-semibold">My Orders</span> for easy access later.
-              </p>
-            </div>
+            <ToolSignupBanner
+              onSignUp={() => {
+                setAuthModalMode("signup");
+                setAuthModalOpen(true);
+              }}
+            />
           )}
-        </div>
+        </ToolPageHeader>
 
         {/* Main Workspace */}
         <div className="grid gap-8">
@@ -618,65 +680,56 @@ export default function ConvertImage() {
             maxFiles={settings?.image?.maxFiles}
             currentFileCount={files.length}
             title="Upload Images to Convert"
-            description={`JPG, PNG, WebP, HEIC, TIFF • Max ${Math.round(settings.image.maxSize / (1024 * 1024))}MB each • Up to ${settings.image.maxFiles} files`}
+            description={`JPG, PNG, WebP, AVIF, ICO, HEIC, TIFF • Max ${Math.round(settings.image.maxSize / (1024 * 1024))}MB each • Up to ${settings.image.maxFiles} files`}
             accept={{
               "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
               "image/png": [".png", ".PNG"],
               "image/webp": [".webp", ".WEBP"],
+              "image/avif": [".avif", ".AVIF"],
+              "image/x-icon": [".ico", ".ICO"],
+              "image/vnd.microsoft.icon": [".ico", ".ICO"],
               "image/heic": [".heic", ".HEIC"],
               "image/gif": [".gif", ".GIF"],
               "image/bmp": [".bmp", ".BMP"],
               "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
             }}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-green-500"
           />
 
           {/* 2. Controls & List */}
           {files.length > 0 && (
-            <div className="grid md:grid-cols-[360px_1fr] gap-8 items-start">
+            <ToolWorkspace sidebarWidth="360px">
 
-              {/* Sidebar: Settings — scrollable body; Convert All pinned at bottom */}
-              <Card className="flex h-fit max-h-[min(92vh,calc(100vh-5.5rem))] flex-col overflow-hidden border border-slate-200/90 shadow-sm md:sticky md:top-24">
-                <CardContent className="flex min-h-0 flex-1 flex-col gap-0 p-0">
-                  <div className="shrink-0 space-y-4 border-b border-slate-100/80 px-5 pb-4 pt-5">
-                    <div className="flex items-center gap-2 w-full">
-                      <div className="flex items-center gap-2 font-semibold text-lg text-gray-800 flex-1 min-w-0">
-                        <Settings2 className="w-5 h-5 flex-shrink-0" />
-                        <span className="truncate">Output Settings</span>
-                      </div>
-                      {selectedFile && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedFile(null)}
-                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 whitespace-nowrap flex-shrink-0 h-7 px-2"
-                        >
-                          Clear Selection
-                        </Button>
-                      )}
-                    </div>
-                    {selectedFile && (
-                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                        <div className="text-xs text-emerald-600 font-medium mb-1">Editing Settings For:</div>
-                        <div className="text-sm font-semibold text-emerald-900 truncate">{selectedFile}</div>
-                      </div>
-                    )}
-                    {!selectedFile && files.length > 0 && (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                        <div className="text-xs text-gray-600 font-medium mb-1">Global Settings</div>
-                        <div className="text-sm text-gray-500">Click a file to edit individual settings</div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div
-                    className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-4 [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300/90 [&::-webkit-scrollbar-track]:bg-transparent"
-                  >
+              {/* Sidebar: Settings */}
+              <ToolSettingsPanel
+                title="Output Settings"
+                headerExtra={
+                  selectedFile ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedFile(null)}
+                      className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 whitespace-nowrap flex-shrink-0 h-7 px-2"
+                    >
+                      Clear Selection
+                    </Button>
+                  ) : null
+                }
+                notice={
+                  selectedFile ? (
+                    <ToolSettingsNotice title="Editing Settings For:" variant="sky">
+                      {selectedFile}
+                    </ToolSettingsNotice>
+                  ) : (
+                    <ToolSettingsNotice title="Global Settings">
+                      Click a file to edit individual settings
+                    </ToolSettingsNotice>
+                  )
+                }
+              >
 
                   {/* Format Presets */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-600">Format Preset</label>
+                    <label className="text-sm font-medium text-muted-foreground">Format Preset</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { id: "custom", label: "Custom", icon: "⚙️" },
@@ -734,8 +787,8 @@ export default function ConvertImage() {
                             className={cn(
                               "p-2 rounded-lg border-2 transition-all text-center text-xs relative",
                               current.formatPreset === preset.id
-                                ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
-                                : "border-gray-200 hover:border-gray-300 text-gray-600",
+                                ? "border-primary bg-brand-sky/50 text-brand-navy shadow-sm"
+                                : "border-border hover:border-border text-muted-foreground",
                               requiresAuth && "opacity-75"
                             )}
                             style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -744,7 +797,7 @@ export default function ConvertImage() {
                             <div className="font-medium">{preset.label}</div>
                             {requiresAuth && (
                               <div className="absolute top-1 right-1 z-10">
-                                <Lock className="w-4 h-4 text-gray-600" />
+                                <Lock className="w-4 h-4 text-muted-foreground" />
                               </div>
                             )}
                           </button>
@@ -755,34 +808,46 @@ export default function ConvertImage() {
 
                   {/* Format Selection */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-600">Target Format</label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {['jpg', 'png', 'webp'].map(fmt => {
+                    <label className="text-sm font-medium text-muted-foreground">Target Format</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['jpg', 'png', 'webp', 'avif', 'ico'].map(fmt => {
                         const current = getCurrentSettings();
                         return (
                           <button
                             key={fmt}
+                            type="button"
                             onClick={() => {
                               updateCurrentSettings({ targetFormat: fmt, formatPreset: "custom" });
                             }}
                             className={cn(
                               "flex items-center justify-between px-3 py-3 text-sm rounded-lg border-2 transition-all uppercase font-medium",
-                              current.targetFormat === fmt ? "border-green-500 bg-green-50 text-green-700 shadow-sm" : "border-gray-200 hover:border-gray-300 text-gray-600"
+                              current.targetFormat === fmt ? "border-primary bg-brand-sky/50 text-brand-navy shadow-sm" : "border-border hover:border-border text-muted-foreground"
                             )}
                           >
                             {fmt}
-                            {current.targetFormat === fmt && <CheckCircle className="w-4 h-4 ml-2" />}
+                            {current.targetFormat === fmt && <CheckCircle className="w-4 h-4 ml-2 shrink-0" />}
                           </button>
                         );
                       })}
                     </div>
+                    {getCurrentSettings().targetFormat === "ico" && (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        ICO exports standard favicon sizes (16, 32, 48px). Best for browser icons.
+                      </p>
+                    )}
+                    {getCurrentSettings().targetFormat === "avif" && (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        AVIF offers strong compression for modern browsers. Quality slider applies.
+                      </p>
+                    )}
                   </div>
 
                   {/* Quality Slider */}
+                  {getCurrentSettings().targetFormat !== "ico" && (
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <label className="text-sm font-medium text-gray-600">Quality</label>
-                      <span className="text-sm font-bold text-green-600">{getCurrentSettings().quality}%</span>
+                      <label className="text-sm font-medium text-muted-foreground">Quality</label>
+                      <span className="text-sm font-bold text-primary">{getCurrentSettings().quality}%</span>
                     </div>
                     <input
                       type="range"
@@ -790,49 +855,50 @@ export default function ConvertImage() {
                       max="100"
                       value={getCurrentSettings().quality}
                       onChange={(e) => updateCurrentSettings({ quality: Number(e.target.value) })}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
+                      className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                     />
-                    <div className="flex justify-between text-xs text-gray-500">
+                    <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Low</span>
                       <span>High</span>
                     </div>
                     {getCurrentSettings().targetFormat === 'png' && (
-                      <p className="text-xs text-gray-500 italic">PNG uses lossless compression</p>
+                      <p className="text-xs text-muted-foreground italic">PNG uses lossless compression</p>
                     )}
                   </div>
+                  )}
 
                   {/* Format-Specific Options */}
                   {getCurrentSettings().targetFormat === 'png' && (
                     <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-muted/40 cursor-pointer transition-all">
                         <input
                           type="checkbox"
                           checked={getCurrentSettings().preserveTransparency}
                           onChange={(e) => updateCurrentSettings({ preserveTransparency: e.target.checked })}
-                          className="w-4 h-4 accent-green-600"
+                          className="w-4 h-4 accent-primary"
                         />
-                        <span className="text-sm font-medium text-gray-700">Preserve Transparency</span>
+                        <span className="text-sm font-medium text-foreground">Preserve Transparency</span>
                       </label>
                     </div>
                   )}
 
                   {getCurrentSettings().targetFormat === 'jpg' && (
                     <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                      <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-muted/40 cursor-pointer transition-all">
                         <input
                           type="checkbox"
                           checked={getCurrentSettings().progressiveJpeg}
                           onChange={(e) => updateCurrentSettings({ progressiveJpeg: e.target.checked })}
-                          className="w-4 h-4 accent-green-600"
+                          className="w-4 h-4 accent-primary"
                         />
-                        <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
+                        <span className="text-sm font-medium text-foreground">Progressive JPEG</span>
                       </label>
                     </div>
                   )}
 
                   {/* Rotation */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-600">Rotation</label>
+                    <label className="text-sm font-medium text-muted-foreground">Rotation</label>
                     <div className="grid grid-cols-4 gap-2">
                       {[0, 90, 180, 270].map((angle) => {
                         const current = getCurrentSettings();
@@ -843,8 +909,8 @@ export default function ConvertImage() {
                             className={cn(
                               "px-3 py-2 text-sm rounded-lg border-2 transition-all font-medium",
                               current.rotation === angle
-                                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                : "border-gray-200 hover:border-gray-300 text-gray-600"
+                                ? "border-primary bg-brand-sky/50 text-brand-navy"
+                                : "border-border hover:border-border text-muted-foreground"
                             )}
                           >
                             {angle}°
@@ -858,16 +924,16 @@ export default function ConvertImage() {
                   <div className="space-y-2">
                     <button
                       onClick={() => setAdvancedOptionsOpen(!advancedOptionsOpen)}
-                      className="w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-gray-50 transition-all"
+                      className="w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-muted/40 transition-all"
                     >
-                      <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                         <Settings2 className="h-4 w-4" />
                         Advanced Options
                       </span>
                       {advancedOptionsOpen ? (
-                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       )}
                     </button>
 
@@ -880,7 +946,7 @@ export default function ConvertImage() {
                       const showPreviewFree = settings?.features?.imageConverter?.advancedOptions?.showPreview ?? false;
                       
                       return (
-                        <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
+                        <div className="space-y-3 border-2 rounded-lg p-4 bg-muted/40">
                           {/* Resize Option */}
                           <div className="space-y-3">
                             {(() => {
@@ -888,7 +954,7 @@ export default function ConvertImage() {
                               return (
                                 <label 
                                   className={cn(
-                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                     requiresAuth && "opacity-75"
                                   )}
                                   style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -915,20 +981,20 @@ export default function ConvertImage() {
                                       }
                                       updateCurrentSettings({ resizeEnabled: e.target.checked });
                                     }}
-                                    className="w-4 h-4 accent-green-600"
+                                    className="w-4 h-4 accent-primary"
                                   />
-                                  <span className="text-sm font-medium text-gray-700">Resize During Conversion</span>
+                                  <span className="text-sm font-medium text-foreground">Resize During Conversion</span>
                                   {requiresAuth && (
-                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                    <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                   )}
                                 </label>
                               );
                             })()}
                           {getCurrentSettings().resizeEnabled && (
-                            <div className="bg-white rounded-lg p-3 space-y-3 border border-gray-200">
+                            <div className="bg-card rounded-lg p-3 space-y-3 border border-border">
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                  <label className="text-xs text-gray-500 mb-1 block">Width (px)</label>
+                                  <label className="text-xs text-muted-foreground mb-1 block">Width (px)</label>
                                   <input
                                     type="number"
                                     value={getCurrentSettings().resizeWidth}
@@ -938,7 +1004,7 @@ export default function ConvertImage() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs text-gray-500 mb-1 block">Height (px)</label>
+                                  <label className="text-xs text-muted-foreground mb-1 block">Height (px)</label>
                                   <input
                                     type="number"
                                     value={getCurrentSettings().resizeHeight}
@@ -949,7 +1015,7 @@ export default function ConvertImage() {
                                 </div>
                               </div>
                               <div>
-                                <label className="text-xs text-gray-500 mb-1 block">Resize Mode</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">Resize Mode</label>
                                 <select
                                   value={getCurrentSettings().resizeMode}
                                   onChange={(e) => updateCurrentSettings({ resizeMode: e.target.value })}
@@ -971,7 +1037,7 @@ export default function ConvertImage() {
                               return (
                                 <label 
                                   className={cn(
-                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                     requiresAuth && "opacity-75"
                                   )}
                                   style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -998,11 +1064,11 @@ export default function ConvertImage() {
                                       }
                                       updateCurrentSettings({ preserveMetadata: e.target.checked });
                                     }}
-                                    className="w-4 h-4 accent-green-600"
+                                    className="w-4 h-4 accent-primary"
                                   />
-                                  <span className="text-sm font-medium text-gray-700">Preserve EXIF Metadata</span>
+                                  <span className="text-sm font-medium text-foreground">Preserve EXIF Metadata</span>
                                   {requiresAuth && (
-                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                    <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                   )}
                                 </label>
                               );
@@ -1016,7 +1082,7 @@ export default function ConvertImage() {
                               return (
                                 <label 
                                   className={cn(
-                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                     requiresAuth && "opacity-75"
                                   )}
                                   style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -1043,17 +1109,17 @@ export default function ConvertImage() {
                                       }
                                       updateCurrentSettings({ watermarkEnabled: e.target.checked });
                                     }}
-                                    className="w-4 h-4 accent-green-600"
+                                    className="w-4 h-4 accent-primary"
                                   />
-                                  <span className="text-sm font-medium text-gray-700">Add Watermark</span>
+                                  <span className="text-sm font-medium text-foreground">Add Watermark</span>
                                   {requiresAuth && (
-                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                    <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                   )}
                                 </label>
                               );
                             })()}
                           {getCurrentSettings().watermarkEnabled && (
-                            <div className="bg-white rounded-lg p-3 space-y-2 border border-gray-200">
+                            <div className="bg-card rounded-lg p-3 space-y-2 border border-border">
                               <input
                                 type="text"
                                 placeholder="Watermark text"
@@ -1083,7 +1149,7 @@ export default function ConvertImage() {
                               return (
                                 <label 
                                   className={cn(
-                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                     requiresAuth && "opacity-75"
                                   )}
                                   style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -1110,17 +1176,17 @@ export default function ConvertImage() {
                                       }
                                       setBatchRename(e.target.checked);
                                     }}
-                                    className="w-4 h-4 accent-green-600"
+                                    className="w-4 h-4 accent-primary"
                                   />
-                                  <span className="text-sm font-medium text-gray-700">Custom File Names</span>
+                                  <span className="text-sm font-medium text-foreground">Custom File Names</span>
                                   {requiresAuth && (
-                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                    <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                   )}
                                 </label>
                               );
                             })()}
                           {batchRename && (
-                            <div className="bg-white rounded-lg p-3 space-y-2 border border-gray-200">
+                            <div className="bg-card rounded-lg p-3 space-y-2 border border-border">
                               <input
                                 type="text"
                                 placeholder="{original} or image_{index}"
@@ -1128,7 +1194,7 @@ export default function ConvertImage() {
                                 onChange={(e) => setRenamePattern(e.target.value)}
                                 className="w-full px-2 py-1 text-sm border rounded-md font-mono text-xs"
                               />
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-muted-foreground">
                                 Use {"{original}"} for original name, {"{index}"} for number
                               </p>
                             </div>
@@ -1142,7 +1208,7 @@ export default function ConvertImage() {
                               return (
                                 <label 
                                   className={cn(
-                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                    "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                     requiresAuth && "opacity-75"
                                   )}
                                   style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -1169,11 +1235,11 @@ export default function ConvertImage() {
                                       }
                                       setShowPreview(e.target.checked);
                                     }}
-                                    className="w-4 h-4 accent-green-600"
+                                    className="w-4 h-4 accent-primary"
                                   />
-                                  <span className="text-sm font-medium text-gray-700">Show Preview Before Conversion</span>
+                                  <span className="text-sm font-medium text-foreground">Show Preview Before Conversion</span>
                                   {requiresAuth && (
-                                    <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                    <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                   )}
                                 </label>
                               );
@@ -1184,113 +1250,78 @@ export default function ConvertImage() {
                     })()}
                   </div>
 
-                  </div>
-                </CardContent>
-              </Card>
+              </ToolSettingsPanel>
 
               {/* Main: File List */}
-              <div className="space-y-4">
-                {/* Header with Stats and Actions */}
-                <Card className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
-                  <CardContent className="p-5 sm:p-6">
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                      {/* Left: title + status pills */}
-                      <div className="min-w-0 flex-1 space-y-4">
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                            <ImageIcon className="h-4 w-4" strokeWidth={2} />
-                          </span>
-                          <h3 className="text-lg font-semibold tracking-tight text-slate-900">Files</h3>
-                        </div>
-                        <div className="flex w-full min-w-0 flex-nowrap items-center justify-between text-sm">
-                          <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap sm:gap-2">
-                            <span className="text-slate-500 font-medium">Total</span>
-                            <span className="inline-flex min-w-[1.75rem] items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-slate-700">
-                              {files.length}
-                            </span>
-                          </div>
-                          <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap sm:gap-2">
-                            <span className="text-slate-500 font-medium">Completed</span>
-                            <span className="inline-flex min-w-[1.75rem] items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-emerald-800">
-                              {Object.values(results).filter((r) => r.status === "done").length}
-                            </span>
-                          </div>
-                          <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap sm:gap-2">
-                            <span className="text-slate-500 font-medium">Processing</span>
-                            <span className="inline-flex min-w-[1.75rem] items-center justify-center rounded-full border border-violet-200/80 bg-violet-50 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-violet-800">
-                              {Object.values(results).filter((r) => r.status === "processing").length}
-                            </span>
-                          </div>
-                        </div>
+              <ToolFilesPanel
+                title="Files"
+                total={files.length}
+                completed={Object.values(results).filter((r) => r.status === "done").length}
+                processing={Object.values(results).filter((r) => r.status === "processing").length}
+                actions={
+                  <>
+                    {Object.values(results).some((r) => r.status === "done") && (
+                      <div className="w-full rounded-xl border border-border bg-muted/40 p-3.5">
+                        <label
+                          htmlFor="zip-file-name"
+                          className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                        >
+                          ZIP file name
+                        </label>
+                        <input
+                          id="zip-file-name"
+                          type="text"
+                          value={zipFileName}
+                          onChange={(e) => setZipFileName(e.target.value)}
+                          placeholder="converted_images"
+                          autoComplete="off"
+                          className="h-9 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus:border-brand-mid focus:outline-none focus:ring-2 focus:ring-brand-mid/20"
+                        />
+                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                          Saved as <span className="rounded bg-card px-1 font-mono text-[0.8rem] text-muted-foreground ring-1 ring-border">.zip</span>
+                          {" — "}edit before Download All
+                        </p>
                       </div>
-
-                      {/* Right: ZIP + actions */}
-                      <div className="flex w-full flex-col gap-3 sm:min-w-[300px] lg:max-w-md lg:items-end">
-                        {Object.values(results).some((r) => r.status === "done") && (
-                          <div className="w-full rounded-xl border border-slate-200/90 bg-slate-50/70 p-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.6)]">
-                            <label
-                              htmlFor="zip-file-name"
-                              className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-slate-500"
-                            >
-                              ZIP file name
-                            </label>
-                            <input
-                              id="zip-file-name"
-                              type="text"
-                              value={zipFileName}
-                              onChange={(e) => setZipFileName(e.target.value)}
-                              placeholder="converted_images"
-                              autoComplete="off"
-                              className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                            />
-                            <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                              Saved as <span className="rounded bg-white px-1 font-mono text-[0.8rem] text-slate-600 ring-1 ring-slate-200/80">.zip</span>
-                              <span className="text-slate-400"> — </span>
-                              edit before Download All
-                            </p>
-                          </div>
+                    )}
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end">
+                      <Button
+                        size="sm"
+                        onClick={processAll}
+                        disabled={processing}
+                        className="h-9 rounded-lg bg-primary px-4 font-semibold text-primary-foreground shadow-sm hover:bg-brand-navy disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-primary/40"
+                      >
+                        {processing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" /> Convert All
+                          </>
                         )}
-                        <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end">
-                          <Button
-                            size="sm"
-                            onClick={processAll}
-                            disabled={processing}
-                            className="h-9 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-4 font-semibold text-white shadow-md transition-all hover:from-green-600 hover:to-emerald-700 disabled:opacity-60"
-                          >
-                            {processing ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting...
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="mr-2 h-4 w-4" /> Convert All
-                              </>
-                            )}
-                          </Button>
-                          {Object.values(results).some((r) => r.status === "done") && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={downloadAll}
-                              className="h-9 rounded-lg border-slate-200 bg-white font-medium text-slate-800 shadow-sm hover:bg-slate-50"
-                            >
-                              <Download className="mr-2 h-4 w-4" /> Download All
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={clearAll}
-                            className="h-9 rounded-lg border-red-200 bg-white font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Clear All
-                          </Button>
-                        </div>
-                      </div>
+                      </Button>
+                      {Object.values(results).some((r) => r.status === "done") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={downloadAll}
+                          className="h-9 rounded-lg border-border bg-card font-medium text-foreground shadow-sm hover:bg-muted/40"
+                        >
+                          <Download className="mr-2 h-4 w-4" /> Download All
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearAll}
+                        className="h-9 rounded-lg border-red-200 bg-card font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Clear All
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-
+                  </>
+                }
+              >
                 {files.map((file, idx) => {
                   const res = results[file.name];
                   const preview = previewUrls[file.name];
@@ -1303,18 +1334,18 @@ export default function ConvertImage() {
                       className={cn(
                         "overflow-hidden border-2 shadow-sm hover:shadow-md transition-all cursor-pointer",
                         isSelected 
-                          ? "border-green-500 bg-green-50/30 shadow-md" 
-                          : "border-gray-200 hover:border-green-300"
+                          ? "border-primary bg-brand-sky/30 shadow-md" 
+                          : "border-border hover:border-brand-mid"
                       )}
                       onClick={() => setSelectedFile(file.name)}
                     >
                       <div className="flex items-center p-3 gap-4">
                         {/* Preview */}
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden relative border">
+                        <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0 overflow-hidden relative border">
                           {preview ? (
                             <img src={preview} className="w-full h-full object-cover" />
                           ) : (
-                            <div className="flex items-center justify-center w-full h-full text-xs font-bold text-gray-400 uppercase">
+                            <div className="flex items-center justify-center w-full h-full text-xs font-bold text-muted-foreground uppercase">
                               {file.name.split('.').pop()}
                             </div>
                           )}
@@ -1323,7 +1354,7 @@ export default function ConvertImage() {
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start">
-                            <h4 className="font-medium truncate pr-4 text-gray-900">{file.name}</h4>
+                            <h4 className="font-medium truncate pr-4 text-foreground">{file.name}</h4>
 
                             {/* Actions */}
                             <div className="flex items-center gap-1">
@@ -1332,7 +1363,7 @@ export default function ConvertImage() {
                                   <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className="h-8 w-8 text-blue-600 hover:text-blue-700" 
+                                    className="h-8 w-8 text-primary hover:text-brand-navy" 
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       openViewModal(file, res);
@@ -1344,7 +1375,7 @@ export default function ConvertImage() {
                                   <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className="h-8 w-8 text-green-600" 
+                                    className="h-8 w-8 text-primary" 
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const url = URL.createObjectURL(res.blob);
@@ -1374,7 +1405,7 @@ export default function ConvertImage() {
                               <Button 
                                 size="icon" 
                                 variant="ghost" 
-                                className="h-8 w-8 text-gray-400 hover:text-red-500" 
+                                className="h-8 w-8 text-muted-foreground hover:text-red-500" 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   removeFile(file.name);
@@ -1387,31 +1418,31 @@ export default function ConvertImage() {
                           </div>
 
                           <div className="flex items-center gap-2 text-sm mt-1">
-                            <Badge variant="secondary" className="font-normal text-gray-500 bg-gray-100 hover:bg-gray-100">
+                            <Badge variant="secondary" className="font-normal text-muted-foreground bg-muted hover:bg-muted">
                               {formatSize(file.size)}
                             </Badge>
 
-                            <ArrowRight className="w-3 h-3 text-gray-300" />
+                            <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
 
                             {res?.status === "done" ? (
                               <>
-                                <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
+                                <Badge className="bg-brand-sky text-brand-navy hover:bg-brand-sky border-brand-mid/30">
                                   {formatSize(res.size)}
                                 </Badge>
                                 {res.percent !== 0 && (
                                   <span className={cn(
                                     "text-xs font-bold ml-1",
-                                    res.percent > 0 ? "text-green-600" : "text-red-600"
+                                    res.percent > 0 ? "text-primary" : "text-red-600"
                                   )}>
                                     ({res.percent > 0 ? '-' : '+'}{Math.abs(res.percent)}%)
                                   </span>
                                 )}
-                                <Badge variant="outline" className="border-emerald-200 text-emerald-700 uppercase">
+                                <Badge variant="outline" className="border-brand-mid/30 text-brand-navy uppercase">
                                   {res.ext}
                                 </Badge>
                               </>
                             ) : (
-                              <Badge variant="outline" className="text-gray-400 border-dashed border-gray-300 uppercase">
+                              <Badge variant="outline" className="text-muted-foreground border-dashed border-border uppercase">
                                 To {fileSettingsForThis.targetFormat}
                               </Badge>
                             )}
@@ -1425,12 +1456,12 @@ export default function ConvertImage() {
                       {res?.status === "processing" && (
                         <div className="px-3 pb-3 space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-green-600 font-medium">Processing...</span>
-                            <span className="text-green-600 font-bold">{res.progress || 0}%</span>
+                            <span className="text-primary font-medium">Processing...</span>
+                            <span className="text-primary font-bold">{res.progress || 0}%</span>
                           </div>
-                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-brand-sky rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
+                              className="h-full bg-gradient-to-r from-primary to-brand-navy transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>
@@ -1439,14 +1470,13 @@ export default function ConvertImage() {
                     </Card>
                   )
                 })}
-              </div>
-            </div>
+              </ToolFilesPanel>
+            </ToolWorkspace>
           )}
         </div>
-      </main>
-      <Footer />
+    </ToolPageShell>
 
-      {/* Auth Modal */}
+    {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -1460,14 +1490,14 @@ export default function ConvertImage() {
           onClick={closeViewModal}
         >
           <div 
-            className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-auto"
+            className="bg-card rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
+            <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex justify-between items-center z-10">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">{viewingFile.file.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">Before & After Comparison</p>
+                <h3 className="text-xl font-bold text-foreground">{viewingFile.file.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">Before & After Comparison</p>
               </div>
               <Button
                 size="icon"
@@ -1485,11 +1515,11 @@ export default function ConvertImage() {
                 {/* Before Image */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-gray-100">BEFORE</Badge>
+                    <h4 className="font-semibold text-foreground flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-muted">BEFORE</Badge>
                     </h4>
                   </div>
-                  <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
+                  <div className="border-2 border-border rounded-lg overflow-hidden bg-muted/40 flex items-center justify-center min-h-[400px]">
                     <img 
                       src={viewingFile.beforeUrl} 
                       alt="Before" 
@@ -1500,18 +1530,18 @@ export default function ConvertImage() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Format:</span>
+                      <span className="text-muted-foreground">Format:</span>
                       <Badge variant="outline" className="uppercase">
                         {getFileType(viewingFile.file.name)}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Size:</span>
+                      <span className="text-muted-foreground">Size:</span>
                       <span className="font-medium">{formatSize(viewingFile.file.size)}</span>
                     </div>
                     {viewingFile.beforeDimensions && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Dimensions:</span>
+                        <span className="text-muted-foreground">Dimensions:</span>
                         <span className="font-medium">
                           {viewingFile.beforeDimensions.width} × {viewingFile.beforeDimensions.height}px
                         </span>
@@ -1523,11 +1553,11 @@ export default function ConvertImage() {
                 {/* After Image */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">AFTER</Badge>
+                    <h4 className="font-semibold text-foreground flex items-center gap-2">
+                      <Badge className="bg-brand-sky text-brand-navy border-brand-mid/30">AFTER</Badge>
                     </h4>
                   </div>
-                  <div className="border-2 border-emerald-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
+                  <div className="border-2 border-brand-mid/30 rounded-lg overflow-hidden bg-muted/40 flex items-center justify-center min-h-[400px]">
                     <img 
                       src={viewingFile.afterUrl} 
                       alt="After" 
@@ -1538,22 +1568,22 @@ export default function ConvertImage() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Format:</span>
-                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 uppercase">
+                      <span className="text-muted-foreground">Format:</span>
+                      <Badge className="bg-brand-sky text-brand-navy border-brand-mid/30 uppercase">
                         {viewingFile.result.ext}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Size:</span>
+                      <span className="text-muted-foreground">Size:</span>
                       <span className={cn(
                         "font-medium",
-                        viewingFile.result.percent > 0 ? "text-green-600" : viewingFile.result.percent < 0 ? "text-red-600" : "text-gray-600"
+                        viewingFile.result.percent > 0 ? "text-primary" : viewingFile.result.percent < 0 ? "text-red-600" : "text-muted-foreground"
                       )}>
                         {formatSize(viewingFile.result.size)}
                         {viewingFile.result.percent !== 0 && (
                           <span className={cn(
                             "ml-2",
-                            viewingFile.result.percent > 0 ? "text-green-600" : "text-red-600"
+                            viewingFile.result.percent > 0 ? "text-primary" : "text-red-600"
                           )}>
                             ({viewingFile.result.percent > 0 ? '-' : '+'}{Math.abs(viewingFile.result.percent)}%)
                           </span>
@@ -1562,7 +1592,7 @@ export default function ConvertImage() {
                     </div>
                     {viewingFile.afterDimensions && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Dimensions:</span>
+                        <span className="text-muted-foreground">Dimensions:</span>
                         <span className="font-medium">
                           {viewingFile.afterDimensions.width} × {viewingFile.afterDimensions.height}px
                         </span>
@@ -1573,28 +1603,28 @@ export default function ConvertImage() {
               </div>
 
               {/* Summary Stats */}
-              <div className="border-t border-gray-200 pt-4 mt-4">
+              <div className="border-t border-border pt-4 mt-4">
                 <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Size Change</div>
+                  <div className="p-3 bg-muted/40 rounded-lg">
+                    <div className="text-xs text-muted-foreground mb-1">Size Change</div>
                     <div className={cn(
                       "text-lg font-bold",
-                      viewingFile.result.percent > 0 ? "text-green-600" : viewingFile.result.percent < 0 ? "text-red-600" : "text-gray-600"
+                      viewingFile.result.percent > 0 ? "text-primary" : viewingFile.result.percent < 0 ? "text-red-600" : "text-muted-foreground"
                     )}>
                       {viewingFile.result.percent !== 0 
                         ? `${viewingFile.result.percent > 0 ? '-' : '+'}${Math.abs(viewingFile.result.percent)}%` 
                         : '0%'}
                     </div>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Saved</div>
-                    <div className="text-lg font-bold text-green-600">
+                  <div className="p-3 bg-muted/40 rounded-lg">
+                    <div className="text-xs text-muted-foreground mb-1">Saved</div>
+                    <div className="text-lg font-bold text-primary">
                       {formatSize(viewingFile.result.saved)}
                     </div>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Quality</div>
-                    <div className="text-lg font-bold text-green-600 capitalize">
+                  <div className="p-3 bg-muted/40 rounded-lg">
+                    <div className="text-xs text-muted-foreground mb-1">Quality</div>
+                    <div className="text-lg font-bold text-primary capitalize">
                       {quality}
                     </div>
                   </div>
@@ -1604,6 +1634,6 @@ export default function ConvertImage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

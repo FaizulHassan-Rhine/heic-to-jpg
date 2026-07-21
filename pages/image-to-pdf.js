@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
 import { generateThumbnail } from "../lib/thumbnailUtils";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import { PDFDocument } from "pdf-lib";
@@ -14,7 +13,6 @@ import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import Head from "next/head";
 
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -200,21 +198,11 @@ export default function ImageToPdf() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Head>
-        <title>Image to PDF - ConvertMastery</title>
-      </Head>
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-            Image to PDF
-          </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-            Convert your images into professional PDF documents.
-          </p>
-        </div>
+    <ToolPageShell containerClassName="max-w-6xl">
+        <ToolPageHeader
+          title="Image to PDF"
+          description="Convert your images into professional PDF documents."
+        />
 
         <div className="grid gap-8">
           <CollapsibleDropzone
@@ -230,8 +218,6 @@ export default function ImageToPdf() {
               "image/bmp": [".bmp", ".BMP"],
               "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
             }}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-red-500"
           />
 
           {files.length > 0 && (
@@ -240,13 +226,13 @@ export default function ImageToPdf() {
               {/* Settings Sidebar */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-8">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-green-600" /> PDF Settings
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                    <Settings2 className="w-6 h-6 text-primary" /> PDF Settings
                   </div>
 
                   {/* Page Size */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Page Size</label>
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Page Size</label>
                     <div className="grid grid-cols-3 gap-2">
                       {['A4', 'Letter', 'Fit'].map(size => (
                         <button
@@ -255,8 +241,8 @@ export default function ImageToPdf() {
                           className={cn(
                             "py-2 text-sm rounded-lg transition-all font-medium border",
                             pageSize === size
-                              ? "bg-green-50 border-green-200 text-green-700 font-semibold"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                              ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy font-semibold"
+                              : "bg-card border-border text-muted-foreground hover:bg-muted/40"
                           )}
                         >
                           {size}
@@ -268,7 +254,7 @@ export default function ImageToPdf() {
                   {/* Orientation */}
                   {pageSize !== 'Fit' && (
                     <div className="space-y-3">
-                      <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Orientation</label>
+                      <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Orientation</label>
                       <div className="grid grid-cols-2 gap-2">
                         {['Portrait', 'Landscape'].map(mode => (
                           <button
@@ -277,8 +263,8 @@ export default function ImageToPdf() {
                             className={cn(
                               "py-2 text-sm rounded-lg transition-all font-medium border",
                               orientation === mode
-                                ? "bg-green-50 border-green-200 text-green-700 font-semibold"
-                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                                ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy font-semibold"
+                                : "bg-card border-border text-muted-foreground hover:bg-muted/40"
                             )}
                           >
                             {mode}
@@ -290,7 +276,7 @@ export default function ImageToPdf() {
 
                   {/* Margins */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Margins</label>
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Margins</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[0, 20, 50].map(m => (
                         <button
@@ -299,8 +285,8 @@ export default function ImageToPdf() {
                           className={cn(
                             "py-2 text-sm rounded-lg transition-all font-medium border",
                             margin === m
-                              ? "bg-green-50 border-green-200 text-green-700 font-semibold"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                              ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy font-semibold"
+                              : "bg-card border-border text-muted-foreground hover:bg-muted/40"
                           )}
                         >
                           {m === 0 ? "None" : m === 20 ? "Normal" : "Large"}
@@ -312,7 +298,7 @@ export default function ImageToPdf() {
                   <Button
                     onClick={processAll}
                     disabled={processing}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                    className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Converting... </>
@@ -327,15 +313,15 @@ export default function ImageToPdf() {
               <div className="space-y-5">
                 <div className="flex justify-between items-end border-b pb-4">
                   <div>
-                    <h3 className="font-bold text-2xl text-gray-800">Files</h3>
-                    <p className="text-gray-500 text-sm mt-1">
+                    <h3 className="font-bold text-2xl text-foreground">Files</h3>
+                    <p className="text-muted-foreground text-sm mt-1">
                       {files.length === 1 ? "1 image → 1 PDF" : `${files.length} images → 1 PDF`}. Review order and convert.
                     </p>
                   </div>
                   {combinedPdfBlob && (
                     <Button
                       onClick={downloadPdf}
-                      className="h-10 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg"
+                      className="h-10 bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white shadow-lg"
                     >
                       <Download className="w-4 h-4 mr-2" /> Download PDF
                     </Button>
@@ -344,13 +330,13 @@ export default function ImageToPdf() {
 
                 {processing && (
                   <div className="space-y-1">
-                    <div className="flex justify-between text-sm text-green-700 font-medium">
+                    <div className="flex justify-between text-sm text-brand-navy font-medium">
                       <span>Combining {files.length} image{files.length === 1 ? "" : "s"} into 1 PDF...</span>
                       <span>{convertProgress}%</span>
                     </div>
-                    <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-brand-sky rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300"
+                        className="h-full bg-gradient-to-r from-primary to-brand-navy transition-all duration-300"
                         style={{ width: `${convertProgress}%` }}
                       />
                     </div>
@@ -360,16 +346,16 @@ export default function ImageToPdf() {
                 {files.map((file, idx) => {
                   const preview = previewUrls[file.name];
                   return (
-                    <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group">
+                    <Card key={file.name + idx} className="overflow-hidden border border-border shadow-sm hover:shadow-md transition-all group">
                       <div className="p-4 flex gap-5 items-center">
-                        <div className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden relative border border-gray-200">
+                        <div className="w-20 h-20 bg-muted rounded-xl flex-shrink-0 overflow-hidden relative border border-border">
                           {preview ? (
                             <img src={preview} className="w-full h-full object-cover" alt="" />
                           ) : (
-                            <FileImage className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                            <FileImage className="w-8 h-8 text-muted-foreground/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                           )}
                           {files.length > 1 && (
-                            <span className="absolute top-1 left-1 w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">
+                            <span className="absolute top-1 left-1 w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
                               {idx + 1}
                             </span>
                           )}
@@ -377,23 +363,23 @@ export default function ImageToPdf() {
 
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="flex justify-between items-start">
-                            <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600 hover:bg-gray-50 flex-shrink-0" onClick={() => removeFile(file.name)}>
+                            <h4 className="font-semibold truncate pr-4 text-foreground text-lg">{file.name}</h4>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-muted-foreground hover:bg-muted/40 flex-shrink-0" onClick={() => removeFile(file.name)}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-sm">
-                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-border font-mono">
                               {formatSize(file.size)}
                             </Badge>
                             {files.length > 1 && (
-                              <span className="text-gray-500 text-xs">Page {idx + 1} in PDF</span>
+                              <span className="text-muted-foreground text-xs">Page {idx + 1} in PDF</span>
                             )}
                             {!combinedPdfBlob && !processing && (
-                              <span className="text-gray-400 italic text-xs">Ready to convert</span>
+                              <span className="text-muted-foreground italic text-xs">Ready to convert</span>
                             )}
                             {combinedPdfBlob && (
-                              <Badge className="bg-green-100 text-green-700 border-green-200">
+                              <Badge className="bg-brand-sky text-brand-navy border-brand-mid/30">
                                 In PDF
                               </Badge>
                             )}
@@ -407,8 +393,6 @@ export default function ImageToPdf() {
             </div>
           )}
         </div>
-      </main>
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

@@ -1,8 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
-import Head from "next/head";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
 import {
@@ -1401,10 +1399,10 @@ export default function Scanner() {
 											e.stopPropagation();
 											rotatePage(idx);
 										}}
-										className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+										className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:bg-card transition-colors"
 										title="Rotate"
 									>
-										<RotateCw className="w-3.5 h-3.5 text-gray-700" />
+										<RotateCw className="w-3.5 h-3.5 text-foreground" />
 									</button>
 									<button
 										onClick={(e) => {
@@ -1643,7 +1641,7 @@ export default function Scanner() {
 				<div className="bg-muted/30 rounded-2xl p-4 border">
 					<div
 						ref={enhancePreviewRef}
-						className="relative mx-auto overflow-hidden rounded-xl bg-white"
+						className="relative mx-auto overflow-hidden rounded-xl bg-card"
 						style={{ maxHeight: "55vh" }}
 					>
 						<img
@@ -1905,7 +1903,7 @@ export default function Scanner() {
 						{signatureEnabled && (
 							<div className="flex flex-wrap items-center gap-2">
 								<Button type="button" variant="outline" size="sm" onClick={() => signatureInputRef.current?.click()}>{signatureDataUrl ? "Change image" : "Upload PNG/JPG"}</Button>
-								{signatureDataUrl && <img src={signatureDataUrl} alt="Signature" className="h-8 object-contain border rounded bg-white" />}
+								{signatureDataUrl && <img src={signatureDataUrl} alt="Signature" className="h-8 object-contain border rounded bg-card" />}
 								<span className="text-xs text-muted-foreground">Position:</span>
 								{["bottom-left", "bottom-center", "bottom-right"].map((pos) => (
 									<button key={pos} type="button" onClick={() => setSignaturePosition(pos)} className={cn("px-2 py-0.5 rounded text-xs border capitalize", signaturePosition === pos ? "bg-primary text-primary-foreground border-primary" : "border-border")}>{pos.replace("-", " ")}</button>
@@ -1971,7 +1969,7 @@ export default function Scanner() {
 						return (
 							<div
 								key={p.id}
-								className="relative rounded-xl overflow-hidden border bg-white aspect-[3/4] shadow-sm"
+								className="relative rounded-xl overflow-hidden border bg-card aspect-[3/4] shadow-sm"
 							>
 								<img
 									src={src}
@@ -2131,33 +2129,14 @@ export default function Scanner() {
 
 	return (
 		<>
-			<Head>
-				<title>Document Scanner - ConvertMastery</title>
-				<meta
-					name="description"
-					content="Scan documents from photos. Auto-detect edges, crop, enhance, and export as PDF or images. Free, fast, privacy-first document scanner."
-				/>
-			</Head>
-
-			<div className="min-h-screen bg-background flex flex-col">
-				<Navbar />
-
-				<main className="flex-1">
+<ToolPageShell containerClassName="max-w-7xl">
 					<div className="container mx-auto px-4 py-8 max-w-4xl">
 						{/* Header */}
-						<div className="text-center mb-8">
-							<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-								<ScanLine className="w-3.5 h-3.5" />
-								Client-side processing • 100% Private
-							</div>
-							<h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-								Document Scanner
-							</h1>
-							<p className="text-muted-foreground max-w-lg mx-auto">
-								Turn photos of documents into clean, professional scanned files.
-								Auto-detect edges, apply scan filters, and export as PDF.
-							</p>
-						</div>
+						<ToolPageHeader
+							title="Document Scanner"
+							description="Turn photos of documents into clean, professional scanned files. Auto-detect edges, apply scan filters, and export as PDF."
+							badge="Client-side processing • 100% Private"
+						/>
 
 						{/* Steps */}
 						<StepIndicator
@@ -2209,10 +2188,7 @@ export default function Scanner() {
 							</div>
 						)}
 					</div>
-				</main>
-
-				<Footer />
-			</div>
+    </ToolPageShell>
 		</>
 	);
 }

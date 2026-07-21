@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Link2, Copy, ExternalLink, Trash2, RotateCcw,
@@ -14,7 +13,6 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-import Head from "next/head";
 
 export default function UrlShortener() {
   const { user, trackUsage } = useAuth();
@@ -195,42 +193,34 @@ export default function UrlShortener() {
 
   return (
     <>
-      <Head>
-        <title>URL Shortener - ConvertMastery</title>
-        <meta name="description" content="Shorten your URLs for free. Generate QR codes for short links. No registration required." />
-      </Head>
-
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar />
-
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+<ToolPageShell containerClassName="max-w-6xl">
           {/* Header */}
-          <div className="text-center mb-10">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">URL Shortener</h1>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">Shorten long URLs and generate QR codes instantly.</p>
-          </div>
+          <ToolPageHeader
+          title="URL Shortener"
+          description="Shorten long URLs and generate QR codes instantly."
+        />
 
           <div className="grid gap-8">
             {/* Input Area (styled like dropzone) */}
-            <Card className="border-2 border-dashed border-gray-300 hover:border-green-500 bg-white shadow-sm transition-all">
+            <Card className="border-2 border-dashed border-border hover:border-primary bg-card shadow-sm transition-all">
               <CardContent className="p-6">
-                <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 block">Enter URL</label>
+                <label className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3 block">Enter URL</label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 relative">
-                    <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
                       type="text"
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && shortenUrl()}
                       placeholder="Enter your long URL here..."
-                      className="w-full pl-10 pr-4 py-3 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base"
+                      className="w-full pl-10 pr-4 py-3 border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
                     />
                   </div>
                   <Button
                     onClick={shortenUrl}
                     disabled={isLoading || !url.trim()}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-3 text-base h-12 shadow-lg hover:shadow-xl font-semibold"
+                    className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white px-8 py-3 text-base h-12 shadow-lg hover:shadow-xl font-semibold"
                   >
                     {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Shortening...</> : "Shorten URL"}
                   </Button>
@@ -238,22 +228,22 @@ export default function UrlShortener() {
 
                 {/* Result */}
                 {shortUrl && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="mt-4 p-4 bg-brand-sky/50 border border-brand-mid/30 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="text-sm font-medium text-green-700">Shortened URL</span>
+                      <CheckCircle className="h-5 w-5 text-primary" />
+                      <span className="text-sm font-medium text-brand-navy">Shortened URL</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <a href={shortUrl} target="_blank" rel="noopener noreferrer"
-                        className="text-green-700 font-semibold text-lg hover:underline break-all flex-1">{shortUrl}</a>
-                      <Button onClick={() => copyToClipboard(shortUrl)} size="sm" className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white flex-shrink-0">
+                        className="text-brand-navy font-semibold text-lg hover:underline break-all flex-1">{shortUrl}</a>
+                      <Button onClick={() => copyToClipboard(shortUrl)} size="sm" className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white flex-shrink-0">
                         <Copy className="h-4 w-4 mr-1" /> Copy
                       </Button>
                       <Button onClick={() => window.open(shortUrl, "_blank")} size="sm" variant="outline" className="flex-shrink-0">
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2 break-all">Original: {url}</p>
+                    <p className="text-xs text-muted-foreground mt-2 break-all">Original: {url}</p>
                   </div>
                 )}
               </CardContent>
@@ -264,39 +254,39 @@ export default function UrlShortener() {
               <div className="space-y-5">
                 <div className="flex justify-between items-end border-b pb-4">
                   <div>
-                    <h3 className="font-bold text-2xl text-gray-800">Recent Links</h3>
-                    <p className="text-gray-500 text-sm mt-1">{history.length} shortened URLs</p>
+                    <h3 className="font-bold text-2xl text-foreground">Recent Links</h3>
+                    <p className="text-muted-foreground text-sm mt-1">{history.length} shortened URLs</p>
                   </div>
-                  <Button onClick={clearHistory} variant="ghost" size="sm" className="text-gray-400">
+                  <Button onClick={clearHistory} variant="ghost" size="sm" className="text-muted-foreground">
                     <Trash2 className="h-4 w-4 mr-1" /> Clear All
                   </Button>
                 </div>
 
                 {history.map((item) => (
-                  <Card key={item.id} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all">
+                  <Card key={item.id} className="overflow-hidden border border-border shadow-sm hover:shadow-md transition-all">
                     <div className="p-4 flex gap-5 items-center">
-                      <div className="w-16 h-16 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-green-100">
-                        <Link2 className="w-7 h-7 text-green-400" />
+                      <div className="w-16 h-16 bg-brand-sky/50 rounded-xl flex items-center justify-center flex-shrink-0 border border-brand-mid/30">
+                        <Link2 className="w-7 h-7 text-brand-mid" />
                       </div>
 
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
                           <a href={item.short} target="_blank" rel="noopener noreferrer"
-                            className="text-green-700 font-semibold hover:underline truncate">{item.short}</a>
-                          <button onClick={() => copyToClipboard(item.short)} className="text-gray-400 hover:text-gray-600 flex-shrink-0" title="Copy">
+                            className="text-brand-navy font-semibold hover:underline truncate">{item.short}</a>
+                          <button onClick={() => copyToClipboard(item.short)} className="text-muted-foreground hover:text-muted-foreground flex-shrink-0" title="Copy">
                             <Copy className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                        <p className="text-sm text-gray-500 truncate">{item.original}</p>
-                        <p className="text-xs text-gray-400">{item.createdAt}</p>
+                        <p className="text-sm text-muted-foreground truncate">{item.original}</p>
+                        <p className="text-xs text-muted-foreground">{item.createdAt}</p>
                       </div>
 
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button variant="ghost" size="icon" onClick={() => toggleQr(item.id, item.short)} className="h-8 w-8">
-                          <QrCode className={cn("h-4 w-4", showQr[item.id] ? "text-green-600" : "text-gray-400")} />
+                          <QrCode className={cn("h-4 w-4", showQr[item.id] ? "text-primary" : "text-muted-foreground")} />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => window.open(item.short, "_blank")} className="h-8 w-8">
-                          <ExternalLink className="h-4 w-4 text-gray-400" />
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => removeFromHistory(item.id)} className="h-8 w-8">
                           <Trash2 className="h-4 w-4 text-red-400" />
@@ -306,11 +296,11 @@ export default function UrlShortener() {
 
                     {showQr[item.id] && qrImages[item.id] && (
                       <div className="px-4 pb-4 flex items-center gap-4 border-t pt-3 mt-0">
-                        <div className="bg-white border rounded-lg p-2 inline-block">
+                        <div className="bg-card border rounded-lg p-2 inline-block">
                           <img src={qrImages[item.id]} alt="QR Code" className="w-28 h-28" />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600 mb-2">Scan to open the shortened URL</p>
+                          <p className="text-sm text-muted-foreground mb-2">Scan to open the shortened URL</p>
                           <Button onClick={() => downloadQr(item.id)} size="sm" variant="outline">
                             <Download className="h-4 w-4 mr-1" /> Download QR
                           </Button>
@@ -322,10 +312,7 @@ export default function UrlShortener() {
               </div>
             )}
           </div>
-        </main>
-
-        <Footer />
-      </div>
+    </ToolPageShell>
     </>
   );
 }

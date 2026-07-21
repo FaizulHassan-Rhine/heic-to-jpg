@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
@@ -15,7 +14,6 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import Head from "next/head";
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
@@ -237,21 +235,11 @@ export default function VideoCompress() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Head>
-        <title>Video Compress - ConvertMastery</title>
-      </Head>
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-            Compress Video
-          </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-            Reduce video size securely in your browser.
-          </p>
-        </div>
+    <ToolPageShell containerClassName="max-w-6xl">
+        <ToolPageHeader
+          title="Compress Video"
+          description="Reduce video size securely in your browser."
+        />
 
         <div className="grid gap-8">
           <CollapsibleDropzone
@@ -260,8 +248,6 @@ export default function VideoCompress() {
             title="Upload Video to Compress"
             description="MP4, MOV, MKV, WebM • Max 500MB"
             accept={{ 'video/*': [] }}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-green-500"
           />
 
           {files.length > 0 && (
@@ -270,13 +256,13 @@ export default function VideoCompress() {
               {/* Settings Sidebar */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-green-600" /> Compression
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                    <Settings2 className="w-6 h-6 text-primary" /> Compression
                   </div>
 
                   {/* Quality */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Quality</label>
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Quality</label>
                     <div className="grid grid-cols-2 gap-2">
                       {QUALITY_PRESETS.map(p => (
                         <button
@@ -285,8 +271,8 @@ export default function VideoCompress() {
                           className={cn(
                             "p-2 text-sm rounded-lg transition-all font-medium border text-left",
                             quality === p.value
-                              ? "bg-green-50 border-green-200 text-green-700 ring-1 ring-green-200"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                              ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy ring-1 ring-brand-mid/40"
+                              : "bg-card border-border text-muted-foreground hover:bg-muted/40"
                           )}
                         >
                           <div className="font-semibold">{p.label}</div>
@@ -298,11 +284,11 @@ export default function VideoCompress() {
 
                   {/* Resolution */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Resolution</label>
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Resolution</label>
                     <select
                       value={resolution}
                       onChange={(e) => setResolution(e.target.value)}
-                      className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full p-2.5 bg-card border border-border rounded-lg text-foreground focus:ring-2 focus:ring-brand-mid outline-none"
                     >
                       {RESOLUTION_PRESETS.map(r => (
                         <option key={r.value} value={r.value}>{r.label}</option>
@@ -311,19 +297,19 @@ export default function VideoCompress() {
                   </div>
 
                   {/* Options */}
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="p-3 bg-muted/40 rounded-xl border border-border">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={removeAudio}
                         onChange={(e) => setRemoveAudio(e.target.checked)}
-                        className="w-4 h-4 accent-blue-600"
+                        className="w-4 h-4 accent-primary"
                       />
                       <div>
-                        <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                           <VolumeX className="w-3 h-3" /> Remove Audio
                         </span>
-                        <span className="text-xs text-gray-500 block">Reduces size further</span>
+                        <span className="text-xs text-muted-foreground block">Reduces size further</span>
                       </div>
                     </label>
                   </div>
@@ -331,7 +317,7 @@ export default function VideoCompress() {
                   <Button
                     onClick={processAll}
                     disabled={processing || (ffmpegLoading && !ffmpegReady)}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                    className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> stop </> // Actually usually we can't stop easily
@@ -348,8 +334,8 @@ export default function VideoCompress() {
               <div className="space-y-5">
                 <div className="flex justify-between items-end border-b pb-4">
                   <div>
-                    <h3 className="font-bold text-2xl text-gray-800">Files</h3>
-                    <p className="text-gray-500 text-sm mt-1">Videos to process</p>
+                    <h3 className="font-bold text-2xl text-foreground">Files</h3>
+                    <p className="text-muted-foreground text-sm mt-1">Videos to process</p>
                   </div>
                 </div>
 
@@ -357,19 +343,19 @@ export default function VideoCompress() {
                   const res = results[file.name];
 
                   return (
-                    <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all">
+                    <Card key={file.name + idx} className="overflow-hidden border border-border shadow-sm hover:shadow-md transition-all">
                       <div className="p-4 flex gap-5 items-center">
-                        <div className="w-16 h-16 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-green-100">
-                          <FileVideo className="w-8 h-8 text-green-400" />
+                        <div className="w-16 h-16 bg-brand-sky/50 rounded-xl flex items-center justify-center flex-shrink-0 border border-brand-mid/30">
+                          <FileVideo className="w-8 h-8 text-brand-mid" />
                         </div>
 
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="flex justify-between items-start">
-                            <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+                            <h4 className="font-semibold truncate pr-4 text-foreground text-lg">{file.name}</h4>
 
                             <div className="flex gap-2">
                               {res?.status === "done" && (
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" onClick={() => {
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-primary bg-brand-sky/50 hover:bg-brand-sky" onClick={() => {
                                   const url = URL.createObjectURL(res.blob);
                                   const a = document.createElement("a");
                                   a.href = url;
@@ -379,27 +365,27 @@ export default function VideoCompress() {
                                   <Download className="w-4 h-4" />
                                 </Button>
                               )}
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-3 text-sm">
-                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-border font-mono">
                               {formatSize(file.size)}
                             </Badge>
-                            <ArrowRight className="w-3 h-3 text-gray-300" />
+                            <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
 
                             {res?.status === "done" ? (
                               <>
-                                <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 font-mono">
+                                <Badge className="bg-brand-sky text-brand-navy border-brand-mid/30 hover:bg-brand-sky font-mono">
                                   {formatSize(res.size)}
                                 </Badge>
-                                <span className="text-green-600 font-bold text-xs">(-{res.savedPercent}%)</span>
+                                <span className="text-primary font-bold text-xs">(-{res.savedPercent}%)</span>
                               </>
                             ) : (
-                              <span className="text-gray-400 italic text-xs">
+                              <span className="text-muted-foreground italic text-xs">
                                 {res?.status === "processing" ? "Processing..." :
                                   res?.status === "pending" ? "Pending" :
                                     res?.status === "error" ? "Error" : "Ready"}
@@ -411,12 +397,12 @@ export default function VideoCompress() {
                       {res?.status === "processing" && (
                         <div className="px-4 pb-4 space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-blue-600 font-medium">Processing...</span>
-                            <span className="text-blue-600 font-bold">{res.progress || 0}%</span>
+                            <span className="text-primary font-medium">Processing...</span>
+                            <span className="text-primary font-bold">{res.progress || 0}%</span>
                           </div>
-                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-brand-sky rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
+                              className="h-full bg-gradient-to-r from-primary to-brand-navy transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>
@@ -429,8 +415,6 @@ export default function VideoCompress() {
             </div>
           )}
         </div>
-      </main>
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

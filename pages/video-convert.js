@@ -3,8 +3,7 @@ import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
 import { generateFileThumbnails } from "../lib/thumbnailUtils";
 import { blobToBase64, extractBase64 } from "../lib/fileUtils";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import AuthModal from "../components/AuthModal";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
@@ -19,7 +18,6 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import Head from "next/head";
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
@@ -363,21 +361,12 @@ export default function VideoConvert() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Head>
-        <title>Video Converter - ConvertMastery</title>
-      </Head>
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-            Convert Video
-          </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-            Change video formats easily in your browser.
-          </p>
-        </div>
+    <>
+    <ToolPageShell containerClassName="max-w-6xl">
+        <ToolPageHeader
+          title="Convert Video"
+          description="Change video formats easily in your browser."
+        />
 
         <div className="grid gap-8">
           <CollapsibleDropzone
@@ -392,8 +381,6 @@ export default function VideoConvert() {
               "video/x-matroska": [".mkv", ".MKV"],
               "video/webm": [".webm", ".WEBM"]
             }}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-green-500"
           />
 
           {files.length > 0 && (
@@ -402,13 +389,13 @@ export default function VideoConvert() {
               {/* Settings Sidebar */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-green-600" /> Convert Settings
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                    <Settings2 className="w-6 h-6 text-primary" /> Convert Settings
                   </div>
 
                   {/* Format Grid */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Target Format</label>
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Target Format</label>
                     <div className="grid grid-cols-2 gap-2">
                       {FORMATS.map(f => {
                         const Icon = f.icon;
@@ -431,19 +418,19 @@ export default function VideoConvert() {
                             className={cn(
                               "p-2 text-sm rounded-lg transition-all font-medium border text-left flex items-start gap-2 relative",
                               targetFormat === f.value
-                                ? "bg-emerald-50 border-emerald-200 text-emerald-700 ring-1 ring-emerald-200"
-                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50",
+                                ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy ring-1 ring-brand-mid/40"
+                                : "bg-card border-border text-muted-foreground hover:bg-muted/40",
                               requiresAuth && "opacity-75"
                             )}
                             style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
                           >
-                            <Icon className={cn("w-4 h-4 mt-0.5 flex-shrink-0", targetFormat === f.value ? "text-green-600" : "text-gray-400")} />
+                            <Icon className={cn("w-4 h-4 mt-0.5 flex-shrink-0", targetFormat === f.value ? "text-primary" : "text-muted-foreground")} />
                             <div className="flex-1">
                               <div className="font-semibold">{f.label}</div>
                               <div className="text-[10px] opacity-70 font-normal">{f.desc}</div>
                             </div>
                             {requiresAuth && (
-                              <Lock className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                              <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                             )}
                           </button>
                         );
@@ -453,16 +440,16 @@ export default function VideoConvert() {
 
                   {/* Options */}
                   {targetFormat !== "MP3" && targetFormat !== "GIF" && (
-                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="p-3 bg-muted/40 rounded-xl border border-border">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={muteAudio}
                           onChange={(e) => setMuteAudio(e.target.checked)}
-                          className="w-4 h-4 accent-green-600"
+                          className="w-4 h-4 accent-primary"
                         />
                         <div>
-                          <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                          <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                             <VolumeX className="w-3 h-3" /> Mute Audio
                           </span>
                         </div>
@@ -473,7 +460,7 @@ export default function VideoConvert() {
                   <Button
                     onClick={processAll}
                     disabled={processing || (ffmpegLoading && !ffmpegReady)}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                    className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> stop </>
@@ -490,8 +477,8 @@ export default function VideoConvert() {
               <div className="space-y-5">
                 <div className="flex justify-between items-end border-b pb-4">
                   <div>
-                    <h3 className="font-bold text-2xl text-gray-800">Files</h3>
-                    <p className="text-gray-500 text-sm mt-1">Videos to convert</p>
+                    <h3 className="font-bold text-2xl text-foreground">Files</h3>
+                    <p className="text-muted-foreground text-sm mt-1">Videos to convert</p>
                   </div>
                 </div>
 
@@ -500,19 +487,19 @@ export default function VideoConvert() {
                   const isMp3 = res?.ext === "mp3" || targetFormat === "MP3";
 
                   return (
-                    <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all">
+                    <Card key={file.name + idx} className="overflow-hidden border border-border shadow-sm hover:shadow-md transition-all">
                       <div className="p-4 flex gap-5 items-center">
-                        <div className="w-16 h-16 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-emerald-100">
-                          {isMp3 ? <FileAudio className="w-8 h-8 text-emerald-400" /> : <Film className="w-8 h-8 text-emerald-400" />}
+                        <div className="w-16 h-16 bg-brand-sky/50 rounded-xl flex items-center justify-center flex-shrink-0 border border-brand-sky">
+                          {isMp3 ? <FileAudio className="w-8 h-8 text-brand-mid" /> : <Film className="w-8 h-8 text-brand-mid" />}
                         </div>
 
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="flex justify-between items-start">
-                            <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+                            <h4 className="font-semibold truncate pr-4 text-foreground text-lg">{file.name}</h4>
 
                             <div className="flex gap-2">
                               {res?.status === "done" && (
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" onClick={() => {
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-primary bg-brand-sky/50 hover:bg-brand-sky" onClick={() => {
                                   const url = URL.createObjectURL(res.blob);
                                   const a = document.createElement("a");
                                   a.href = url;
@@ -522,27 +509,27 @@ export default function VideoConvert() {
                                   <Download className="w-4 h-4" />
                                 </Button>
                               )}
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-3 text-sm">
-                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-border font-mono">
                               {formatSize(file.size)}
                             </Badge>
-                            <ArrowRight className="w-3 h-3 text-gray-300" />
+                            <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
 
                             {res?.status === "done" ? (
                               <>
-                                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 font-bold uppercase">
+                                <Badge className="bg-brand-sky text-brand-navy border-brand-mid/30 hover:bg-brand-sky font-bold uppercase">
                                   {res.ext}
                                 </Badge>
-                                <span className="text-gray-500 text-xs font-mono">{formatSize(res.size)}</span>
+                                <span className="text-muted-foreground text-xs font-mono">{formatSize(res.size)}</span>
                               </>
                             ) : (
-                              <span className="text-green-600 font-medium text-xs bg-emerald-50 px-2 py-0.5 rounded">
+                              <span className="text-primary font-medium text-xs bg-brand-sky/50 px-2 py-0.5 rounded">
                                 To {targetFormat}
                               </span>
                             )}
@@ -558,12 +545,12 @@ export default function VideoConvert() {
                       {res?.status === "processing" && (
                         <div className="px-4 pb-4 space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-green-600 font-medium">Processing...</span>
-                            <span className="text-green-600 font-bold">{res.progress || 0}%</span>
+                            <span className="text-primary font-medium">Processing...</span>
+                            <span className="text-primary font-bold">{res.progress || 0}%</span>
                           </div>
-                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-brand-sky rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
+                              className="h-full bg-gradient-to-r from-primary to-brand-navy transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>
@@ -576,15 +563,14 @@ export default function VideoConvert() {
             </div>
           )}
         </div>
-      </main>
-      <Footer />
+    </ToolPageShell>
 
-      {/* Auth Modal */}
+    {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         initialMode={authModalMode}
       />
-    </div>
+    </>
   );
 }

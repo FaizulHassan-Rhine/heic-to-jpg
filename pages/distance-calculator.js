@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { loadGoogleMaps, geocodeAddress, getDirections, haversineKm, kmToMiles, getCurrentPosition, reverseGeocode } from "../lib/googleMaps";
@@ -132,16 +131,11 @@ export default function DistanceCalculatorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-          <MapPin className="h-8 w-8 text-primary" />
-          Distance Calculator
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mb-8">
-          Enter two addresses to get driving or walking distance and duration. Straight-line distance is also shown.
-        </p>
+    <ToolPageShell containerClassName="max-w-4xl">
+        <ToolPageHeader
+          title="Distance Calculator"
+          description="Enter two addresses to get driving or walking distance and duration. Straight-line distance is also shown."
+        />
 
         <Card className="mb-6">
           <CardHeader>
@@ -155,7 +149,7 @@ export default function DistanceCalculatorPage() {
                 value={origin}
                 onChange={setOrigin}
                 placeholder="Address or place (e.g. Dhaka)"
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                className="w-full px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
               />
             </div>
             <div>
@@ -164,7 +158,7 @@ export default function DistanceCalculatorPage() {
                 value={dest}
                 onChange={setDest}
                 placeholder="Address or place"
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                className="w-full px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -174,7 +168,7 @@ export default function DistanceCalculatorPage() {
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${mode === m ? "bg-primary text-primary-foreground border-primary" : "border-slate-300 dark:border-slate-600"}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${mode === m ? "bg-primary text-primary-foreground border-primary" : "border-border dark:border-border"}`}
                 >
                   {m === "DRIVING" ? "Driving" : "Walking"}
                 </button>
@@ -199,7 +193,7 @@ export default function DistanceCalculatorPage() {
                 {mode === "DRIVING" ? "Driving" : "Walking"}: {result.distanceText} · {result.durationText}
               </p>
               {straightLine && (
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                   Straight line: {straightLine.km.toFixed(2)} km ({straightLine.miles.toFixed(2)} miles)
                 </p>
               )}
@@ -230,8 +224,6 @@ export default function DistanceCalculatorPage() {
             <div ref={mapRef} className="w-full h-[400px] rounded-b-lg" />
           </CardContent>
         </Card>
-      </main>
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { loadGoogleMaps, geocodeAddress, getCurrentPosition, reverseGeocode } from "../lib/googleMaps";
@@ -112,16 +111,11 @@ export default function RadiusMapPage() {
   }, [center, radiusKm]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-          <MapPin className="h-8 w-8 text-primary" />
-          Radius Map Tool
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mb-8">
-          Enter a center address and radius to draw a circle on the map. Useful for delivery zones, coverage areas, or proximity search.
-        </p>
+    <ToolPageShell containerClassName="max-w-4xl">
+        <ToolPageHeader
+          title="Radius Map Tool"
+          description="Enter a center address and radius to draw a circle on the map. Useful for delivery zones, coverage areas, or proximity search."
+        />
 
         <Card className="mb-6">
           <CardHeader>
@@ -140,7 +134,7 @@ export default function RadiusMapPage() {
                     setCenter({ lat, lng, formatted });
                   }}
                   placeholder="Address or place"
-                  className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                  className="flex-1 px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
                   onKeyDown={(e) => e.key === "Enter" && applyCenter()}
                 />
                 <Button onClick={applyCenter} disabled={loading} className="gap-2">
@@ -158,11 +152,11 @@ export default function RadiusMapPage() {
                 step={0.5}
                 value={radiusKm}
                 onChange={(e) => setRadiusKm(Number(e.target.value) || 10)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                className="w-full px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
               />
-              <p className="text-xs text-slate-500 mt-1">≈ {(radiusKm * 0.621371).toFixed(1)} miles</p>
+              <p className="text-xs text-muted-foreground mt-1">≈ {(radiusKm * 0.621371).toFixed(1)} miles</p>
             </div>
-            {center && <p className="text-sm text-slate-600 dark:text-slate-400">Center: {center.formatted}</p>}
+            {center && <p className="text-sm text-muted-foreground dark:text-muted-foreground">Center: {center.formatted}</p>}
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           </CardContent>
         </Card>
@@ -182,8 +176,6 @@ export default function RadiusMapPage() {
             <div ref={mapRef} className="w-full h-[450px] rounded-b-lg" />
           </CardContent>
         </Card>
-      </main>
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

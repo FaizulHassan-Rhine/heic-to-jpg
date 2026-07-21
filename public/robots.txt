@@ -3,5 +3,7 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /my-orders
+Disallow: /hermes-ai
+Disallow: /resume-match
 
 Sitemap: https://convertmastery.com/sitemap.xml

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Globe, Search, Loader2, MapPin, Server, Wifi, Shield
@@ -90,30 +89,20 @@ export default function IpLookup() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+    <ToolPageShell containerClassName="max-w-4xl">
         <div className="space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Globe className="w-3.5 h-3.5" />
-              IP Address Information
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              IP Address Lookup
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Get detailed information about any IP address including location, ISP, organization, and more.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="IP Address Lookup"
+            description="Get detailed information about any IP address including location, ISP, organization, and more."
+            badge="IP Address Information"
+          />
 
           {/* Input Section */}
-          <Card className="border-2 border-green-200 dark:border-green-800">
+          <Card className="border border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Search className="w-5 h-5 text-green-600" />
+                <Search className="w-5 h-5 text-primary" />
                 Enter IP Address
               </CardTitle>
             </CardHeader>
@@ -125,12 +114,12 @@ export default function IpLookup() {
                   onChange={(e) => setIp(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && lookupIp()}
                   placeholder="Enter IP address (e.g., 8.8.8.8)"
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <Button
                   onClick={lookupIp}
                   disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy"
                 >
                   {loading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -144,7 +133,7 @@ export default function IpLookup() {
                 onClick={lookupMyIp}
                 disabled={loading}
                 variant="outline"
-                className="w-full border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                className="w-full border-brand-mid/40 dark:border-brand-mid text-brand-navy dark:text-brand-mid hover:bg-brand-sky/50 dark:hover:bg-brand-sky/20"
               >
                 <Wifi className="w-4 h-4 mr-2" />
                 Lookup My IP Address
@@ -160,73 +149,73 @@ export default function IpLookup() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Server className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">IP Address</span>
+                      <Server className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">IP Address</span>
                     </div>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.ip || "N/A"}</p>
+                    <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.ip || "N/A"}</p>
                   </div>
 
                   {result.country && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <MapPin className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Country</span>
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Country</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">
                         {result.country} {result.countryCode && `(${result.countryCode})`}
                       </p>
                     </div>
                   )}
 
                   {result.region && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <MapPin className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Region</span>
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Region</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.region}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.region}</p>
                     </div>
                   )}
 
                   {result.city && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <MapPin className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">City</span>
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">City</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.city}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.city}</p>
                     </div>
                   )}
 
                   {result.isp && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <Wifi className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">ISP</span>
+                        <Wifi className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">ISP</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.isp}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.isp}</p>
                     </div>
                   )}
 
                   {result.org && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <Server className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Organization</span>
+                        <Server className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Organization</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.org}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.org}</p>
                     </div>
                   )}
 
                   {result.timezone && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <Globe className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Timezone</span>
+                        <Globe className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Timezone</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.timezone}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.timezone}</p>
                     </div>
                   )}
                 </div>
@@ -234,12 +223,12 @@ export default function IpLookup() {
                 {result.lat && result.lon && (
                   <>
                     <Separator />
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <MapPin className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Coordinates</span>
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Coordinates</span>
                       </div>
-                      <p className="text-sm text-gray-900 dark:text-white">
+                      <p className="text-sm text-foreground dark:text-foreground">
                         Latitude: {result.lat}, Longitude: {result.lon}
                       </p>
                     </div>
@@ -250,11 +239,11 @@ export default function IpLookup() {
           )}
 
           {/* Info */}
-          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <Card className="bg-brand-sky/50 dark:bg-primary/10 border-brand-mid/30 dark:border-primary/30">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-green-600 mt-0.5" />
-                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                <Shield className="w-5 h-5 text-primary mt-0.5" />
+                <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                   <p className="font-medium">About IP Lookup</p>
                   <p>IP address lookup provides approximate location information based on IP geolocation databases. Results may not always be 100% accurate and are for informational purposes only.</p>
                 </div>
@@ -262,10 +251,7 @@ export default function IpLookup() {
             </CardContent>
           </Card>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 

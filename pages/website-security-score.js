@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Shield, Search, Loader2, CheckCircle, XCircle, AlertTriangle, Globe, Lock, Server
@@ -54,42 +53,32 @@ export default function WebsiteSecurityScore() {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 71) return "text-green-600";
+    if (score >= 71) return "text-primary";
     if (score >= 41) return "text-yellow-600";
     return "text-red-600";
   };
 
   const getScoreBgColor = (score) => {
-    if (score >= 71) return "bg-green-100 dark:bg-green-900/20";
+    if (score >= 71) return "bg-brand-sky dark:bg-primary/10";
     if (score >= 41) return "bg-yellow-100 dark:bg-yellow-900/20";
     return "bg-red-100 dark:bg-red-900/20";
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+    <ToolPageShell containerClassName="max-w-5xl">
         <div className="space-y-6">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              Security Analysis • Free Tool
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Website Security Score
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Analyze your website's security configuration, SSL/TLS setup, security headers, and get a comprehensive security score.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Website Security Score"
+            description="Analyze your website's security configuration, SSL/TLS setup, security headers, and get a comprehensive security score."
+            badge="Security Analysis • Free Tool"
+          />
 
           {/* Input Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5 text-green-600" />
+                <Globe className="w-5 h-5 text-primary" />
                 Enter Website URL
               </CardTitle>
             </CardHeader>
@@ -100,13 +89,13 @@ export default function WebsiteSecurityScore() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com"
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   onKeyPress={(e) => e.key === "Enter" && !loading && checkSecurity()}
                 />
                 <Button
                   onClick={checkSecurity}
                   disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy"
                 >
                   {loading ? (
                     <>
@@ -138,12 +127,12 @@ export default function WebsiteSecurityScore() {
                     <Badge
                       className={cn(
                         "text-lg px-4 py-2",
-                        result.score >= 71 ? "bg-green-600" : result.score >= 41 ? "bg-yellow-600" : "bg-red-600"
+                        result.score >= 71 ? "bg-primary" : result.score >= 41 ? "bg-yellow-600" : "bg-red-600"
                       )}
                     >
                       {result.riskLevel}
                     </Badge>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                       Domain: <span className="font-mono font-medium">{result.domain}</span>
                     </p>
                   </div>
@@ -167,7 +156,7 @@ export default function WebsiteSecurityScore() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm">HTTPS Enabled</span>
                           {result.checks.basic.hasHttps ? (
-                            <Badge className="bg-green-600">Yes</Badge>
+                            <Badge className="bg-primary">Yes</Badge>
                           ) : (
                             <Badge variant="destructive">No</Badge>
                           )}
@@ -175,7 +164,7 @@ export default function WebsiteSecurityScore() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm">HTTP to HTTPS Redirect</span>
                           {result.checks.basic.redirectsToHttps ? (
-                            <Badge className="bg-green-600">Yes</Badge>
+                            <Badge className="bg-primary">Yes</Badge>
                           ) : (
                             <Badge variant="destructive">No</Badge>
                           )}
@@ -203,7 +192,7 @@ export default function WebsiteSecurityScore() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm">SSL Certificate</span>
                           {result.checks.ssl.hasSsl ? (
-                            <Badge className="bg-green-600">Valid</Badge>
+                            <Badge className="bg-primary">Valid</Badge>
                           ) : (
                             <Badge variant="destructive">Invalid/Missing</Badge>
                           )}
@@ -237,7 +226,7 @@ export default function WebsiteSecurityScore() {
                             <div key={key} className="flex items-center justify-between">
                               <span className="text-sm">{headerName}</span>
                               {value === "Present" ? (
-                                <Badge className="bg-green-600">Present</Badge>
+                                <Badge className="bg-primary">Present</Badge>
                               ) : (
                                 <Badge variant="destructive">Missing</Badge>
                               )}
@@ -293,10 +282,7 @@ export default function WebsiteSecurityScore() {
             </>
           )}
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 

@@ -1,8 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useAuth } from "../lib/authContext";
-import Head from "next/head";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
@@ -227,42 +225,29 @@ export default function CompressPdf() {
 
     return (
         <>
-            <Head>
-                <title>Compress PDF - ConvertMastery</title>
-                <meta name="description" content="Compress PDF files locally in your browser. Reduce file size without uploading to a server." />
-            </Head>
-
-            <div className="min-h-screen bg-gray-50 flex flex-col">
-                <Navbar />
-
-                <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+<ToolPageShell containerClassName="max-w-4xl">
                     {/* Header */}
-                    <div className="text-center mb-10">
-                        <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-                            Compress PDF
-                        </h1>
-                        <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-                            Reduce PDF file size significantly while maintaining readability.
-                            Secure client-side processing.
-                        </p>
-                    </div>
+                    <ToolPageHeader
+          title="Compress PDF"
+          description="Reduce PDF file size significantly while maintaining readability. Secure client-side processing."
+        />
 
                     <div className="space-y-8">
                         {/* Upload Area */}
                         {!file && !result && (
                             <Card
                                 onClick={() => fileInputRef.current?.click()}
-                                className="border-2 border-dashed border-gray-300 hover:border-green-500 hover:bg-green-50/10 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-md"
+                                className="border-2 border-dashed border-border hover:border-primary hover:bg-brand-sky/50/10 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-md"
                             >
                                 <CardContent className="flex flex-col items-center justify-center py-16">
-                                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                                        <Minimize2 className="w-10 h-10 text-green-600" />
+                                    <div className="w-20 h-20 bg-brand-sky rounded-full flex items-center justify-center mb-6">
+                                        <Minimize2 className="w-10 h-10 text-primary" />
                                     </div>
-                                    <h3 className="text-xl font-semibold mb-2 text-gray-800">
+                                    <h3 className="text-xl font-semibold mb-2 text-foreground">
                                         Drop PDF file here
                                     </h3>
-                                    <p className="text-gray-500 mb-6">or click to browse local files</p>
-                                    <Button size="lg" className="bg-green-600 hover:bg-green-700">
+                                    <p className="text-muted-foreground mb-6">or click to browse local files</p>
+                                    <Button size="lg" className="bg-primary hover:bg-brand-navy">
                                         Select PDF File
                                     </Button>
                                     <input
@@ -280,21 +265,21 @@ export default function CompressPdf() {
                         {file && !result && (
                             <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                                 {/* File Card */}
-                                <Card className="border-l-4 border-l-green-500">
+                                <Card className="border-l-4 border-l-primary">
                                     <CardContent className="p-6 flex items-center gap-4">
                                         <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                             <FileText className="w-6 h-6 text-red-600" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-medium text-lg truncate">{file.name}</h3>
-                                            <p className="text-gray-500">{formatFileSize(file.size)}</p>
+                                            <p className="text-muted-foreground">{formatFileSize(file.size)}</p>
                                         </div>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => setFile(null)}
                                             disabled={processing}
-                                            className="text-gray-400 hover:text-red-500"
+                                            className="text-muted-foreground hover:text-red-500"
                                         >
                                             <Trash2 className="w-5 h-5" />
                                         </Button>
@@ -304,34 +289,34 @@ export default function CompressPdf() {
                                 {/* Settings */}
                                 <Card>
                                     <CardContent className="p-6 space-y-6">
-                                        <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800">
-                                            <Settings2 className="w-5 h-5 text-gray-500" />
+                                        <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground">
+                                            <Settings2 className="w-5 h-5 text-muted-foreground" />
                                             Compression Settings
                                         </h3>
                                         
                                         {/* Compression Intensity */}
                                         <div>
-                                            <label className="text-sm font-semibold text-gray-700 mb-3 block">Compression Intensity</label>
+                                            <label className="text-sm font-semibold text-foreground mb-3 block">Compression Intensity</label>
                                             <div className="grid md:grid-cols-3 gap-4">
                                                 {Object.entries(compressionSettings).map(([key, setting]) => (
                                                     <div
                                                         key={key}
                                                         onClick={() => !processing && setLevel(key)}
                                                         className={cn(
-                                                            "cursor-pointer rounded-xl border-2 p-4 transition-all hover:bg-gray-50",
+                                                            "cursor-pointer rounded-xl border-2 p-4 transition-all hover:bg-muted/40",
                                                             level === key
-                                                                ? "border-green-500 bg-green-50/50 shadow-sm"
-                                                                : "border-gray-200"
+                                                                ? "border-primary bg-brand-sky/50/50 shadow-sm"
+                                                                : "border-border"
                                                         )}
                                                     >
                                                         <div className={cn(
                                                             "w-full h-2 rounded-full mb-3",
-                                                            key === "recommended" ? "bg-green-400" : key === "quality" ? "bg-blue-400" : "bg-orange-400"
+                                                            key === "recommended" ? "bg-primary" : key === "quality" ? "bg-brand-mid" : "bg-orange-400"
                                                         )} />
-                                                        <div className="font-semibold text-gray-900 mb-1">
+                                                        <div className="font-semibold text-foreground mb-1">
                                                             {setting.label}
                                                         </div>
-                                                        <div className="text-xs text-gray-500">{setting.desc}</div>
+                                                        <div className="text-xs text-muted-foreground">{setting.desc}</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -339,20 +324,20 @@ export default function CompressPdf() {
 
                                         {/* Page Range */}
                                         <div>
-                                            <label className="text-sm font-semibold text-gray-700 mb-2 block">Page Range (Optional)</label>
+                                            <label className="text-sm font-semibold text-foreground mb-2 block">Page Range (Optional)</label>
                                             <input
                                                 type="text"
                                                 placeholder="All pages (e.g., 1-5,10-15)"
                                                 value={pageRange}
                                                 onChange={(e) => setPageRange(e.target.value)}
                                                 disabled={processing}
-                                                className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                                className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                                             />
-                                            <p className="text-xs text-gray-500 mt-1">Leave empty to compress all pages</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Leave empty to compress all pages</p>
                                         </div>
 
                                         {/* Metadata Removal */}
-                                        <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all"
+                                        <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/40 cursor-pointer transition-all"
                                             onClick={() => !processing && setRemoveMetadata(!removeMetadata)}
                                         >
                                             <input
@@ -360,11 +345,11 @@ export default function CompressPdf() {
                                                 checked={removeMetadata}
                                                 onChange={(e) => setRemoveMetadata(e.target.checked)}
                                                 disabled={processing}
-                                                className="w-5 h-5 accent-green-600"
+                                                className="w-5 h-5 accent-primary"
                                             />
                                             <div>
-                                                <span className="font-semibold text-gray-800 block text-sm">Remove Metadata</span>
-                                                <span className="text-xs text-gray-500">Remove title, author, and other metadata</span>
+                                                <span className="font-semibold text-foreground block text-sm">Remove Metadata</span>
+                                                <span className="text-xs text-muted-foreground">Remove title, author, and other metadata</span>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -375,11 +360,11 @@ export default function CompressPdf() {
                                     {processing && (
                                         <div className="w-full max-w-md space-y-2">
                                             <div className="flex justify-between text-sm font-medium">
-                                                <span className="text-green-700">Compressing PDF...</span>
-                                                <span className="text-gray-600">{progress}%</span>
+                                                <span className="text-brand-navy">Compressing PDF...</span>
+                                                <span className="text-muted-foreground">{progress}%</span>
                                             </div>
                                             <Progress value={progress} className="h-3" />
-                                            <p className="text-xs text-center text-gray-400">
+                                            <p className="text-xs text-center text-muted-foreground">
                                                 This may take a moment for large files
                                             </p>
                                         </div>
@@ -387,7 +372,7 @@ export default function CompressPdf() {
 
                                     <Button
                                         size="lg"
-                                        className="w-full md:w-auto px-12 py-6 text-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-200"
+                                        className="w-full md:w-auto px-12 py-6 text-lg bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy shadow-lg shadow-primary/20"
                                         onClick={compressPdf}
                                         disabled={processing}
                                     >
@@ -410,17 +395,17 @@ export default function CompressPdf() {
                         {/* Results */}
                         {result && (
                             <div className="space-y-6 animate-in zoom-in-95 duration-500">
-                                <Card className="overflow-hidden border-2 border-green-100 shadow-xl shadow-green-100">
-                                    <div className="bg-green-50/50 p-8 text-center border-b border-green-100">
-                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                            <CheckCircle className="w-8 h-8 text-green-500" />
+                                <Card className="overflow-hidden border-2 border-brand-mid/30 shadow-xl shadow-primary/10">
+                                    <div className="bg-brand-sky/50/50 p-8 text-center border-b border-brand-mid/30">
+                                        <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                            <CheckCircle className="w-8 h-8 text-primary" />
                                         </div>
-                                        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                        <h2 className="text-2xl font-bold text-foreground mb-2">
                                             Compression Successful!
                                         </h2>
-                                        <p className="text-gray-600">
+                                        <p className="text-muted-foreground">
                                             We've reduced your file size by
-                                            <strong className="text-green-600 ml-1">{result.savedPercent}%</strong>
+                                            <strong className="text-primary ml-1">{result.savedPercent}%</strong>
                                         </p>
                                     </div>
 
@@ -428,21 +413,21 @@ export default function CompressPdf() {
                                         <div className="flex flex-col md:flex-row items-center justify-center gap-8 mb-8">
                                             {/* Before */}
                                             <div className="text-center opacity-60">
-                                                <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">Original</div>
+                                                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Original</div>
                                                 <div className="text-2xl font-bold line-through decorations-red-500 decoration-2">
                                                     {formatFileSize(result.originalSize)}
                                                 </div>
                                             </div>
 
-                                            <ArrowRight className="w-6 h-6 text-green-400 hidden md:block" />
+                                            <ArrowRight className="w-6 h-6 text-brand-mid hidden md:block" />
 
                                             {/* After */}
                                             <div className="text-center scale-110 transform origin-center">
-                                                <div className="text-xs uppercase tracking-wider text-green-600 mb-1 font-bold">Compressed</div>
-                                                <div className="text-3xl font-bold text-gray-900">
+                                                <div className="text-xs uppercase tracking-wider text-primary mb-1 font-bold">Compressed</div>
+                                                <div className="text-3xl font-bold text-foreground">
                                                     {formatFileSize(result.size)}
                                                 </div>
-                                                <Badge variant="outline" className="mt-2 border-green-500 text-green-700 bg-green-50">
+                                                <Badge variant="outline" className="mt-2 border-primary text-brand-navy bg-brand-sky/50">
                                                     New Size
                                                 </Badge>
                                             </div>
@@ -452,7 +437,7 @@ export default function CompressPdf() {
                                             <Button
                                                 size="lg"
                                                 onClick={downloadResult}
-                                                className="bg-green-600 hover:bg-green-700 px-8 h-12 text-base shadow-md shadow-green-200"
+                                                className="bg-primary hover:bg-brand-navy px-8 h-12 text-base shadow-md shadow-primary/20"
                                             >
                                                 <Download className="w-5 h-5 mr-2" />
                                                 Download PDF
@@ -474,10 +459,7 @@ export default function CompressPdf() {
                             </div>
                         )}
                     </div>
-                </main>
-
-                <Footer />
-            </div>
+    </ToolPageShell>
         </>
     );
 }

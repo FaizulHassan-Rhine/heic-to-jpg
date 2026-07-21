@@ -114,45 +114,45 @@ export function DateTimePicker({ value, onChange, className, placeholder = "Sele
         disabled={disabled}
         onClick={() => !disabled && setOpen((o) => !o)}
         className={cn(
-          "flex w-full min-w-0 items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-left text-sm text-slate-900 dark:text-slate-100 shadow-sm transition-colors",
-          "hover:border-slate-300 dark:hover:border-slate-600",
+          "flex w-full min-w-0 items-center justify-between rounded-lg border border-border dark:border-border bg-card dark:bg-card px-3 py-2 text-left text-sm text-foreground dark:text-slate-100 shadow-sm transition-colors",
+          "hover:border-border dark:hover:border-slate-600",
           "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
           "disabled:opacity-50 disabled:pointer-events-none",
           open && "ring-2 ring-primary/50 border-primary",
-          !value && "text-slate-500 dark:text-slate-400"
+          !value && "text-muted-foreground dark:text-muted-foreground"
         )}
       >
         <span className="truncate flex items-center gap-2">
-          <Calendar className="h-4 w-4 flex-shrink-0 text-slate-500" />
-          <Clock className="h-4 w-4 flex-shrink-0 text-slate-500" />
+          <Calendar className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          <Clock className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
           {displayLabel}
         </span>
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full min-w-[300px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-lg">
+        <div className="absolute z-50 mt-1 w-full min-w-[300px] rounded-lg border border-border dark:border-border bg-card dark:bg-card p-3 shadow-lg">
           <div className="flex items-center justify-between mb-3">
             <button
               type="button"
               onClick={() => setViewDate(new Date(year, month - 1, 1))}
-              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+              className="p-1.5 rounded-lg hover:bg-muted dark:hover:bg-slate-800 text-muted-foreground dark:text-muted-foreground"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">
+            <span className="text-sm font-semibold text-foreground dark:text-foreground">
               {MONTHS[month]} {year}
             </span>
             <button
               type="button"
               onClick={() => setViewDate(new Date(year, month + 1, 1))}
-              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+              className="p-1.5 rounded-lg hover:bg-muted dark:hover:bg-slate-800 text-muted-foreground dark:text-muted-foreground"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
           <div className="grid grid-cols-7 gap-0.5 mb-3">
             {DAYS.map((d) => (
-              <div key={d} className="py-1 text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              <div key={d} className="py-1 text-center text-xs font-medium text-muted-foreground dark:text-muted-foreground">
                 {d}
               </div>
             ))}
@@ -174,7 +174,7 @@ export function DateTimePicker({ value, onChange, className, placeholder = "Sele
                     "py-1.5 rounded-md text-sm transition-colors",
                     isSelected && "bg-primary text-primary-foreground font-medium",
                     !isSelected && isToday && "bg-primary/20 text-primary font-medium",
-                    !isSelected && !isToday && "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    !isSelected && !isToday && "hover:bg-muted dark:hover:bg-slate-800 text-foreground dark:text-slate-100"
                   )}
                 >
                   {d}
@@ -182,14 +182,14 @@ export function DateTimePicker({ value, onChange, className, placeholder = "Sele
               );
             })}
           </div>
-          <div className="flex gap-2 items-center justify-center mb-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-            <Clock className="h-4 w-4 text-slate-500 flex-shrink-0" />
+          <div className="flex gap-2 items-center justify-center mb-3 pt-2 border-t border-border dark:border-border">
+            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <Select value={hour} onChange={(e) => setHour(Number(e.target.value))} className="flex-1 min-w-0">
               {hours.map((h) => (
                 <option key={h} value={h}>{pad(h)}</option>
               ))}
             </Select>
-            <span className="text-slate-500">:</span>
+            <span className="text-muted-foreground">:</span>
             <Select value={minute} onChange={(e) => setMinute(Number(e.target.value))} className="flex-1 min-w-0">
               {minutes.map((m) => (
                 <option key={m} value={m}>{pad(m)}</option>

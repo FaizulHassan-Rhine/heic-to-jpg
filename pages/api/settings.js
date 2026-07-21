@@ -1,22 +1,100 @@
 import connectDB from "../../lib/mongodb";
 import Settings from "../../models/Settings";
 
+/** Used when MongoDB is not configured — tools work fully with these defaults */
+const DEFAULT_SETTINGS_RESPONSE = {
+  success: true,
+  fromDefaults: true,
+  settings: {
+    image: { maxSize: 20 * 1024 * 1024, maxFiles: 20 },
+    document: { maxSize: 20 * 1024 * 1024, maxFiles: 10 },
+    pdf: { maxSize: 20 * 1024 * 1024, maxFiles: 10 },
+    video: { maxSize: 100 * 1024 * 1024, maxFiles: 5 },
+    audio: { maxSize: 50 * 1024 * 1024, maxFiles: 10 },
+    general: { maxSize: 20 * 1024 * 1024, maxFiles: 10 },
+    features: {
+      imageConverter: {
+        webPreset: true,
+        printPreset: true,
+        socialPreset: true,
+        jpgFormat: true,
+        pngFormat: true,
+        webpFormat: true,
+        qualitySlider: true,
+        preserveTransparency: true,
+        advancedOptions: {
+          resize: true,
+          preserveMetadata: true,
+          watermark: true,
+          customNames: true,
+          showPreview: true,
+        },
+      },
+      imageCompress: {
+        resizeMode: true,
+        compressionPreset: true,
+        qualitySlider: true,
+        targetFileSize: true,
+        convertFormat: true,
+        jpgFormat: true,
+        pngFormat: true,
+        webpFormat: true,
+        smartCrop: true,
+        advancedOptions: {
+          progressiveJpeg: true,
+          optimizePalette: true,
+          stripMetadata: true,
+          losslessCompression: true,
+        },
+      },
+      imageToPdf: { advancedOptions: true },
+      extractText: { proOCR: true, languageSelection: true, exportFormat: true },
+      videoConvert: { webmFormat: true },
+      videoCompress: { advancedOptions: true },
+      videoTrim: { advancedOptions: true },
+      docToPdf: { batchConversion: true, advancedOptions: true },
+      pdfToDoc: { advancedOptions: true },
+      mergePdf: { advancedOptions: true },
+      compressPdf: { advancedOptions: true },
+      scanner: { advancedOptions: true },
+      audioConvert: { highQuality: true, advancedOptions: true },
+      textToSpeech: { advancedOptions: true },
+      speechToText: { longAudio: true, advancedOptions: true },
+      qrBarcode: { customDesign: true, batchGeneration: true },
+      urlShortener: { advancedOptions: true },
+      phoneValidator: { formatValidation: true },
+      apiStatusChecker: {
+        connectivityCheck: true,
+        securityAnalysis: true,
+        performanceMetrics: true,
+      },
+    },
+  },
+};
+
+function noCache(res) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Disable all caching to ensure fresh settings on live site
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
+  noCache(res);
+
+  // No MongoDB configured — tools don't need it; return defaults quietly
+  if (!process.env.MONGODB_URI) {
+    return res.status(200).json(DEFAULT_SETTINGS_RESPONSE);
+  }
 
   try {
     await connectDB();
     const settings = await Settings.getSettings();
-    
-    // Return settings in a format that's easy to use on the frontend
+
     return res.status(200).json({
       success: true,
       settings: {
@@ -44,7 +122,6 @@ export default async function handler(req, res) {
           maxSize: settings.generalMaxSize,
           maxFiles: settings.generalMaxFiles,
         },
-        // Feature flags - true = free, false = requires sign-in
         features: {
           imageConverter: {
             webPreset: settings.features?.imageConverter?.webPreset ?? true,
@@ -85,13 +162,11 @@ export default async function handler(req, res) {
           },
           extractText: {
             proOCR: settings.features?.extractText?.proOCR ?? false,
-            languageSelection: settings.features?.extractText?.languageSelection ?? false,
-            exportFormat: settings.features?.extractText?.exportFormat ?? false,
+            languageSelection: settings.features?.extractText?.languageSelection ?? true,
+            exportFormat: settings.features?.extractText?.exportFormat ?? true,
           },
           videoConvert: {
-            mp4Format: settings.features?.videoConvert?.mp4Format ?? true,
             webmFormat: settings.features?.videoConvert?.webmFormat ?? false,
-            aviFormat: settings.features?.videoConvert?.aviFormat ?? true,
           },
           videoCompress: {
             advancedOptions: settings.features?.videoCompress?.advancedOptions ?? false,
@@ -133,68 +208,8 @@ export default async function handler(req, res) {
           urlShortener: {
             advancedOptions: settings.features?.urlShortener?.advancedOptions ?? false,
           },
-          fileToZip: {
-            highCompression: settings.features?.fileToZip?.highCompression ?? true,
-            preserveStructure: settings.features?.fileToZip?.preserveStructure ?? true,
-            advancedOptions: settings.features?.fileToZip?.advancedOptions ?? false,
-          },
-          pdfUnlockProtect: {
-            unlock: settings.features?.pdfUnlockProtect?.unlock ?? true,
-            protect: settings.features?.pdfUnlockProtect?.protect ?? true,
-            changePassword: settings.features?.pdfUnlockProtect?.changePassword ?? true,
-            ownerPassword: settings.features?.pdfUnlockProtect?.ownerPassword ?? false,
-            advancedPermissions: settings.features?.pdfUnlockProtect?.advancedPermissions ?? false,
-          },
-          passwordGenerator: {
-            customLength: settings.features?.passwordGenerator?.customLength ?? true,
-            characterTypes: settings.features?.passwordGenerator?.characterTypes ?? true,
-            securityOptions: settings.features?.passwordGenerator?.securityOptions ?? true,
-          },
-          passwordStrengthChecker: {
-            basicCheck: settings.features?.passwordStrengthChecker?.basicCheck ?? true,
-            detailedAnalysis: settings.features?.passwordStrengthChecker?.detailedAnalysis ?? true,
-            crackTimeEstimate: settings.features?.passwordStrengthChecker?.crackTimeEstimate ?? true,
-          },
-          ipLookup: {
-            basicInfo: settings.features?.ipLookup?.basicInfo ?? true,
-            detailedInfo: settings.features?.ipLookup?.detailedInfo ?? true,
-            myIpLookup: settings.features?.ipLookup?.myIpLookup ?? true,
-          },
-          whoisChecker: {
-            basicInfo: settings.features?.whoisChecker?.basicInfo ?? true,
-            detailedInfo: settings.features?.whoisChecker?.detailedInfo ?? true,
-            rawData: settings.features?.whoisChecker?.rawData ?? true,
-          },
-          metadataRemover: {
-            exifRemoval: settings.features?.metadataRemover?.exifRemoval ?? true,
-            gpsRemoval: settings.features?.metadataRemover?.gpsRemoval ?? true,
-            batchRemoval: settings.features?.metadataRemover?.batchRemoval ?? false,
-          },
-          fakeEmailGenerator: {
-            basicGeneration: settings.features?.fakeEmailGenerator?.basicGeneration ?? true,
-            customDomain: settings.features?.fakeEmailGenerator?.customDomain ?? true,
-            emailHistory: settings.features?.fakeEmailGenerator?.emailHistory ?? true,
-          },
-          websiteSecurityScore: {
-            basicCheck: settings.features?.websiteSecurityScore?.basicCheck ?? true,
-            sslAnalysis: settings.features?.websiteSecurityScore?.sslAnalysis ?? true,
-            securityHeaders: settings.features?.websiteSecurityScore?.securityHeaders ?? true,
-            blacklistCheck: settings.features?.websiteSecurityScore?.blacklistCheck ?? false,
-          },
-          emailReputationChecker: {
-            basicCheck: settings.features?.emailReputationChecker?.basicCheck ?? true,
-            domainAnalysis: settings.features?.emailReputationChecker?.domainAnalysis ?? true,
-            breachCheck: settings.features?.emailReputationChecker?.breachCheck ?? false,
-          },
           phoneValidator: {
             formatValidation: settings.features?.phoneValidator?.formatValidation ?? true,
-            carrierInfo: settings.features?.phoneValidator?.carrierInfo ?? true,
-            spamCheck: settings.features?.phoneValidator?.spamCheck ?? false,
-          },
-          dataBreachChecker: {
-            emailCheck: settings.features?.dataBreachChecker?.emailCheck ?? true,
-            domainCheck: settings.features?.dataBreachChecker?.domainCheck ?? true,
-            detailedReport: settings.features?.dataBreachChecker?.detailedReport ?? false,
           },
           apiStatusChecker: {
             connectivityCheck: settings.features?.apiStatusChecker?.connectivityCheck ?? true,
@@ -205,8 +220,10 @@ export default async function handler(req, res) {
       },
     });
   } catch (error) {
-    console.error("Get settings error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    // DB optional for public tools — fall back quietly
+    if (error?.code !== "MONGODB_URI_MISSING" && error?.code !== "MONGODB_CONNECTION_FAILED") {
+      console.warn("Settings: using defaults (database unavailable)");
+    }
+    return res.status(200).json(DEFAULT_SETTINGS_RESPONSE);
   }
 }
-

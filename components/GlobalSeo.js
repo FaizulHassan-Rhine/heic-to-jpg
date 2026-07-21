@@ -9,13 +9,24 @@ import {
 } from "../lib/structuredData";
 
 const PAGES_WITH_OWN_SEO = ["/", "/hermes-ai", "/resume-match"];
+const NOINDEX_PREFIXES = ["/admin", "/my-orders"];
 
 export default function GlobalSeo() {
   const router = useRouter();
   const pathname = router.pathname;
 
+  if (NOINDEX_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return (
+      <SEO
+        title={pathname.startsWith("/admin") ? "Admin" : "My Orders"}
+        description="Private ConvertMastery page."
+        url={pathname}
+        noindex
+      />
+    );
+  }
+
   if (PAGES_WITH_OWN_SEO.includes(pathname)) return null;
-  if (pathname.startsWith("/admin")) return null;
   if (pathname.startsWith("/blog/") && pathname !== "/blog") return null;
 
   const seo = getSeoByPath(pathname);

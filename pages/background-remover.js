@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
@@ -275,16 +274,12 @@ export default function BackgroundRemoverPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-          <ImageIcon className="h-8 w-8 text-primary" />
-          Background Remover
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mb-8">
-          100% client-side AI background removal. No API key, no server upload, privacy-first.
-        </p>
+    <>
+    <ToolPageShell containerClassName="max-w-5xl">
+        <ToolPageHeader
+          title="Background Remover"
+          description="100% client-side AI background removal. No API key, no server upload, privacy-first."
+        />
 
         <CollapsibleDropzone
           files={items.map((it) => it.file)}
@@ -303,21 +298,19 @@ export default function BackgroundRemoverPage() {
             "image/png": [".png", ".PNG"],
             "image/webp": [".webp", ".WEBP"],
           }}
-          borderColor="border-gray-300"
-          hoverColor="hover:border-green-500"
         />
 
         {items.length > 0 && (
           <div className="mt-6 grid lg:grid-cols-[320px_minmax(0,1fr)] gap-6 items-start">
             <Card className="md:sticky md:top-24 h-fit">
               <CardContent className="p-5 space-y-5">
-                <div className="flex items-center gap-2 font-semibold text-lg text-gray-800">
+                <div className="flex items-center gap-2 font-semibold text-lg text-foreground">
                   <Settings2 className="w-5 h-5" />
                   <span>Output Settings</span>
                 </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  <div className="text-xs text-gray-600 font-medium mb-1">Global Settings</div>
-                  <div className="text-sm text-gray-500">Transparent PNG output for all files</div>
+                <div className="bg-muted/40 border border-border rounded-lg p-3">
+                  <div className="text-xs text-muted-foreground font-medium mb-1">Global Settings</div>
+                  <div className="text-sm text-muted-foreground">Transparent PNG output for all files</div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Button type="button" onClick={processAll} disabled={processing || items.length === 0} className="gap-2">
@@ -334,7 +327,7 @@ export default function BackgroundRemoverPage() {
                     <p className="text-xs text-muted-foreground">
                       Processing {processingLabel ? `(${processingLabel})` : ""}: {phase} ({Math.round(progress)}%)
                     </p>
-                    <div className="h-2 w-full rounded bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                    <div className="h-2 w-full rounded bg-muted overflow-hidden">
                       <div className="h-full bg-primary transition-all" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
                     </div>
                   </div>
@@ -354,13 +347,13 @@ export default function BackgroundRemoverPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                   <span>Total: <strong className="text-foreground">{items.length}</strong></span>
-                  <span>Completed: <strong className="text-green-600">{items.filter((it) => it.status === "done").length}</strong></span>
-                  <span>Processing: <strong className="text-blue-600">{items.filter((it) => it.status === "processing").length}</strong></span>
+                  <span>Completed: <strong className="text-primary">{items.filter((it) => it.status === "done").length}</strong></span>
+                  <span>Processing: <strong className="text-primary">{items.filter((it) => it.status === "processing").length}</strong></span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {items.map((item) => (
-                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border p-3 bg-white dark:bg-slate-900">
+                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border p-3 bg-card dark:bg-card">
                     <img src={item.sourceUrl} alt={item.name} className="w-14 h-14 rounded object-cover border" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold truncate">{item.name}</p>
@@ -408,7 +401,7 @@ export default function BackgroundRemoverPage() {
             </Card>
           </div>
         )}
-      </main>
+    </ToolPageShell>
       {viewItem && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="w-full max-w-6xl max-h-[90vh] overflow-auto bg-background rounded-xl shadow-2xl border">
@@ -441,7 +434,7 @@ export default function BackgroundRemoverPage() {
                 </CardHeader>
                 <CardContent>
                   {viewItem.outputUrl ? (
-                    <img src={viewItem.outputUrl} alt={`${viewItem.name} after`} className="w-full rounded-lg border bg-slate-100 dark:bg-slate-800" />
+                    <img src={viewItem.outputUrl} alt={`${viewItem.name} after`} className="w-full rounded-lg border bg-muted dark:bg-muted" />
                   ) : (
                     <p className="text-sm text-muted-foreground">Output is not available for this file.</p>
                   )}
@@ -451,7 +444,6 @@ export default function BackgroundRemoverPage() {
           </div>
         </div>
       )}
-      <Footer />
-    </div>
+    </>
   );
 }

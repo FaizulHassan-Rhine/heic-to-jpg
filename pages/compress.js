@@ -3,15 +3,17 @@ import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
 import { generateFileThumbnails } from "../lib/thumbnailUtils";
 import { blobToBase64, extractBase64 } from "../lib/fileUtils";
-import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
+import ToolSignupBanner from "../components/ToolSignupBanner";
+import ToolWorkspace from "../components/ToolWorkspace";
+import ToolSettingsPanel, { ToolSettingsNotice } from "../components/ToolSettingsPanel";
+import ToolFilesPanel from "../components/ToolFilesPanel";
 import AuthModal from "../components/AuthModal";
 import JSZip from "jszip";
 import {
   Loader2, CheckCircle, Download, AlertCircle, FileImage,
-  Zap, RefreshCw, Trash2, Upload, RotateCcw, Image as ImageIcon,
+  Zap, RefreshCw, Trash2, RotateCcw, Image as ImageIcon,
   Settings2, ArrowRight, Minimize2, Scale, Eye, X, ChevronDown, ChevronUp, Lock
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -21,6 +23,7 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { notify } from "../lib/notify";
 
 // ─────────────────────────── HELPERS ───────────────────────────
 
@@ -32,21 +35,56 @@ const formatSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
-const calculateEstimatedSize = (originalSize, oldW, oldH, newW, newH) => {
-  if (!oldW || !oldH || !newW || !newH || !originalSize) return null;
-  const oldArea = oldW * oldH;
-  const newArea = newW * newH;
-  const ratio = newArea / oldArea;
+/** Parse strings like "500KB", "2MB", "1024" (KB) into bytes */
+const parseSizeToBytes = (input) => {
+  if (!input || typeof input !== "string") return null;
+  const trimmed = input.trim().toUpperCase().replace(/\s+/g, "");
+  const match = trimmed.match(/^(\d+(?:\.\d+)?)(KB|MB|GB|B)?$/);
+  if (!match) return null;
+  const value = parseFloat(match[1]);
+  const unit = match[2] || "KB";
+  const mult = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 }[unit];
+  return Math.round(value * mult);
+};
 
-  // Heuristic: Size scales with area, but JPEG compression adds non-linear savings.
-  // Assume modest additional compression savings (0.9 factor) plus area reduction.
-  // Clamped to at least 5% of original to be safe.
-  let estimated = originalSize * ratio * 0.9;
+/**
+ * Live size estimate from dimensions + quality.
+ * Tuned so ~85% quality ≈ 70% of original when dimensions are unchanged.
+ */
+const calculateEstimatedSize = (
+  originalSize,
+  oldW,
+  oldH,
+  newW,
+  newH,
+  quality = 85,
+  { useTargetSize = false, targetFileSize = "", losslessCompression = false } = {}
+) => {
+  if (!originalSize) return null;
 
-  // If ratio is 1 (no resize), assume just re-compression savings (e.g. 80% quality -> ~0.7 size)
-  if (ratio >= 0.99) estimated = originalSize * 0.7;
+  if (useTargetSize) {
+    const targetBytes = parseSizeToBytes(targetFileSize);
+    if (targetBytes && targetBytes > 0) {
+      return Math.min(targetBytes, originalSize);
+    }
+  }
 
-  return Math.max(estimated, originalSize * 0.05);
+  const ow = oldW > 0 ? oldW : 1;
+  const oh = oldH > 0 ? oldH : 1;
+  const nw = newW > 0 ? newW : ow;
+  const nh = newH > 0 ? newH : oh;
+  const areaRatio = Math.min((nw * nh) / (ow * oh), 1);
+
+  if (losslessCompression) {
+    return Math.max(Math.round(originalSize * areaRatio * 0.92), Math.round(originalSize * 0.02));
+  }
+
+  const q = Math.min(100, Math.max(1, Number(quality) || 85)) / 100;
+  // ~60% → ~0.46, ~85% → ~0.70, ~95% → ~0.81 of area-scaled size
+  const qualityFactor = 0.1 + 0.77 * Math.pow(q, 1.5);
+  const estimated = originalSize * areaRatio * qualityFactor;
+
+  return Math.max(Math.round(estimated), Math.round(originalSize * 0.02));
 };
 
 // ─────────────────────────── COMPONENT ───────────────────────────
@@ -115,30 +153,39 @@ export default function CompressImage() {
   // Mode: Ratio
   const [ratioValue, setRatioValue] = useState(0.8);
 
+  // Get global (non-per-file) settings snapshot
+  const getGlobalSettings = () => ({
+    resizeMode,
+    compressionPreset,
+    quality,
+    targetFileSize,
+    useTargetSize,
+    progressiveJpeg,
+    optimizePalette,
+    stripMetadata,
+    losslessCompression,
+    convertFormat,
+    targetFormat,
+    smartCrop,
+    percentageValue,
+    pixelSubMode,
+    targetWidth,
+    targetHeight,
+    ratioValue,
+  });
+
   // Get current settings (for selected file or global)
   const getCurrentSettings = () => {
     if (selectedFile && fileSettings[selectedFile]) {
       return fileSettings[selectedFile];
     }
-    return {
-      resizeMode,
-      compressionPreset,
-      quality,
-      targetFileSize,
-      useTargetSize,
-      progressiveJpeg,
-      optimizePalette,
-      stripMetadata,
-      losslessCompression,
-      convertFormat,
-      targetFormat,
-      smartCrop,
-      percentageValue,
-      pixelSubMode,
-      targetWidth,
-      targetHeight,
-      ratioValue,
-    };
+    return getGlobalSettings();
+  };
+
+  // Settings to use for estimating / compressing a specific file
+  const getSettingsForFile = (filename) => {
+    if (fileSettings[filename]) return fileSettings[filename];
+    return getGlobalSettings();
   };
 
   // Update current settings (for selected file or global)
@@ -522,6 +569,24 @@ export default function CompressImage() {
       }, processedFiles);
     }
 
+    const failedCount = pending.length - successCount;
+    if (successCount > 0 && failedCount === 0) {
+      notify.success(
+        "Compression complete",
+        successCount === 1 ? "Ready to download." : `${successCount} files ready.`
+      );
+    } else if (successCount > 0 && failedCount > 0) {
+      notify.warning(
+        "Partially complete",
+        `${successCount} ok · ${failedCount} failed`
+      );
+    } else if (pending.length > 0) {
+      notify.error(
+        "Compression failed",
+        "Check the file list for details."
+      );
+    }
+
     setProcessing(false);
   };
 
@@ -608,53 +673,22 @@ export default function CompressImage() {
     setViewingFile(null);
   };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
-  
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "Image Compressor - ConvertMastery",
-    "description": "Free online image compressor. Reduce file size while maintaining quality. Support for JPG, PNG, WebP. Fast, secure, privacy-first. Sign up to access advanced features like target file size, progressive JPEG, and save files in My Orders.",
-    "url": `${siteUrl}/compress`,
-    "applicationCategory": "UtilityApplication",
-    "operatingSystem": "Web Browser",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "featureList": [
-      "Image Compression",
-      "Quality Control",
-      "Target File Size",
-      "Progressive JPEG",
-      "Metadata Stripping",
-      "Lossless Compression",
-      "Batch Processing"
-    ]
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-            Compress Images
-          </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-4">
-            Reduce image size by smart scaling and optimization.
-          </p>
+    <>
+    <ToolPageShell containerClassName="max-w-7xl">
+        <ToolPageHeader
+          title="Compress Images"
+          description="Reduce image size by smart scaling and optimization."
+        >
           {!user && (
-            <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-4 max-w-2xl mx-auto mt-4">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                <span className="font-semibold text-primary">Sign up for free</span> to unlock advanced features like target file size, progressive JPEG, WEBP format, and save all your compressed files in <span className="font-semibold">My Orders</span> for easy access later.
-              </p>
-            </div>
+            <ToolSignupBanner
+              onSignUp={() => {
+                setAuthModalMode("signup");
+                setAuthModalOpen(true);
+              }}
+            />
           )}
-        </div>
+        </ToolPageHeader>
 
         <div className="grid gap-8">
 
@@ -679,48 +713,41 @@ export default function CompressImage() {
               "image/bmp": [".bmp", ".BMP"],
               "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
             }}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-green-500"
           />
 
           {/* Workspace */}
           {files.length > 0 && (
-            <div className="grid lg:grid-cols-[400px_1fr] gap-8 items-start">
+            <ToolWorkspace sidebarWidth="400px">
 
               {/* Sidebar: Settings */}
-              <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
-                <CardContent className="p-6 space-y-8">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                      <Settings2 className="w-6 h-6 text-green-600" /> Settings
-                    </div>
-                    {selectedFile && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedFile(null)}
-                        className="text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        Clear Selection
-                      </Button>
-                    )}
-                  </div>
-                  {selectedFile && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                      <div className="text-xs text-green-600 font-medium mb-1">Editing Settings For:</div>
-                      <div className="text-sm font-semibold text-green-900 truncate">{selectedFile}</div>
-                    </div>
-                  )}
-                  {!selectedFile && files.length > 0 && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
-                      <div className="text-xs text-gray-600 font-medium mb-1">Global Settings</div>
-                      <div className="text-sm text-gray-500">Click a file to edit individual settings</div>
-                    </div>
-                  )}
-
-                  {/* Compression Presets */}
+              <ToolSettingsPanel
+                title="Settings"
+                headerExtra={
+                  selectedFile ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedFile(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Clear Selection
+                    </Button>
+                  ) : null
+                }
+                notice={
+                  selectedFile ? (
+                    <ToolSettingsNotice title="Editing Settings For:" variant="sky">
+                      {selectedFile}
+                    </ToolSettingsNotice>
+                  ) : (
+                    <ToolSettingsNotice title="Global Settings">
+                      Click a file to edit individual settings
+                    </ToolSettingsNotice>
+                  )
+                }
+              >
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Compression Preset</label>
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Compression Preset</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { id: "maximum", label: "Maximum", desc: "Smallest size", quality: 60 },
@@ -737,8 +764,8 @@ export default function CompressImage() {
                             className={cn(
                               "p-3 rounded-lg border-2 transition-all text-center",
                               current.compressionPreset === preset.id
-                                ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
-                                : "border-gray-200 hover:border-gray-300 text-gray-600"
+                                ? "border-primary bg-brand-sky/50 text-brand-navy shadow-sm"
+                                : "border-border hover:border-border text-muted-foreground"
                             )}
                           >
                             <div className="font-semibold text-sm">{preset.label}</div>
@@ -752,8 +779,8 @@ export default function CompressImage() {
                   {/* Quality Slider */}
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <label className="text-sm font-semibold text-gray-700">Quality</label>
-                      <span className="text-sm font-bold text-green-600">{getCurrentSettings().quality}%</span>
+                      <label className="text-sm font-semibold text-foreground">Quality</label>
+                      <span className="text-sm font-bold text-primary">{getCurrentSettings().quality}%</span>
                     </div>
                     <input
                       type="range"
@@ -761,9 +788,9 @@ export default function CompressImage() {
                       max="100"
                       value={getCurrentSettings().quality}
                       onChange={(e) => updateCurrentSettings({ quality: Number(e.target.value) })}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                     />
-                    <div className="flex justify-between text-xs text-gray-500">
+                    <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Low</span>
                       <span>High</span>
                     </div>
@@ -773,7 +800,7 @@ export default function CompressImage() {
                   <div className="space-y-2">
                     <label 
                       className={cn(
-                        "flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all relative",
+                        "flex items-center gap-3 p-2 border rounded-lg hover:bg-muted/40 cursor-pointer transition-all relative",
                         (() => {
                           const targetFileSizeFree = settings?.features?.imageCompress?.targetFileSize ?? false;
                           return !targetFileSizeFree && !user;
@@ -808,14 +835,14 @@ export default function CompressImage() {
                           }
                           updateCurrentSettings({ useTargetSize: e.target.checked });
                         }}
-                        className="w-4 h-4 accent-blue-600"
+                        className="w-4 h-4 accent-primary"
                       />
-                      <span className="text-sm font-medium text-gray-700">Target File Size</span>
+                      <span className="text-sm font-medium text-foreground">Target File Size</span>
                       {(() => {
                         const targetFileSizeFree = settings?.features?.imageCompress?.targetFileSize ?? false;
                         return !targetFileSizeFree && !user;
                       })() && (
-                        <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                        <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                       )}
                     </label>
                     {getCurrentSettings().useTargetSize && (
@@ -824,15 +851,15 @@ export default function CompressImage() {
                         placeholder="e.g., 500KB or 2MB"
                         value={getCurrentSettings().targetFileSize}
                         onChange={(e) => updateCurrentSettings({ targetFileSize: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-brand-mid"
                       />
                     )}
                   </div>
 
                   {/* Mode Tabs */}
                   <div className="space-y-4">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Resizing Mode</label>
-                    <div className="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-xl">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Resizing Mode</label>
+                    <div className="grid grid-cols-3 gap-1 bg-muted p-1 rounded-xl">
                       {['percentage', 'pixel', 'ratio'].map(mode => {
                         const current = getCurrentSettings();
                         return (
@@ -841,7 +868,7 @@ export default function CompressImage() {
                             onClick={() => updateCurrentSettings({ resizeMode: mode })}
                             className={cn(
                               "py-2 text-sm rounded-lg transition-all font-medium capitalize",
-                              current.resizeMode === mode ? "bg-white text-green-600 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                              current.resizeMode === mode ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}
                           >
                             {mode}
@@ -852,23 +879,23 @@ export default function CompressImage() {
                   </div>
 
                   {/* Dynamic Controls */}
-                  <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 space-y-4">
+                  <div className="bg-muted/40/50 rounded-xl p-4 border border-border space-y-4">
                     {(() => {
                       const current = getCurrentSettings();
                       if (current.resizeMode === "percentage") {
                         return (
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-gray-700">Scale</span>
-                              <span className="text-lg font-bold text-blue-600">{current.percentageValue}%</span>
+                              <span className="text-sm font-medium text-foreground">Scale</span>
+                              <span className="text-lg font-bold text-primary">{current.percentageValue}%</span>
                             </div>
                             <input
                               type="range" min="1" max="100" step="1"
                               value={current.percentageValue}
                               onChange={(e) => updateCurrentSettings({ percentageValue: Number(e.target.value) })}
-                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                             />
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               Scaling down to {current.percentageValue}% of original dimensions.
                             </p>
                           </div>
@@ -877,16 +904,16 @@ export default function CompressImage() {
                         return (
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-gray-700">Ratio</span>
-                              <span className="text-lg font-bold text-blue-600">{current.ratioValue.toFixed(2)}x</span>
+                              <span className="text-sm font-medium text-foreground">Ratio</span>
+                              <span className="text-lg font-bold text-primary">{current.ratioValue.toFixed(2)}x</span>
                             </div>
                             <input
                               type="range" min="0.01" max="1.00" step="0.01"
                               value={current.ratioValue}
                               onChange={(e) => updateCurrentSettings({ ratioValue: Number(e.target.value) })}
-                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                             />
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               Multiply dimensions by {current.ratioValue}.
                             </p>
                           </div>
@@ -897,13 +924,13 @@ export default function CompressImage() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => updateCurrentSettings({ pixelSubMode: "fixedRatio" })}
-                                className={cn("flex-1 py-1.5 text-xs rounded border transition-all", current.pixelSubMode === "fixedRatio" ? "bg-blue-50 border-blue-200 text-blue-700 font-semibold" : "border-gray-200 text-gray-600")}
+                                className={cn("flex-1 py-1.5 text-xs rounded border transition-all", current.pixelSubMode === "fixedRatio" ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy font-semibold" : "border-border text-muted-foreground")}
                               >
                                 Fixed Ratio
                               </button>
                               <button
                                 onClick={() => updateCurrentSettings({ pixelSubMode: "custom" })}
-                                className={cn("flex-1 py-1.5 text-xs rounded border transition-all", current.pixelSubMode === "custom" ? "bg-blue-50 border-blue-200 text-blue-700 font-semibold" : "border-gray-200 text-gray-600")}
+                                className={cn("flex-1 py-1.5 text-xs rounded border transition-all", current.pixelSubMode === "custom" ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy font-semibold" : "border-border text-muted-foreground")}
                               >
                                 Custom W/H
                               </button>
@@ -911,28 +938,28 @@ export default function CompressImage() {
 
                             <div className="space-y-3">
                               <div className="space-y-1">
-                                <label className="text-xs font-semibold text-gray-500 uppercase">Width (px)</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase">Width (px)</label>
                                 <input
                                   type="number"
                                   value={current.targetWidth}
                                   onChange={(e) => updateCurrentSettings({ targetWidth: Number(e.target.value) })}
-                                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-brand-mid outline-none font-mono text-sm"
                                 />
                               </div>
 
                               {current.pixelSubMode === "custom" && (
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-gray-500 uppercase">Height (px)</label>
+                                  <label className="text-xs font-semibold text-muted-foreground uppercase">Height (px)</label>
                                   <input
                                     type="number"
                                     value={current.targetHeight}
                                     onChange={(e) => updateCurrentSettings({ targetHeight: Number(e.target.value) })}
-                                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-brand-mid outline-none font-mono text-sm"
                                   />
                                 </div>
                               )}
                               {current.pixelSubMode === "fixedRatio" && (
-                                <p className="text-xs text-gray-400 italic">
+                                <p className="text-xs text-muted-foreground italic">
                                   Height will be calculated automatically to maintain aspect ratio.
                                 </p>
                               )}
@@ -948,16 +975,16 @@ export default function CompressImage() {
                   <div className="space-y-2 border-t pt-4">
                     <button
                       onClick={() => setAdvancedOptionsOpen(!advancedOptionsOpen)}
-                      className="w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-gray-50 transition-all"
+                      className="w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-muted/40 transition-all"
                     >
-                      <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                         <Settings2 className="h-4 w-4" />
                         Advanced Options
                       </span>
                       {advancedOptionsOpen ? (
-                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       )}
                     </button>
 
@@ -969,13 +996,13 @@ export default function CompressImage() {
                       const losslessCompressionFree = settings?.features?.imageCompress?.advancedOptions?.losslessCompression ?? false;
                       
                       return (
-                        <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
+                        <div className="space-y-3 border-2 rounded-lg p-4 bg-muted/40">
                           {(() => {
                             const requiresAuth = !progressiveJpegFree && !user;
                             return (
                               <label 
                                 className={cn(
-                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                   requiresAuth && "opacity-75"
                                 )}
                                 style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -1002,11 +1029,11 @@ export default function CompressImage() {
                                     }
                                     updateCurrentSettings({ progressiveJpeg: e.target.checked });
                                   }}
-                                  className="w-4 h-4 accent-blue-600"
+                                  className="w-4 h-4 accent-primary"
                                 />
-                                <span className="text-sm font-medium text-gray-700">Progressive JPEG</span>
+                                <span className="text-sm font-medium text-foreground">Progressive JPEG</span>
                                 {requiresAuth && (
-                                  <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                 )}
                               </label>
                             );
@@ -1017,7 +1044,7 @@ export default function CompressImage() {
                             return (
                               <label 
                                 className={cn(
-                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                   requiresAuth && "opacity-75"
                                 )}
                                 style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -1044,11 +1071,11 @@ export default function CompressImage() {
                                     }
                                     updateCurrentSettings({ optimizePalette: e.target.checked });
                                   }}
-                                  className="w-4 h-4 accent-blue-600"
+                                  className="w-4 h-4 accent-primary"
                                 />
-                                <span className="text-sm font-medium text-gray-700">Optimize Palette (PNG)</span>
+                                <span className="text-sm font-medium text-foreground">Optimize Palette (PNG)</span>
                                 {requiresAuth && (
-                                  <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                 )}
                               </label>
                             );
@@ -1059,7 +1086,7 @@ export default function CompressImage() {
                             return (
                               <label 
                                 className={cn(
-                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                   requiresAuth && "opacity-75"
                                 )}
                                 style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -1086,11 +1113,11 @@ export default function CompressImage() {
                                     }
                                     updateCurrentSettings({ stripMetadata: e.target.checked });
                                   }}
-                                  className="w-4 h-4 accent-blue-600"
+                                  className="w-4 h-4 accent-primary"
                                 />
-                                <span className="text-sm font-medium text-gray-700">Strip Metadata</span>
+                                <span className="text-sm font-medium text-foreground">Strip Metadata</span>
                                 {requiresAuth && (
-                                  <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                 )}
                               </label>
                             );
@@ -1101,7 +1128,7 @@ export default function CompressImage() {
                             return (
                               <label 
                                 className={cn(
-                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white relative",
+                                  "flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card relative",
                                   requiresAuth && "opacity-75"
                                 )}
                                 style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
@@ -1128,11 +1155,11 @@ export default function CompressImage() {
                                     }
                                     updateCurrentSettings({ losslessCompression: e.target.checked });
                                   }}
-                                  className="w-4 h-4 accent-blue-600"
+                                  className="w-4 h-4 accent-primary"
                                 />
-                                <span className="text-sm font-medium text-gray-700">Lossless Compression</span>
+                                <span className="text-sm font-medium text-foreground">Lossless Compression</span>
                                 {requiresAuth && (
-                                  <Lock className="w-4 h-4 text-gray-600 ml-auto" />
+                                  <Lock className="w-4 h-4 text-muted-foreground ml-auto" />
                                 )}
                               </label>
                             );
@@ -1144,18 +1171,18 @@ export default function CompressImage() {
 
                   {/* Format Conversion */}
                   <div className="space-y-2 border-t pt-4">
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-muted/40 cursor-pointer transition-all">
                       <input
                         type="checkbox"
                         checked={getCurrentSettings().convertFormat}
                         onChange={(e) => updateCurrentSettings({ convertFormat: e.target.checked })}
-                        className="w-4 h-4 accent-blue-600"
+                        className="w-4 h-4 accent-primary"
                       />
-                      <span className="text-sm font-medium text-gray-700">Convert Format</span>
+                      <span className="text-sm font-medium text-foreground">Convert Format</span>
                     </label>
                     {getCurrentSettings().convertFormat && (
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
-                        <label className="text-xs font-semibold text-gray-500 uppercase">Target Format</label>
+                      <div className="bg-muted/40 rounded-lg p-3 space-y-2 border border-border">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase">Target Format</label>
                         <div className="grid grid-cols-3 gap-2">
                           {['jpg', 'png', 'webp'].map(fmt => {
                             const current = getCurrentSettings();
@@ -1178,15 +1205,15 @@ export default function CompressImage() {
                                 className={cn(
                                   "px-2 py-2 text-xs rounded-lg border-2 transition-all uppercase font-medium relative",
                                   current.targetFormat === fmt
-                                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                                    : "border-gray-200 hover:border-gray-300 text-gray-600",
+                                    ? "border-primary bg-brand-sky/50 text-brand-navy"
+                                    : "border-border hover:border-border text-muted-foreground",
                                   requiresAuth && "opacity-75"
                                 )}
                                 style={requiresAuth ? { filter: 'blur(0.5px)' } : {}}
                               >
                                 {fmt}
                                 {requiresAuth && (
-                                  <Lock className="w-4 h-4 text-gray-600 absolute top-1 right-1" />
+                                  <Lock className="w-4 h-4 text-muted-foreground absolute top-1 right-1" />
                                 )}
                               </button>
                             );
@@ -1198,91 +1225,79 @@ export default function CompressImage() {
 
                   {/* Smart Crop */}
                   <div className="space-y-2 border-t pt-4">
-                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-muted/40 cursor-pointer transition-all">
                       <input
                         type="checkbox"
                         checked={getCurrentSettings().smartCrop}
                         onChange={(e) => updateCurrentSettings({ smartCrop: e.target.checked })}
-                        className="w-4 h-4 accent-blue-600"
+                        className="w-4 h-4 accent-primary"
                       />
-                      <span className="text-sm font-medium text-gray-700">Smart Crop (Auto-remove whitespace)</span>
+                      <span className="text-sm font-medium text-foreground">Smart Crop (Auto-remove whitespace)</span>
                     </label>
                   </div>
 
-                  <Button
-                    onClick={processAll}
-                    disabled={processing}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
-                  >
-                    {processing ? (
-                      <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Compressing... </>
-                    ) : (
-                      <> <Zap className="w-5 h-5 mr-2" /> Compress All </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+              </ToolSettingsPanel>
 
-              {/* File List */}
-              <div className="space-y-5">
-                {/* Header with Stats and Actions */}
-                <Card className="border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                        <ImageIcon className="w-5 h-5 text-gray-400" />
-                        Files
-                      </h3>
-                      <div className="flex gap-2">
-                        <label className="flex items-center gap-2 px-3 py-1.5 border rounded-md hover:bg-gray-50 cursor-pointer transition-all text-sm">
-                          <input
-                            type="checkbox"
-                            checked={comparisonMode}
-                            onChange={(e) => setComparisonMode(e.target.checked)}
-                            className="w-4 h-4 accent-blue-600"
-                          />
-                          <span>Comparison Grid</span>
-                        </label>
-                        {Object.values(results).some(r => r.status === "done") && (
-                          <Button variant="outline" size="sm" onClick={downloadAll}>
-                            <Download className="w-4 h-4 mr-2" /> Download All
-                          </Button>
+              <ToolFilesPanel
+                title="Files"
+                total={files.length}
+                completed={Object.values(results).filter((r) => r.status === "done").length}
+                processing={Object.values(results).filter((r) => r.status === "processing").length}
+                actions={
+                  <div className="flex w-full flex-col items-stretch gap-2 sm:items-end">
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end">
+                      <Button
+                        size="sm"
+                        onClick={processAll}
+                        disabled={processing}
+                        className="h-9 rounded-lg bg-primary px-4 font-semibold text-primary-foreground shadow-sm hover:bg-brand-navy disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-primary/40"
+                      >
+                        {processing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Compressing...
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="mr-2 h-4 w-4" /> Compress All
+                          </>
                         )}
-                        <Button variant="outline" size="sm" onClick={clearAll} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                          <Trash2 className="w-4 h-4 mr-2" /> Clear All
+                      </Button>
+                      {Object.values(results).some((r) => r.status === "done") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={downloadAll}
+                          className="h-9 rounded-lg border-border bg-card font-medium text-foreground shadow-sm hover:bg-muted/40"
+                        >
+                          <Download className="mr-2 h-4 w-4" /> Download All
                         </Button>
-                      </div>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearAll}
+                        className="h-9 rounded-lg border-red-200 bg-card font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Clear All
+                      </Button>
                     </div>
-                    
-                    {/* Stats */}
-                    <div className="flex gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-600 font-medium">Total:</span>
-                        <Badge variant="secondary" className="font-semibold">
-                          {files.length}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-600 font-medium">Completed:</span>
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 font-semibold">
-                          {Object.values(results).filter(r => r.status === "done").length}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-600 font-medium">Processing:</span>
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 font-semibold">
-                          {Object.values(results).filter(r => r.status === "processing").length}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
+                    <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/40 sm:self-end">
+                      <input
+                        type="checkbox"
+                        checked={comparisonMode}
+                        onChange={(e) => setComparisonMode(e.target.checked)}
+                        className="h-4 w-4 accent-primary"
+                      />
+                      <span>Comparison Grid</span>
+                    </label>
+                  </div>
+                }
+              >
                 {/* Comparison Grid View */}
                 {comparisonMode && Object.values(results).some(r => r.status === "done") && (
-                  <Card className="border border-gray-200 mb-5">
+                  <Card className="border border-border mb-5">
                     <CardContent className="p-4">
-                      <h3 className="font-bold text-lg text-gray-800 mb-4">Before & After Comparison</h3>
+                      <h3 className="font-bold text-lg text-foreground mb-4">Before & After Comparison</h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {files.map((file, idx) => {
                           const res = results[file.name];
@@ -1294,7 +1309,7 @@ export default function CompressImage() {
                           return (
                             <div key={file.name + idx} className="space-y-2">
                               <div className="grid grid-cols-2 gap-2">
-                                <div className="relative w-full aspect-square border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                                <div className="relative w-full aspect-square border-2 border-border rounded-lg overflow-hidden bg-muted/40 flex items-center justify-center">
                                   {preview && (
                                     <img 
                                       src={preview} 
@@ -1307,7 +1322,7 @@ export default function CompressImage() {
                                     BEFORE
                                   </div>
                                 </div>
-                                <div className="relative w-full aspect-square border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                                <div className="relative w-full aspect-square border-2 border-brand-mid/30 rounded-lg overflow-hidden bg-muted/40 flex items-center justify-center">
                                   <img 
                                     src={afterUrl} 
                                     alt="After" 
@@ -1317,7 +1332,7 @@ export default function CompressImage() {
                                       // URL will be cleaned up when component unmounts
                                     }}
                                   />
-                                  <div className="absolute top-1 left-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                  <div className="absolute top-1 left-1 bg-primary text-white text-[10px] px-1.5 py-0.5 rounded">
                                     AFTER
                                   </div>
                                 </div>
@@ -1325,11 +1340,11 @@ export default function CompressImage() {
                               <div className="text-center text-xs">
                                 <div className={cn(
                                   "font-semibold",
-                                  res.percent > 0 ? "text-green-600" : res.percent < 0 ? "text-red-600" : "text-gray-600"
+                                  res.percent > 0 ? "text-primary" : res.percent < 0 ? "text-red-600" : "text-muted-foreground"
                                 )}>
                                   {res.percent !== 0 ? `${res.percent > 0 ? '-' : '+'}${Math.abs(res.percent)}%` : '0%'}
                                 </div>
-                                <div className="text-gray-500">{formatSize(res.size)}</div>
+                                <div className="text-muted-foreground">{formatSize(res.size)}</div>
                               </div>
                             </div>
                           );
@@ -1344,10 +1359,28 @@ export default function CompressImage() {
                   const preview = previewUrls[file.name];
                   const dims = dimensions[file.name];
                   const isSelected = selectedFile === file.name;
-                  const fileSettingsForThis = fileSettings[file.name] || {};
-                  const estDims = getEstimatedDimensions(dims?.w, dims?.h, fileSettingsForThis);
-                  const estSize = estDims ? calculateEstimatedSize(file.size, dims?.w, dims?.h, estDims.w, estDims.h) : null;
-                  const estReduction = estSize ? Math.round(((file.size - estSize) / file.size) * 100) : 0;
+                  const fileSettingsForThis = getSettingsForFile(file.name);
+                  const estDims = getEstimatedDimensions(
+                    dims?.w || 1,
+                    dims?.h || 1,
+                    fileSettingsForThis
+                  );
+                  const estSize = calculateEstimatedSize(
+                    file.size,
+                    dims?.w,
+                    dims?.h,
+                    estDims?.w,
+                    estDims?.h,
+                    fileSettingsForThis.quality,
+                    {
+                      useTargetSize: fileSettingsForThis.useTargetSize,
+                      targetFileSize: fileSettingsForThis.targetFileSize,
+                      losslessCompression: fileSettingsForThis.losslessCompression,
+                    }
+                  );
+                  const estReduction = estSize
+                    ? Math.max(0, Math.round(((file.size - estSize) / file.size) * 100))
+                    : 0;
 
                   return (
                     <Card 
@@ -1355,25 +1388,25 @@ export default function CompressImage() {
                       className={cn(
                         "overflow-hidden border-2 shadow-sm hover:shadow-md transition-all group cursor-pointer",
                         isSelected 
-                          ? "border-blue-500 bg-blue-50/30 shadow-md" 
-                          : "border-gray-200 hover:border-blue-300"
+                          ? "border-primary bg-brand-sky/50/30 shadow-md" 
+                          : "border-border hover:border-blue-300"
                       )}
                       onClick={() => setSelectedFile(file.name)}
                     >
                       <div className="p-4 flex gap-5 items-center">
                         {/* Thumbnail */}
-                        <div className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden relative border border-gray-200">
+                        <div className="w-20 h-20 bg-muted rounded-xl flex-shrink-0 overflow-hidden relative border border-border">
                           {preview ? (
                             <img src={preview} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                           ) : (
-                            <ImageIcon className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                            <ImageIcon className="w-8 h-8 text-muted-foreground/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                           )}
                         </div>
 
                         {/* Content */}
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="flex justify-between items-start">
-                            <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+                            <h4 className="font-semibold truncate pr-4 text-foreground text-lg">{file.name}</h4>
 
                             <div className="flex gap-2">
                               {res?.status === "done" && (
@@ -1381,7 +1414,7 @@ export default function CompressImage() {
                                   <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className="h-8 w-8 text-blue-600 hover:text-blue-700" 
+                                    className="h-8 w-8 text-primary hover:text-brand-navy" 
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       openViewModal(file, res);
@@ -1393,7 +1426,7 @@ export default function CompressImage() {
                                   <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100" 
+                                    className="h-8 w-8 text-primary bg-brand-sky/50 hover:bg-brand-sky" 
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const url = URL.createObjectURL(res.blob);
@@ -1412,7 +1445,7 @@ export default function CompressImage() {
                               <Button 
                                 size="icon" 
                                 variant="ghost" 
-                                className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" 
+                                className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50" 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   removeFile(file.name);
@@ -1427,21 +1460,21 @@ export default function CompressImage() {
                           {/* Metrics Row */}
                           <div className="flex flex-wrap items-center gap-3 text-sm">
                             {/* Original Size */}
-                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-border font-mono">
                               {formatSize(file.size)}
                             </Badge>
 
-                            <ArrowRight className="w-3 h-3 text-gray-300" />
+                            <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
 
                             {/* Result / Estimate */}
                             {res?.status === "done" ? (
                               <>
-                                <Badge className="bg-green-100 text-green-700 border-green-200 font-mono hover:bg-green-100">
+                                <Badge className="bg-brand-sky text-brand-navy border-brand-mid/30 font-mono hover:bg-brand-sky">
                                   {formatSize(res.size)}
                                 </Badge>
                                 <span className={cn(
                                   "font-bold text-xs",
-                                  res.percent > 0 ? "text-green-600" : res.percent < 0 ? "text-red-600" : "text-gray-600"
+                                  res.percent > 0 ? "text-primary" : res.percent < 0 ? "text-red-600" : "text-muted-foreground"
                                 )}>
                                   {res.percent !== 0 ? `${res.percent > 0 ? '-' : '+'}${Math.abs(res.percent)}%` : '0%'}
                                 </span>
@@ -1452,17 +1485,22 @@ export default function CompressImage() {
                               </Badge>
                             ) : (
                               <>
-                                {(estSize && estSize < file.size) ? (
+                                {estSize ? (
                                   <>
-                                    <span className="text-gray-500 font-mono text-xs">
+                                    <span className="text-muted-foreground font-mono text-xs tabular-nums transition-all">
                                       ~{formatSize(estSize)}
                                     </span>
-                                    <span className="text-blue-600 font-bold text-xs">
-                                      (-{estReduction}%)
-                                    </span>
+                                    {estReduction > 0 && (
+                                      <span className="text-primary font-bold text-xs tabular-nums">
+                                        (-{estReduction}%)
+                                      </span>
+                                    )}
+                                    {estReduction === 0 && estSize >= file.size && (
+                                      <span className="text-muted-foreground text-xs">est.</span>
+                                    )}
                                   </>
                                 ) : (
-                                  <span className="text-gray-400 italic text-xs">
+                                  <span className="text-muted-foreground italic text-xs">
                                     Ready
                                   </span>
                                 )}
@@ -1472,11 +1510,11 @@ export default function CompressImage() {
 
                           {/* Dimensions Visualizer (The "Live Reducer") */}
                           {dims && estDims && (
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1 bg-gray-50 px-2 py-1 rounded-md w-fit border border-gray-100">
-                              <Scale className="w-3 h-3 text-blue-400" />
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 bg-muted/40 px-2 py-1 rounded-md w-fit border border-border">
+                              <Scale className="w-3 h-3 text-brand-mid" />
                               <span className="font-mono">{dims.w}x{dims.h}</span>
-                              <ArrowRight className="w-3 h-3 text-gray-300" />
-                              <span className="font-mono font-bold text-blue-600">{estDims.w}x{estDims.h}px</span>
+                              <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
+                              <span className="font-mono font-bold text-primary">{estDims.w}x{estDims.h}px</span>
                             </div>
                           )}
                         </div>
@@ -1485,12 +1523,12 @@ export default function CompressImage() {
                       {res?.status === "processing" && (
                         <div className="px-4 pb-4 space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-blue-600 font-medium">Processing...</span>
-                            <span className="text-green-600 font-bold">{res.progress || 0}%</span>
+                            <span className="text-primary font-medium">Processing...</span>
+                            <span className="text-primary font-bold">{res.progress || 0}%</span>
                           </div>
-                          <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-brand-sky rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
+                              className="h-full bg-gradient-to-r from-primary to-brand-navy transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>
@@ -1499,67 +1537,66 @@ export default function CompressImage() {
                     </Card>
                   )
                 })}
-              </div>
-            </div>
+              </ToolFilesPanel>
+            </ToolWorkspace>
           )}
         </div>
-      </main>
-      <Footer />
+    </ToolPageShell>
 
-      {/* View Modal - Before/After Comparison */}
+    {/* View Modal - Before/After Comparison */}
       {viewingFile && (
-        <div 
-          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-4"
           onClick={closeViewModal}
         >
-          <div 
-            className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-auto"
+          <div
+            className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">{viewingFile.file.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">Before & After Compression Comparison</p>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+              <div className="min-w-0">
+                <h3 className="truncate text-lg font-bold text-foreground">
+                  {viewingFile.file.name}
+                </h3>
+                <p className="text-sm text-muted-foreground">Before & After Comparison</p>
               </div>
               <Button
                 size="icon"
                 variant="ghost"
                 onClick={closeViewModal}
-                className="h-8 w-8"
+                className="h-8 w-8 shrink-0"
               >
-                <X className="w-5 h-5" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Content */}
-            <div className="p-6">
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="overflow-y-auto p-4 sm:p-5">
+              <div className="mb-4 grid gap-4 sm:grid-cols-2 sm:gap-5">
                 {/* Before Image */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-gray-100">BEFORE</Badge>
-                    </h4>
-                  </div>
-                  <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
-                    <img 
-                      src={viewingFile.beforeUrl} 
-                      alt="Before" 
-                      className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                <div className="space-y-2.5">
+                  <Badge variant="secondary" className="bg-muted text-xs">
+                    BEFORE
+                  </Badge>
+                  <div className="flex h-[280px] items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40 sm:h-[340px]">
+                    <img
+                      src={viewingFile.beforeUrl}
+                      alt="Before"
+                      className="max-h-full max-w-full object-contain"
                       loading="eager"
                       decoding="async"
                     />
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Size:</span>
-                      <span className="font-medium">{formatSize(viewingFile.file.size)}</span>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Size</span>
+                      <span className="font-medium tabular-nums">{formatSize(viewingFile.file.size)}</span>
                     </div>
                     {viewingFile.beforeDimensions && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Dimensions:</span>
-                        <span className="font-medium">
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Dimensions</span>
+                        <span className="font-medium tabular-nums">
                           {viewingFile.beforeDimensions.width} × {viewingFile.beforeDimensions.height}px
                         </span>
                       </div>
@@ -1568,43 +1605,45 @@ export default function CompressImage() {
                 </div>
 
                 {/* After Image */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200">AFTER</Badge>
-                    </h4>
-                  </div>
-                  <div className="border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[400px]">
-                    <img 
-                      src={viewingFile.afterUrl} 
-                      alt="After" 
-                      className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                <div className="space-y-2.5">
+                  <Badge className="bg-brand-sky text-xs text-brand-navy border-brand-mid/30">
+                    AFTER
+                  </Badge>
+                  <div className="flex h-[280px] items-center justify-center overflow-hidden rounded-lg border border-brand-mid/30 bg-muted/40 sm:h-[340px]">
+                    <img
+                      src={viewingFile.afterUrl}
+                      alt="After"
+                      className="max-h-full max-w-full object-contain"
                       loading="eager"
                       decoding="async"
                     />
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Size:</span>
-                      <span className={cn(
-                        "font-medium",
-                        viewingFile.result.percent > 0 ? "text-green-600" : viewingFile.result.percent < 0 ? "text-red-600" : "text-gray-600"
-                      )}>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Size</span>
+                      <span
+                        className={cn(
+                          "font-medium tabular-nums",
+                          viewingFile.result.percent > 0
+                            ? "text-primary"
+                            : viewingFile.result.percent < 0
+                              ? "text-red-600"
+                              : "text-muted-foreground"
+                        )}
+                      >
                         {formatSize(viewingFile.result.size)}
                         {viewingFile.result.percent !== 0 && (
-                          <span className={cn(
-                            "ml-2",
-                            viewingFile.result.percent > 0 ? "text-green-600" : "text-red-600"
-                          )}>
-                            ({viewingFile.result.percent > 0 ? '-' : '+'}{Math.abs(viewingFile.result.percent)}%)
+                          <span className="ml-1.5">
+                            ({viewingFile.result.percent > 0 ? "-" : "+"}
+                            {Math.abs(viewingFile.result.percent)}%)
                           </span>
                         )}
                       </span>
                     </div>
                     {viewingFile.afterDimensions && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Dimensions:</span>
-                        <span className="font-medium">
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Dimensions</span>
+                        <span className="font-medium tabular-nums">
                           {viewingFile.afterDimensions.width} × {viewingFile.afterDimensions.height}px
                         </span>
                       </div>
@@ -1614,31 +1653,31 @@ export default function CompressImage() {
               </div>
 
               {/* Summary Stats */}
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Size Change</div>
-                    <div className={cn(
-                      "text-lg font-bold",
-                      viewingFile.result.percent > 0 ? "text-green-600" : viewingFile.result.percent < 0 ? "text-red-600" : "text-gray-600"
-                    )}>
-                      {viewingFile.result.percent !== 0 
-                        ? `${viewingFile.result.percent > 0 ? '-' : '+'}${Math.abs(viewingFile.result.percent)}%` 
-                        : '0%'}
-                    </div>
+              <div className="grid grid-cols-3 gap-3 border-t border-border pt-4 text-center">
+                <div className="rounded-lg bg-muted/40 px-2 py-2.5">
+                  <div className="mb-0.5 text-xs text-muted-foreground">Size Change</div>
+                  <div
+                    className={cn(
+                      "text-base font-bold",
+                      viewingFile.result.percent > 0
+                        ? "text-primary"
+                        : viewingFile.result.percent < 0
+                          ? "text-red-600"
+                          : "text-muted-foreground"
+                    )}
+                  >
+                    {viewingFile.result.percent !== 0
+                      ? `${viewingFile.result.percent > 0 ? "-" : "+"}${Math.abs(viewingFile.result.percent)}%`
+                      : "0%"}
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Saved</div>
-                    <div className="text-lg font-bold text-green-600">
-                      {formatSize(viewingFile.result.saved)}
-                    </div>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Compression Mode</div>
-                    <div className="text-lg font-bold text-blue-600 capitalize">
-                      {resizeMode}
-                    </div>
-                  </div>
+                </div>
+                <div className="rounded-lg bg-muted/40 px-2 py-2.5">
+                  <div className="mb-0.5 text-xs text-muted-foreground">Saved</div>
+                  <div className="text-base font-bold text-primary">{formatSize(viewingFile.result.saved)}</div>
+                </div>
+                <div className="rounded-lg bg-muted/40 px-2 py-2.5">
+                  <div className="mb-0.5 text-xs text-muted-foreground">Mode</div>
+                  <div className="truncate text-base font-bold capitalize text-primary">{resizeMode}</div>
                 </div>
               </div>
             </div>
@@ -1652,6 +1691,6 @@ export default function CompressImage() {
         onClose={() => setAuthModalOpen(false)}
         initialMode={authModalMode}
       />
-    </div>
+    </>
   );
 }

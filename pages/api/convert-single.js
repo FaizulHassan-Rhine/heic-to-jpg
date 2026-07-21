@@ -1,265 +1,394 @@
-import Busboy from "busboy";
-import convert from "heic-convert";
 import sharp from "sharp";
-import connectDB from "../../lib/mongodb";
-import Settings from "../../models/Settings";
+import convert from "heic-convert";
+import formidable from "formidable";
+import fs from "fs/promises";
 
 export const config = {
   api: { bodyParser: false },
 };
+
+/** Hardcoded limits — no MongoDB required for processing */
+const DEFAULT_IMAGE_MAX_SIZE = 20 * 1024 * 1024; // 20MB
+const VERCEL_MAX_SIZE = 4.5 * 1024 * 1024;
+
+function getMaxUploadSize() {
+  const isVercel = process.env.VERCEL === "1";
+  return isVercel ? Math.min(VERCEL_MAX_SIZE, DEFAULT_IMAGE_MAX_SIZE) : DEFAULT_IMAGE_MAX_SIZE;
+}
+
+function fieldValue(fields, key, fallback = "") {
+  const v = fields[key];
+  if (Array.isArray(v)) return v[0] ?? fallback;
+  return v ?? fallback;
+}
+
+/** Detect image type from file magic bytes */
+function detectImageType(buffer) {
+  if (!buffer || buffer.length < 12) return "unknown";
+
+  if (buffer[0] === 0xff && buffer[1] === 0xd8) return "jpg";
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return "png";
+  }
+  if (buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP") {
+    return "webp";
+  }
+  if (buffer.toString("ascii", 0, 3) === "GIF") return "gif";
+  if (buffer[0] === 0x42 && buffer[1] === 0x4d) return "bmp";
+  if (
+    buffer[0] === 0x00 &&
+    buffer[1] === 0x00 &&
+    (buffer[2] === 0x01 || buffer[2] === 0x02) &&
+    buffer[3] === 0x00
+  ) {
+    return "ico";
+  }
+  if (
+    (buffer[0] === 0x49 && buffer[1] === 0x49 && buffer[2] === 0x2a && buffer[3] === 0x00) ||
+    (buffer[0] === 0x4d && buffer[1] === 0x4d && buffer[2] === 0x00 && buffer[3] === 0x2a)
+  ) {
+    return "tiff";
+  }
+  if (buffer.toString("ascii", 4, 8) === "ftyp" && buffer.length >= 12) {
+    const brands = buffer.toString("ascii", 8, Math.min(buffer.length, 64)).toLowerCase();
+    if (brands.includes("avif") || brands.includes("avis")) return "avif";
+    if (
+      brands.includes("heic") ||
+      brands.includes("heif") ||
+      brands.includes("mif1") ||
+      brands.includes("msf1")
+    ) {
+      return "heic";
+    }
+  }
+
+  return "unknown";
+}
+
+/**
+ * Sharp cannot read many ICO files. Extract the largest embedded PNG
+ * (modern ICO) so Sharp can decode it.
+ */
+function extractPngFromIco(buffer) {
+  if (!buffer || buffer.length < 22) return null;
+  const type = buffer.readUInt16LE(2);
+  const count = buffer.readUInt16LE(4);
+  if ((type !== 1 && type !== 2) || count < 1) return null;
+
+  let best = null;
+  let bestLen = 0;
+
+  for (let i = 0; i < count; i++) {
+    const entryOffset = 6 + i * 16;
+    if (entryOffset + 16 > buffer.length) break;
+    const imgSize = buffer.readUInt32LE(entryOffset + 8);
+    const imgOffset = buffer.readUInt32LE(entryOffset + 12);
+    if (imgOffset + imgSize > buffer.length || imgSize < 8) continue;
+    const chunk = buffer.subarray(imgOffset, imgOffset + imgSize);
+    if (chunk[0] === 0x89 && chunk[1] === 0x50 && chunk[2] === 0x4e && chunk[3] === 0x47) {
+      if (imgSize > bestLen) {
+        best = Buffer.from(chunk);
+        bestLen = imgSize;
+      }
+    }
+  }
+
+  return best;
+}
+
+function buildIcoFromPngs(entries) {
+  const count = entries.length;
+  const headerSize = 6;
+  const entrySize = 16;
+  const dataOffset = headerSize + entrySize * count;
+
+  const header = Buffer.alloc(headerSize);
+  header.writeUInt16LE(0, 0);
+  header.writeUInt16LE(1, 2);
+  header.writeUInt16LE(count, 4);
+
+  const dirEntries = [];
+  const payloads = [];
+  let offset = dataOffset;
+
+  for (const { size, png } of entries) {
+    const entry = Buffer.alloc(entrySize);
+    entry.writeUInt8(size >= 256 ? 0 : size, 0);
+    entry.writeUInt8(size >= 256 ? 0 : size, 1);
+    entry.writeUInt8(0, 2);
+    entry.writeUInt8(0, 3);
+    entry.writeUInt16LE(1, 4);
+    entry.writeUInt16LE(32, 6);
+    entry.writeUInt32LE(png.length, 8);
+    entry.writeUInt32LE(offset, 12);
+    dirEntries.push(entry);
+    payloads.push(png);
+    offset += png.length;
+  }
+
+  return Buffer.concat([header, ...dirEntries, ...payloads]);
+}
+
+async function toIcoBuffer(inputBuffer) {
+  // Always start from a fresh buffer so the pipeline is never "consumed"
+  const sizes = [16, 32, 48];
+  const entries = [];
+  for (const size of sizes) {
+    const png = await sharp(inputBuffer)
+      .resize(size, size, {
+        fit: "contain",
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer();
+    entries.push({ size, png });
+  }
+  return buildIcoFromPngs(entries);
+}
+
+async function loadDecodableBuffer(fileBuffer, clientInputType) {
+  const detected = detectImageType(fileBuffer);
+  const hinted = String(clientInputType || "").toLowerCase();
+  let kind = detected !== "unknown" ? detected : hinted;
+
+  if (kind === "ico" || detected === "ico") {
+    const png = extractPngFromIco(fileBuffer);
+    if (png) {
+      await sharp(png).metadata();
+      return png;
+    }
+    throw new Error(
+      "Could not read this ICO file. Use a PNG/JPG source, or an ICO with embedded PNG images."
+    );
+  }
+
+  if (kind === "heic" || kind === "heif") {
+    const png = await convert({ buffer: fileBuffer, format: "PNG" });
+    const buf = Buffer.from(png);
+    await sharp(buf).metadata();
+    return buf;
+  }
+
+  try {
+    await sharp(fileBuffer, { failOn: "none", page: 0 }).metadata();
+    return fileBuffer;
+  } catch (sharpErr) {
+    try {
+      await sharp(fileBuffer, { failOn: "none" }).metadata();
+      return fileBuffer;
+    } catch {
+      /* continue to heic-convert fallback */
+    }
+    try {
+      const png = await convert({ buffer: fileBuffer, format: "PNG" });
+      const buf = Buffer.from(png);
+      await sharp(buf).metadata();
+      return buf;
+    } catch {
+      const magic = fileBuffer.subarray(0, 12).toString("hex");
+      if (detected === "avif") {
+        throw new Error(
+          "This AVIF cannot be decoded on the server. The app will try browser decode — refresh and retry, or use PNG/JPG."
+        );
+      }
+      throw new Error(
+        `Unsupported image format (detected=${detected || "unknown"}, magic=${magic}). ${sharpErr.message}`
+      );
+    }
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  let fileBuffer = null;
-  let format = "jpg";
-  let quality = 85;
-  let preserveMetadata = false;
-  let rotation = 0;
-  let resizeEnabled = false;
-  let resizeWidth = 1920;
-  let resizeHeight = 1080;
-  let resizeMode = "fit";
-  let preserveTransparency = true;
-  let progressiveJpeg = false;
-  let watermarkEnabled = false;
-  let watermarkText = "";
-  let watermarkPosition = "bottom-right";
+  const maxSize = getMaxUploadSize();
+  let tempPath = null;
 
-  const busboy = Busboy({ headers: req.headers });
-
-  return new Promise((resolve) => {
-    busboy.on("file", (name, file) => {
-      const chunks = [];
-      file.on("data", (data) => chunks.push(data));
-      file.on("end", () => {
-        fileBuffer = Buffer.concat(chunks);
-      });
+  try {
+    const form = formidable({
+      maxFileSize: maxSize,
+      keepExtensions: true,
+      multiples: false,
     });
 
-    let inputType = "heic";
+    const [fields, files] = await form.parse(req);
 
-    busboy.on("field", (name, value) => {
-      if (name === "format") format = value.toLowerCase().trim();
-      if (name === "inputType") inputType = value;
-      if (name === "quality") quality = parseInt(value) || 85;
-      if (name === "preserveMetadata") preserveMetadata = value === "true";
-      if (name === "rotation") rotation = parseInt(value) || 0;
-      if (name === "resizeEnabled") resizeEnabled = value === "true";
-      if (name === "resizeWidth") resizeWidth = parseInt(value) || 1920;
-      if (name === "resizeHeight") resizeHeight = parseInt(value) || 1080;
-      if (name === "resizeMode") resizeMode = value;
-      if (name === "preserveTransparency") preserveTransparency = value === "true";
-      if (name === "progressiveJpeg") progressiveJpeg = value === "true";
-      if (name === "watermarkEnabled") watermarkEnabled = value === "true";
-      if (name === "watermarkText") watermarkText = value;
-      if (name === "watermarkPosition") watermarkPosition = value;
-    });
+    const uploaded =
+      (Array.isArray(files.file) ? files.file[0] : files.file) ||
+      (Array.isArray(files.image) ? files.image[0] : files.image) ||
+      null;
 
-    busboy.on("finish", async () => {
-      try {
-        if (!fileBuffer) {
-          res.status(400).json({ error: "No file received" });
-          return resolve();
-        }
+    if (!uploaded?.filepath) {
+      return res.status(400).json({ error: "No file received" });
+    }
 
+    tempPath = uploaded.filepath;
+    const fileBuffer = await fs.readFile(tempPath);
 
-        // Check file size using dynamic settings from MongoDB
-        await connectDB();
-        const settings = await Settings.getSettings();
-        
-        // Get max size directly from database - no fallbacks
-        if (!settings || !settings.imageMaxSize) {
-          res.status(500).json({ error: "Upload limits not configured in database. Please contact administrator." });
-          return resolve();
-        }
-        
-        // Use Vercel's hard limit as absolute max, but prefer database setting
-        const isVercel = process.env.VERCEL === '1';
-        const vercelMaxSize = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
-        const dbMaxSize = settings.imageMaxSize; // From database
-        const maxSize = isVercel ? Math.min(vercelMaxSize, dbMaxSize) : dbMaxSize;
-        
-        if (fileBuffer.length > maxSize) {
-          res.status(413).json({ 
-            error: `File too large. Maximum size is ${(maxSize / 1024 / 1024).toFixed(1)}MB. Your file is ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB.` 
-          });
-          return resolve();
-        }
+    if (!fileBuffer.length) {
+      return res.status(400).json({ error: "Uploaded file is empty" });
+    }
 
-        let inputBuffer;
-        let outputBuffer;
+    const format = String(fieldValue(fields, "format", "jpg")).toLowerCase().trim();
+    const quality = parseInt(fieldValue(fields, "quality", "85"), 10) || 85;
+    const inputType = fieldValue(fields, "inputType", "");
+    const preserveMetadata = fieldValue(fields, "preserveMetadata") === "true";
+    const rotation = parseInt(fieldValue(fields, "rotation", "0"), 10) || 0;
+    const resizeEnabled = fieldValue(fields, "resizeEnabled") === "true";
+    const resizeWidth = parseInt(fieldValue(fields, "resizeWidth", "1920"), 10) || 1920;
+    const resizeHeight = parseInt(fieldValue(fields, "resizeHeight", "1080"), 10) || 1080;
+    const resizeMode = fieldValue(fields, "resizeMode", "fit");
+    const preserveTransparency = fieldValue(fields, "preserveTransparency", "true") !== "false";
+    const progressiveJpeg = fieldValue(fields, "progressiveJpeg") === "true";
+    const watermarkEnabled = fieldValue(fields, "watermarkEnabled") === "true";
+    const watermarkText = fieldValue(fields, "watermarkText", "");
+    const watermarkPosition = fieldValue(fields, "watermarkPosition", "bottom-right");
 
-        // STEP 1 — Convert input to a format Sharp can handle
-        if (inputType === "heic") {
-          // HEIC → PNG first
-          inputBuffer = await convert({
-            buffer: fileBuffer,
-            format: "PNG",
-          });
-        } else if (inputType === "jpg" || inputType === "png" || inputType === "webp") {
-          // JPG, PNG, and WebP can be used directly with Sharp
-          inputBuffer = fileBuffer;
-        } else {
-          res.status(400).json({ error: "Unsupported input format" });
-          return resolve();
-        }
+    let inputBuffer;
+    try {
+      inputBuffer = await loadDecodableBuffer(fileBuffer, inputType);
+    } catch (loadErr) {
+      return res.status(400).json({ error: loadErr.message || "Unsupported input format" });
+    }
 
-        // STEP 2 — Build Sharp pipeline
-        let sharpInstance = sharp(inputBuffer);
+    // Normalize to a known-good PNG/JPEG pipeline buffer for transforms
+    // (keeps AVIF/ICO/etc. paths reliable after decode)
+    let workBuffer = inputBuffer;
 
-        // Apply rotation
-        if (rotation !== 0) {
-          sharpInstance = sharpInstance.rotate(rotation);
-        }
+    if (rotation !== 0) {
+      workBuffer = await sharp(workBuffer).rotate(rotation).toBuffer();
+    }
 
-        // Apply resize if enabled
-        if (resizeEnabled) {
-          if (resizeMode === "fit") {
-            sharpInstance = sharpInstance.resize(resizeWidth, resizeHeight, {
-              fit: 'inside',
-              withoutEnlargement: true
-            });
-          } else if (resizeMode === "fill") {
-            sharpInstance = sharpInstance.resize(resizeWidth, resizeHeight, {
-              fit: 'cover',
-              position: 'center'
-            });
-          } else if (resizeMode === "exact") {
-            sharpInstance = sharpInstance.resize(resizeWidth, resizeHeight, {
-              fit: 'fill'
-            });
-          }
-        }
+    if (resizeEnabled && format !== "ico") {
+      const resizeOpts =
+        resizeMode === "fill"
+          ? { fit: "cover", position: "center" }
+          : resizeMode === "exact"
+            ? { fit: "fill" }
+            : { fit: "inside", withoutEnlargement: true };
+      workBuffer = await sharp(workBuffer)
+        .resize(resizeWidth, resizeHeight, resizeOpts)
+        .toBuffer();
+    }
 
-        // Apply watermark if enabled
-        if (watermarkEnabled && watermarkText) {
-          const metadata = await sharpInstance.metadata();
-          const width = metadata.width;
-          const height = metadata.height;
-          
-          // Calculate watermark position
-          let x = 0;
-          let y = 0;
-          const fontSize = Math.min(width, height) / 20; // Responsive font size
-          const padding = Math.min(width, height) / 50;
-          
-          if (watermarkPosition.includes("right")) {
-            x = width - (watermarkText.length * fontSize * 0.6) - padding;
-          } else if (watermarkPosition.includes("left")) {
-            x = padding;
-          } else {
-            x = (width - (watermarkText.length * fontSize * 0.6)) / 2;
-          }
-          
-          if (watermarkPosition.includes("bottom")) {
-            y = height - padding;
-          } else if (watermarkPosition.includes("top")) {
-            y = padding + fontSize;
-          } else {
-            y = height / 2;
-          }
-          
-          // Create SVG watermark
-          const svgWatermark = `
-            <svg width="${width}" height="${height}">
-              <text
-                x="${x}"
-                y="${y}"
-                font-family="Arial, sans-serif"
-                font-size="${fontSize}"
-                fill="rgba(0,0,0,0.3)"
-                font-weight="bold"
-              >${watermarkText}</text>
-            </svg>
-          `;
-          
-          const watermarkBuffer = Buffer.from(svgWatermark);
-          sharpInstance = sharpInstance.composite([
-            { input: watermarkBuffer, blend: 'over' }
-          ]);
-        }
+    if (watermarkEnabled && watermarkText && format !== "ico") {
+      const metadata = await sharp(workBuffer).metadata();
+      const width = metadata.width || 1;
+      const height = metadata.height || 1;
+      const fontSize = Math.min(width, height) / 20;
+      const padding = Math.min(width, height) / 50;
 
-        // Metadata handling - Sharp preserves by default, so we only need to handle if we want to strip
-        // For now, we'll let Sharp handle it naturally (preserves by default)
-
-        // Convert to output format with options
-        if (format === "jpg" || format === "jpeg") {
-          const jpegOptions = {
-            quality: quality,
-            progressive: progressiveJpeg,
-            mozjpeg: true
-          };
-          outputBuffer = await sharpInstance
-            .flatten({ background: "#fff" })
-            .jpeg(jpegOptions)
-            .toBuffer();
-        } else if (format === "webp") {
-          outputBuffer = await sharpInstance
-            .flatten({ background: "#fff" })
-            .webp({ quality: quality })
-            .toBuffer();
-        } else if (format === "png") {
-          const pngOptions = {
-            compressionLevel: 9,
-            adaptiveFiltering: true
-          };
-          if (preserveTransparency) {
-            // Keep alpha channel
-            outputBuffer = await sharpInstance
-              .png(pngOptions)
-              .toBuffer();
-          } else {
-            // Remove transparency
-            outputBuffer = await sharpInstance
-              .flatten({ background: "#fff" })
-              .png(pngOptions)
-              .toBuffer();
-          }
-        } else {
-          res.status(400).json({ error: "Unsupported output format" });
-          return resolve();
-        }
-
-        // Strip metadata if not preserving
-        if (!preserveMetadata && format !== "png") {
-          // Metadata is already handled in format conversion above
-          // Sharp by default preserves metadata unless explicitly removed
-        }
-
-        // Set extension for frontend - format is already normalized
-        let ext = "jpg"; // default fallback
-        if (format === "webp") {
-          ext = "webp";
-        } else if (format === "png") {
-          ext = "png";
-        } else if (format === "jpg" || format === "jpeg") {
-          ext = "jpg";
-        }
-
-        res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("X-Output-Extension", ext);
-        res.setHeader("Access-Control-Expose-Headers", "X-Output-Extension");
-        res.send(outputBuffer);
-
-        resolve();
-      } catch (err) {
-        console.error("Conversion error:", err);
-        console.error("Error details:", {
-          message: err.message,
-          stack: err.stack,
-          name: err.name,
-        });
-        res.status(500).json({ 
-          error: "Conversion failed",
-          details: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
-        resolve();
+      let x = 0;
+      let y = 0;
+      if (watermarkPosition.includes("right")) {
+        x = width - watermarkText.length * fontSize * 0.6 - padding;
+      } else if (watermarkPosition.includes("left")) {
+        x = padding;
+      } else {
+        x = (width - watermarkText.length * fontSize * 0.6) / 2;
       }
+      if (watermarkPosition.includes("bottom")) {
+        y = height - padding;
+      } else if (watermarkPosition.includes("top")) {
+        y = padding + fontSize;
+      } else {
+        y = height / 2;
+      }
+
+      const svgWatermark = `
+        <svg width="${width}" height="${height}">
+          <text
+            x="${x}"
+            y="${y}"
+            font-family="Arial, sans-serif"
+            font-size="${fontSize}"
+            fill="rgba(0,0,0,0.3)"
+            font-weight="bold"
+          >${watermarkText}</text>
+        </svg>
+      `;
+
+      workBuffer = await sharp(workBuffer)
+        .composite([{ input: Buffer.from(svgWatermark), blend: "over" }])
+        .toBuffer();
+    }
+
+    // Strip metadata when requested by re-encoding through Sharp without withMetadata()
+    void preserveMetadata;
+
+    let outputBuffer;
+    let ext = "jpg";
+
+    if (format === "jpg" || format === "jpeg") {
+      outputBuffer = await sharp(workBuffer)
+        .flatten({ background: "#fff" })
+        .jpeg({ quality, progressive: progressiveJpeg, mozjpeg: true })
+        .toBuffer();
+      ext = "jpg";
+    } else if (format === "webp") {
+      outputBuffer = await sharp(workBuffer)
+        .flatten({ background: "#fff" })
+        .webp({ quality })
+        .toBuffer();
+      ext = "webp";
+    } else if (format === "avif") {
+      outputBuffer = await sharp(workBuffer).avif({ quality, effort: 4 }).toBuffer();
+      ext = "avif";
+    } else if (format === "png") {
+      const pngOptions = { compressionLevel: 9, adaptiveFiltering: true };
+      if (preserveTransparency) {
+        outputBuffer = await sharp(workBuffer).png(pngOptions).toBuffer();
+      } else {
+        outputBuffer = await sharp(workBuffer)
+          .flatten({ background: "#fff" })
+          .png(pngOptions)
+          .toBuffer();
+      }
+      ext = "png";
+    } else if (format === "ico") {
+      outputBuffer = await toIcoBuffer(workBuffer);
+      ext = "ico";
+    } else {
+      return res.status(400).json({ error: "Unsupported output format. Use jpg, png, webp, avif, or ico." });
+    }
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("X-Output-Extension", ext);
+    res.setHeader("Access-Control-Expose-Headers", "X-Output-Extension");
+    res.send(outputBuffer);
+  } catch (err) {
+    console.error("Conversion error:", err);
+    console.error("Error details:", {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
     });
 
-    req.pipe(busboy);
-  });
+    if (err?.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
+        error: `File too large. Maximum size is ${(maxSize / 1024 / 1024).toFixed(1)}MB.`,
+      });
+    }
+
+    const message = /avif|heif|libheif/i.test(err.message || "")
+      ? "AVIF conversion failed on this server"
+      : /unsupported image format/i.test(err.message || "")
+        ? "Unsupported image format. Try JPG, PNG, WebP, AVIF, or HEIC."
+        : "Conversion failed";
+
+    return res.status(500).json({
+      error: message,
+      details: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+  } finally {
+    if (tempPath) {
+      try {
+        await fs.unlink(tempPath);
+      } catch {
+        /* ignore cleanup errors */
+      }
+    }
+  }
 }

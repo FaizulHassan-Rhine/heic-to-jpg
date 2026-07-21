@@ -1,8 +1,6 @@
 import Busboy from "busboy";
 import { PDFDocument } from "pdf-lib";
 import { encryptPDF } from "../../lib/pdf-encrypt";
-import connectDB from "../../lib/mongodb";
-import Order from "../../models/Order";
 
 export const config = {
   api: { bodyParser: false },
@@ -160,41 +158,6 @@ export default async function handler(req, res) {
 
         // Send PDF
         res.status(200).send(pdfBytes);
-
-        // Track usage if user is logged in
-        const firebaseUid = req.headers["x-firebase-uid"];
-        if (firebaseUid && firebaseUid !== "anonymous") {
-          try {
-            await connectDB();
-            const order = new Order({
-              firebaseUid,
-              userEmail: req.headers["x-user-email"] || null,
-              isAnonymous: false,
-              toolName: "PDF Unlock/Protect",
-              toolPath: "/pdf-unlock-protect",
-              toolType: "pdf",
-              fileCount: 1,
-              status: "completed",
-              files: [
-                {
-                  inputName: fileName,
-                  inputSize: fileBuffer.length,
-                  inputFormat: "pdf",
-                  outputName,
-                  outputSize: pdfBytes.length,
-                  outputFormat: "pdf",
-                },
-              ],
-              metadata: {
-                mode,
-                hasPermissions: Object.keys(permissions).length > 0,
-              },
-            });
-            await order.save();
-          } catch (error) {
-            console.error("Error tracking usage:", error);
-          }
-        }
       } catch (error) {
         console.error("PDF unlock/protect error:", error);
         if (!res.headersSent) {

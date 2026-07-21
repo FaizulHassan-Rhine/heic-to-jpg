@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { loadGoogleMaps, geocodeAddress, getCurrentPosition } from "../lib/googleMaps";
@@ -139,16 +138,11 @@ export default function EmbedMapGeneratorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-          <MapPin className="h-8 w-8 text-primary" />
-          Embed Map Generator
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mb-8">
-          Enter an address or coordinates (lat, lng) to generate an iframe embed code for Google Maps. Paste the code into your website or blog.
-        </p>
+    <ToolPageShell containerClassName="max-w-4xl">
+        <ToolPageHeader
+          title="Embed Map Generator"
+          description="Enter an address or coordinates (lat, lng) to generate an iframe embed code for Google Maps. Paste the code into your website or blog."
+        />
 
         <Card className="mb-6">
           <CardHeader>
@@ -169,7 +163,7 @@ export default function EmbedMapGeneratorPage() {
                   setIframeCode(code);
                 }}
                 placeholder="Address or lat, lng"
-                className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                className="flex-1 px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
                 onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
               />
               <Button onClick={handleGenerate} disabled={loading} className="gap-2">
@@ -186,7 +180,7 @@ export default function EmbedMapGeneratorPage() {
                   max={21}
                   value={zoom}
                   onChange={(e) => setZoom(Number(e.target.value) || 14)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                  className="w-full px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
                 />
               </div>
               <div>
@@ -197,7 +191,7 @@ export default function EmbedMapGeneratorPage() {
                   max={1200}
                   value={width}
                   onChange={(e) => setWidth(Number(e.target.value) || 600)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                  className="w-full px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
                 />
               </div>
               <div>
@@ -208,13 +202,13 @@ export default function EmbedMapGeneratorPage() {
                   max={800}
                   value={height}
                   onChange={(e) => setHeight(Number(e.target.value) || 450)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
+                  className="w-full px-3 py-2 border border-border dark:border-border rounded-lg bg-card dark:bg-card"
                 />
               </div>
             </div>
             {embedUrl && (
               <div>
-                <p className="text-xs text-slate-500 mb-1">Changed zoom or size? Update the embed code below.</p>
+                <p className="text-xs text-muted-foreground mb-1">Changed zoom or size? Update the embed code below.</p>
                 <Button variant="outline" size="sm" onClick={updateEmbedFromOptions}>Update embed code</Button>
               </div>
             )}
@@ -246,7 +240,7 @@ export default function EmbedMapGeneratorPage() {
                 <CardDescription>How the embedded map will look</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-hidden rounded-b-lg bg-slate-100 dark:bg-slate-800">
+                <div className="overflow-hidden rounded-b-lg bg-muted dark:bg-muted">
                   <iframe
                     title="Embed preview"
                     width={width}
@@ -265,7 +259,7 @@ export default function EmbedMapGeneratorPage() {
                 <CardDescription>Copy and paste this into your HTML</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                <pre className="p-4 bg-slate-900 text-slate-100 text-xs overflow-x-auto rounded-lg whitespace-pre-wrap break-all">
+                <pre className="p-4 bg-brand-navy text-brand-sky text-xs overflow-x-auto rounded-lg whitespace-pre-wrap break-all">
                   {iframeCode}
                 </pre>
                 <Button onClick={copyCode} className="gap-2">
@@ -276,8 +270,6 @@ export default function EmbedMapGeneratorPage() {
             </Card>
           </>
         )}
-      </main>
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

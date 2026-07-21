@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Shield, Search, Loader2, AlertTriangle, CheckCircle, Database, Mail, Globe
@@ -56,44 +55,34 @@ export default function DataBreachChecker() {
   };
 
   const getRiskColor = (riskLevel) => {
-    if (riskLevel === "Low") return "text-green-600";
+    if (riskLevel === "Low") return "text-primary";
     if (riskLevel === "Medium") return "text-yellow-600";
     if (riskLevel === "High" || riskLevel === "Critical") return "text-red-600";
-    return "text-gray-600";
+    return "text-muted-foreground";
   };
 
   const getRiskBgColor = (riskLevel) => {
-    if (riskLevel === "Low") return "bg-green-100 dark:bg-green-900/20";
+    if (riskLevel === "Low") return "bg-brand-sky dark:bg-primary/10";
     if (riskLevel === "Medium") return "bg-yellow-100 dark:bg-yellow-900/20";
     if (riskLevel === "High" || riskLevel === "Critical") return "bg-red-100 dark:bg-red-900/20";
-    return "bg-gray-100 dark:bg-gray-900/20";
+    return "bg-muted dark:bg-card/20";
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+    <ToolPageShell containerClassName="max-w-5xl">
         <div className="space-y-6">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              Security Check • Free Tool
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Data Breach Checker
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Check if your email address or domain has been exposed in known data breaches.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Data Breach Checker"
+            description="Check if your email address or domain has been exposed in known data breaches."
+            badge="Security Check • Free Tool"
+          />
 
           {/* Input Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-green-600" />
+                <Database className="w-5 h-5 text-primary" />
                 Check for Breaches
               </CardTitle>
             </CardHeader>
@@ -102,7 +91,7 @@ export default function DataBreachChecker() {
                 <select
                   value={queryType}
                   onChange={(e) => setQueryType(e.target.value)}
-                  className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="email">Email</option>
                   <option value="domain">Domain</option>
@@ -112,13 +101,13 @@ export default function DataBreachChecker() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={queryType === "email" ? "example@domain.com" : "example.com"}
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   onKeyPress={(e) => e.key === "Enter" && !loading && checkBreach()}
                 />
                 <Button
                   onClick={checkBreach}
                   disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy"
                 >
                   {loading ? (
                     <>
@@ -145,7 +134,7 @@ export default function DataBreachChecker() {
                   <div className="text-center space-y-4">
                     <div className="flex items-center justify-center gap-3">
                       {result.breachCount === 0 ? (
-                        <CheckCircle className="w-12 h-12 text-green-600" />
+                        <CheckCircle className="w-12 h-12 text-primary" />
                       ) : (
                         <AlertTriangle className="w-12 h-12 text-red-600" />
                       )}
@@ -156,14 +145,14 @@ export default function DataBreachChecker() {
                         <Badge
                           className={cn(
                             "text-lg px-4 py-2 mt-2",
-                            result.riskLevel === "Low" ? "bg-green-600" : result.riskLevel === "Medium" ? "bg-yellow-600" : "bg-red-600"
+                            result.riskLevel === "Low" ? "bg-primary" : result.riskLevel === "Medium" ? "bg-yellow-600" : "bg-red-600"
                           )}
                         >
                           {result.riskLevel} Risk
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                       {result.type === "email" ? "Email" : "Domain"}: <span className="font-mono font-medium">{result.query}</span>
                     </p>
                   </div>
@@ -186,7 +175,7 @@ export default function DataBreachChecker() {
                               {breach.severity}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-2">
                             Date: {breach.date}
                           </p>
                           <div className="flex flex-wrap gap-2">
@@ -228,10 +217,7 @@ export default function DataBreachChecker() {
             </>
           )}
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 

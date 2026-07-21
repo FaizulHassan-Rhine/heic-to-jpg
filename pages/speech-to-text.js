@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../lib/authContext";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import {
   Mic, MicOff, Copy, Download, Trash2, RotateCcw,
   Languages, CheckCircle, AlertCircle, Square
@@ -12,7 +11,6 @@ import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-import Head from "next/head";
 
 // Popular languages for speech recognition
 const LANGUAGE_GROUPS = {
@@ -247,43 +245,32 @@ export default function SpeechToText() {
 
   if (!supported) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <ToolPageShell containerClassName="max-w-6xl">
+        <div className="min-h-[50vh] flex items-center justify-center">
           <Card className="p-8 text-center max-w-md">
             <MicOff className="h-16 w-16 mx-auto text-red-400 mb-4" />
             <h2 className="text-xl font-bold mb-2">Not Supported</h2>
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               Your browser does not support the Speech Recognition API.
               Please use <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong> for the best experience.
             </p>
           </Card>
         </div>
-        <Footer />
-      </>
+      </ToolPageShell>
     );
   }
 
   return (
-    <>
-      <Head>
-        <title>Speech to Text - ConvertMastery</title>
-        <meta name="description" content="Convert speech to text in 50+ languages. Free, real-time transcription right in your browser." />
-      </Head>
-
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar />
-
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+    <ToolPageShell containerClassName="max-w-6xl">
           {/* Header */}
-          <div className="text-center mb-10">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">Speech to Text</h1>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">Real-time speech recognition in 50+ languages.</p>
-          </div>
+          <ToolPageHeader
+          title="Speech to Text"
+          description="Real-time speech recognition in 50+ languages."
+        />
 
           <div className="grid gap-8">
             {/* Mic Capture Area (styled like dropzone) */}
-            <Card className="border-2 border-dashed border-gray-300 hover:border-sky-500 bg-white shadow-sm transition-all">
+            <Card className="border-2 border-dashed border-border hover:border-sky-500 bg-card shadow-sm transition-all">
               <CardContent className="py-10 px-6">
                 <div className="flex flex-col items-center">
                   <button
@@ -292,13 +279,13 @@ export default function SpeechToText() {
                       "w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
                       isListening
                         ? "bg-red-500 hover:bg-red-600 animate-pulse shadow-red-200"
-                        : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-green-200"
+                        : "bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy shadow-primary/20"
                     )}
                   >
                     {isListening ? <Square className="h-10 w-10 text-white" /> : <Mic className="h-10 w-10 text-white" />}
                   </button>
 
-                  <p className="mt-4 text-sm font-medium text-gray-600">
+                  <p className="mt-4 text-sm font-medium text-muted-foreground">
                     {isListening ? (
                       <span className="text-red-500 flex items-center gap-2">
                         <span className="relative flex h-3 w-3">
@@ -328,19 +315,19 @@ export default function SpeechToText() {
               {/* Settings Sidebar */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground">
                     <Mic className="w-6 h-6 text-sky-600" /> Settings
                   </div>
 
                   {/* Language */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
                       <Languages className="h-4 w-4" /> Language
                     </label>
                     <select
                       value={selectedLang}
                       onChange={(e) => { if (isListening) stopListening(); setSelectedLang(e.target.value); }}
-                      className="w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
+                      className="w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 bg-card"
                     >
                       {Object.entries(LANGUAGE_GROUPS).map(([group, langs]) => (
                         <optgroup key={group} label={group}>
@@ -353,22 +340,22 @@ export default function SpeechToText() {
                   </div>
 
                   {/* Continuous Mode */}
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="p-3 bg-muted/40 rounded-xl border border-border">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input type="checkbox" checked={continuous}
                         onChange={(e) => { if (isListening) stopListening(); setContinuous(e.target.checked); }}
                         className="w-4 h-4 accent-sky-600" />
                       <div>
-                        <span className="text-sm font-semibold text-gray-800">Continuous mode</span>
-                        <p className="text-xs text-gray-400">Keep recording until you stop</p>
+                        <span className="text-sm font-semibold text-foreground">Continuous mode</span>
+                        <p className="text-xs text-muted-foreground">Keep recording until you stop</p>
                       </div>
                     </label>
                   </div>
 
                   {/* Tips */}
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tips</label>
-                    <ul className="text-xs text-gray-500 space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tips</label>
+                    <ul className="text-xs text-muted-foreground space-y-1.5">
                       <li className="flex items-start gap-2"><CheckCircle className="h-3 w-3 text-sky-500 mt-0.5 flex-shrink-0" />Speak clearly and at a normal pace</li>
                       <li className="flex items-start gap-2"><CheckCircle className="h-3 w-3 text-sky-500 mt-0.5 flex-shrink-0" />Use a quiet environment</li>
                       <li className="flex items-start gap-2"><CheckCircle className="h-3 w-3 text-sky-500 mt-0.5 flex-shrink-0" />Works best in Chrome or Edge</li>
@@ -381,8 +368,8 @@ export default function SpeechToText() {
               <div className="space-y-5">
                 <div className="flex justify-between items-end border-b pb-4">
                   <div>
-                    <h3 className="font-bold text-2xl text-gray-800">Transcript</h3>
-                    <p className="text-gray-500 text-sm mt-1">{wordCount} words • {getLangName(selectedLang)}</p>
+                    <h3 className="font-bold text-2xl text-foreground">Transcript</h3>
+                    <p className="text-muted-foreground text-sm mt-1">{wordCount} words • {getLangName(selectedLang)}</p>
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={copyToClipboard} variant="outline" size="sm" disabled={!transcript.trim()}>
@@ -395,16 +382,16 @@ export default function SpeechToText() {
                 </div>
 
                 {/* Transcript Card */}
-                <Card className="overflow-hidden border border-gray-200 shadow-sm">
+                <Card className="overflow-hidden border border-border shadow-sm">
                   <div className="p-5">
-                    <div className="w-full min-h-[200px] p-4 border rounded-lg bg-gray-50 text-gray-800 text-base leading-relaxed">
+                    <div className="w-full min-h-[200px] p-4 border rounded-lg bg-muted/40 text-foreground text-base leading-relaxed">
                       {transcript || interimTranscript ? (
                         <>
                           <span>{transcript}</span>
-                          {interimTranscript && <span className="text-gray-400 italic">{interimTranscript}</span>}
+                          {interimTranscript && <span className="text-muted-foreground italic">{interimTranscript}</span>}
                         </>
                       ) : (
-                        <span className="text-gray-300 italic">Your transcription will appear here...</span>
+                        <span className="text-muted-foreground/50 italic">Your transcription will appear here...</span>
                       )}
                     </div>
 
@@ -420,17 +407,17 @@ export default function SpeechToText() {
                 {history.length > 0 && (
                   <>
                     <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-lg text-gray-800">History</h4>
-                      <Button onClick={clearHistory} variant="ghost" size="sm" className="text-gray-400 text-xs">Clear</Button>
+                      <h4 className="font-bold text-lg text-foreground">History</h4>
+                      <Button onClick={clearHistory} variant="ghost" size="sm" className="text-muted-foreground text-xs">Clear</Button>
                     </div>
                     {history.map((item, i) => (
-                      <Card key={i} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => loadFromHistory(item)}>
+                      <Card key={i} className="overflow-hidden border border-border shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => loadFromHistory(item)}>
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-1">
                             <Badge variant="outline" className="text-[10px]">{getLangName(item.lang)}</Badge>
-                            <span className="text-gray-400 text-[10px]">{item.time}</span>
+                            <span className="text-muted-foreground text-[10px]">{item.time}</span>
                           </div>
-                          <p className="text-gray-600 text-sm line-clamp-2">{item.text}</p>
+                          <p className="text-muted-foreground text-sm line-clamp-2">{item.text}</p>
                         </div>
                       </Card>
                     ))}
@@ -439,11 +426,7 @@ export default function SpeechToText() {
               </div>
             </div>
           </div>
-        </main>
-
-        <Footer />
-      </div>
-    </>
+    </ToolPageShell>
   );
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
+import ToolFormCard from "../components/ToolFormCard";
 import { useAuth } from "@/lib/authContext";
 import {
   Key, Copy, RefreshCw, CheckCircle, Lock, Shield
@@ -78,7 +78,7 @@ export default function PasswordGenerator() {
   };
 
   const getStrength = (pwd) => {
-    if (!pwd) return { level: 0, label: "None", color: "bg-gray-300" };
+    if (!pwd) return { level: 0, label: "None", color: "bg-muted" };
     
     let score = 0;
     if (pwd.length >= 8) score++;
@@ -91,53 +91,38 @@ export default function PasswordGenerator() {
     
     if (score <= 2) return { level: 1, label: "Weak", color: "bg-red-500" };
     if (score <= 4) return { level: 2, label: "Fair", color: "bg-yellow-500" };
-    if (score <= 6) return { level: 3, label: "Good", color: "bg-blue-500" };
-    return { level: 4, label: "Strong", color: "bg-green-500" };
+    if (score <= 6) return { level: 3, label: "Good", color: "bg-brand-mid" };
+    return { level: 4, label: "Strong", color: "bg-primary" };
   };
 
   const strength = getStrength(password);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+    <ToolPageShell containerClassName="max-w-4xl">
         <div className="space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              100% Secure • Client-side Generation
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Password Generator
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Create strong, secure passwords with customizable options. All generation happens in your browser for maximum privacy.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Password Generator"
+            description="Create strong, secure passwords with customizable options. All generation happens in your browser for maximum privacy."
+            badge="100% Secure • Client-side Generation"
+          />
 
           {/* Password Display */}
-          <Card className="border-2 border-green-200 dark:border-green-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-green-600" />
-                Generated Password
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <ToolFormCard title="Generated Password" icon={Key}>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={password}
                   readOnly
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-mono text-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  aria-label="Generated password"
+                  className="flex-1 px-4 py-3 bg-muted/40 border border-border rounded-lg font-mono text-lg focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
                 <Button
                   onClick={copyToClipboard}
+                  aria-label={copied ? "Copied" : "Copy password"}
                   className={cn(
-                    "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700",
-                    copied && "bg-green-600"
+                    "bg-primary hover:bg-brand-navy focus-visible:ring-2 focus-visible:ring-primary/40",
+                    copied && "bg-primary"
                   )}
                 >
                   {copied ? (
@@ -151,12 +136,12 @@ export default function PasswordGenerator() {
               {password && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Strength:</span>
+                    <span className="text-muted-foreground">Strength:</span>
                     <Badge className={cn("text-white", strength.color)}>
                       {strength.label}
                     </Badge>
                   </div>
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className={cn("h-full transition-all", strength.color)}
                       style={{ width: `${(strength.level / 4) * 100}%` }}
@@ -164,30 +149,30 @@ export default function PasswordGenerator() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </ToolFormCard>
 
           {/* Options */}
-          <Card>
+          <Card className="border border-border shadow-sm">
             <CardHeader>
               <CardTitle>Password Options</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Length */}
               <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center justify-between">
+                <label className="text-sm font-medium flex items-center justify-between" htmlFor="password-length">
                   <span>Length: {length} characters</span>
-                  <span className="text-gray-500">{length}</span>
+                  <span className="text-muted-foreground">{length}</span>
                 </label>
                 <input
+                  id="password-length"
                   type="range"
                   min="4"
                   max="128"
                   value={length}
                   onChange={(e) => setLength(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 />
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>4</span>
                   <span>128</span>
                 </div>
@@ -204,7 +189,7 @@ export default function PasswordGenerator() {
                       type="checkbox"
                       checked={includeUppercase}
                       onChange={(e) => setIncludeUppercase(e.target.checked)}
-                      className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      className="w-4 h-4 text-primary rounded focus:ring-primary"
                     />
                     <span>Uppercase (A-Z)</span>
                   </label>
@@ -213,7 +198,7 @@ export default function PasswordGenerator() {
                       type="checkbox"
                       checked={includeLowercase}
                       onChange={(e) => setIncludeLowercase(e.target.checked)}
-                      className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      className="w-4 h-4 text-primary rounded focus:ring-primary"
                     />
                     <span>Lowercase (a-z)</span>
                   </label>
@@ -222,7 +207,7 @@ export default function PasswordGenerator() {
                       type="checkbox"
                       checked={includeNumbers}
                       onChange={(e) => setIncludeNumbers(e.target.checked)}
-                      className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      className="w-4 h-4 text-primary rounded focus:ring-primary"
                     />
                     <span>Numbers (0-9)</span>
                   </label>
@@ -231,7 +216,7 @@ export default function PasswordGenerator() {
                       type="checkbox"
                       checked={includeSymbols}
                       onChange={(e) => setIncludeSymbols(e.target.checked)}
-                      className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      className="w-4 h-4 text-primary rounded focus:ring-primary"
                     />
                     <span>Symbols (!@#$%...)</span>
                   </label>
@@ -249,7 +234,7 @@ export default function PasswordGenerator() {
                       type="checkbox"
                       checked={excludeSimilar}
                       onChange={(e) => setExcludeSimilar(e.target.checked)}
-                      className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      className="w-4 h-4 text-primary rounded focus:ring-primary"
                     />
                     <span>Exclude Similar Characters (i, l, 1, L, o, 0, O)</span>
                   </label>
@@ -258,7 +243,7 @@ export default function PasswordGenerator() {
                       type="checkbox"
                       checked={excludeAmbiguous}
                       onChange={(e) => setExcludeAmbiguous(e.target.checked)}
-                      className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      className="w-4 h-4 text-primary rounded focus:ring-primary"
                     />
                     <span>Exclude Ambiguous Characters ({ } [ ] ( ) / \ ' " ~ , ; . &lt; &gt;)</span>
                   </label>
@@ -267,7 +252,7 @@ export default function PasswordGenerator() {
 
               <Button
                 onClick={generatePassword}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 text-lg"
+                className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white font-semibold py-6 text-lg"
               >
                 <RefreshCw className="w-5 h-5 mr-2" />
                 Generate Password
@@ -276,11 +261,11 @@ export default function PasswordGenerator() {
           </Card>
 
           {/* Info */}
-          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <Card className="bg-brand-sky/50 dark:bg-primary/10 border-brand-mid/30 dark:border-primary/30">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-green-600 mt-0.5" />
-                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                <Lock className="w-5 h-5 text-primary mt-0.5" />
+                <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                   <p className="font-medium">Security & Privacy</p>
                   <p>All password generation happens locally in your browser. No data is sent to any server, ensuring complete privacy and security.</p>
                 </div>
@@ -288,10 +273,7 @@ export default function PasswordGenerator() {
             </CardContent>
           </Card>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 

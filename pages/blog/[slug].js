@@ -28,8 +28,8 @@ function renderMarkdownContent(content) {
     const ListTag = listType === "ol" ? "ol" : "ul";
     const listClass =
       listType === "ol"
-        ? "list-decimal pl-6 space-y-2 mb-6 text-slate-600 dark:text-slate-300"
-        : "list-disc pl-6 space-y-2 mb-6 text-slate-600 dark:text-slate-300 marker:text-primary";
+        ? "list-decimal pl-6 space-y-2 mb-6 text-muted-foreground dark:text-muted-foreground"
+        : "list-disc pl-6 space-y-2 mb-6 text-muted-foreground dark:text-muted-foreground marker:text-primary";
     elements.push(
       <ListTag key={`list-${elements.length}`} className={listClass}>
         {listItems.map((item, i) => (
@@ -53,7 +53,7 @@ function renderMarkdownContent(content) {
         <h2
           key={idx}
           id={trimmed.slice(3).toLowerCase().replace(/\s+/g, "-")}
-          className="text-2xl font-bold mt-12 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white scroll-mt-24"
+          className="text-2xl font-bold mt-12 mb-4 pb-3 border-b border-border dark:border-border text-foreground dark:text-foreground scroll-mt-24"
         >
           {trimmed.slice(3)}
         </h2>
@@ -61,7 +61,7 @@ function renderMarkdownContent(content) {
     } else if (trimmed.startsWith("### ")) {
       flushList();
       elements.push(
-        <h3 key={idx} className="text-xl font-semibold mt-8 mb-3 text-slate-900 dark:text-white">
+        <h3 key={idx} className="text-xl font-semibold mt-8 mb-3 text-foreground dark:text-foreground">
           {trimmed.slice(4)}
         </h3>
       );
@@ -78,7 +78,7 @@ function renderMarkdownContent(content) {
       elements.push(
         <p
           key={idx}
-          className="text-slate-600 dark:text-slate-300 leading-relaxed mb-5 text-[1.05rem]"
+          className="text-muted-foreground dark:text-muted-foreground leading-relaxed mb-5 text-[1.05rem]"
           dangerouslySetInnerHTML={{ __html: parseInline(trimmed) }}
         />
       );
@@ -131,7 +131,7 @@ export default function BlogPostPage({ post }) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <SEO
         title={post.title}
         description={post.description}
@@ -142,16 +142,16 @@ export default function BlogPostPage({ post }) {
       <Navbar />
 
       {/* Article hero */}
-      <section className="relative border-b bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+      <section className="relative border-b bg-gradient-to-br from-brand-navy via-primary to-brand-navy text-white overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand-sky/20 via-transparent to-transparent" />
         <div className="container mx-auto px-4 py-12 md:py-16 relative max-w-4xl">
           <Breadcrumbs items={breadcrumbs} variant="light" className="mb-6" />
           <div className="flex flex-wrap items-center gap-3 mb-5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/20 border border-primary/30 px-3 py-1 text-xs font-semibold text-primary-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/20 px-3 py-1 text-xs font-semibold text-brand-sky">
               <Tag className="h-3.5 w-3.5" />
               {post.category}
             </span>
-            <span className="inline-flex items-center gap-1.5 text-sm text-slate-400">
+            <span className="inline-flex items-center gap-1.5 text-sm text-white/70">
               <Clock className="h-4 w-4" />
               {post.readTime} read
             </span>
@@ -159,8 +159,8 @@ export default function BlogPostPage({ post }) {
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight mb-5">
             {post.title}
           </h1>
-          <p className="text-lg text-slate-300 leading-relaxed mb-6">{post.description}</p>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
+          <p className="text-lg text-white/80 leading-relaxed mb-6">{post.description}</p>
+          <div className="flex flex-wrap items-center gap-4 text-sm text-white/70">
             <span className="inline-flex items-center gap-1.5">
               <User className="h-4 w-4" />
               ConvertMastery Team
@@ -169,7 +169,7 @@ export default function BlogPostPage({ post }) {
               <Calendar className="h-4 w-4" />
               Published {post.datePublished}
             </span>
-            <span className="text-slate-500">· Updated {post.dateModified}</span>
+            <span>· Updated {post.dateModified}</span>
           </div>
         </div>
       </section>
@@ -178,13 +178,13 @@ export default function BlogPostPage({ post }) {
         <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 max-w-6xl mx-auto">
           {/* Article body */}
           <article className="lg:col-span-8">
-            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+            <Card className="border-border dark:border-border shadow-sm">
               <CardContent className="pt-8 pb-8 md:pt-10 md:pb-10 px-6 md:px-10">
                 <ProseContent>{renderMarkdownContent(post.content)}</ProseContent>
               </CardContent>
             </Card>
 
-            <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-8 border-t border-slate-200 dark:border-slate-800">
+            <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-8 border-t border-border dark:border-border">
               <Link
                 href="/blog"
                 className="inline-flex items-center text-sm font-medium text-primary hover:underline"
@@ -204,7 +204,7 @@ export default function BlogPostPage({ post }) {
           {/* Sidebar */}
           <aside className="lg:col-span-4 space-y-6">
             {headings.length > 0 && (
-              <Card className="border-slate-200 dark:border-slate-800 shadow-sm sticky top-24">
+              <Card className="border-border dark:border-border shadow-sm sticky top-24">
                 <CardContent className="pt-6 pb-6">
                   <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
                     On this page
@@ -214,7 +214,7 @@ export default function BlogPostPage({ post }) {
                       <li key={heading}>
                         <a
                           href={`#${heading.toLowerCase().replace(/\s+/g, "-")}`}
-                          className="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors line-clamp-2"
+                          className="text-sm text-muted-foreground dark:text-muted-foreground hover:text-primary transition-colors line-clamp-2"
                         >
                           {heading}
                         </a>
@@ -225,9 +225,9 @@ export default function BlogPostPage({ post }) {
               </Card>
             )}
 
-            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+            <Card className="border-border dark:border-border shadow-sm">
               <CardContent className="pt-6 pb-6">
-                <h2 className="font-semibold text-slate-900 dark:text-white mb-4">More guides</h2>
+                <h2 className="font-semibold text-foreground dark:text-foreground mb-4">More guides</h2>
                 <ul className="space-y-4">
                   {relatedPosts.map((related) => (
                     <li key={related.slug}>
@@ -235,7 +235,7 @@ export default function BlogPostPage({ post }) {
                         href={`/blog/${related.slug}`}
                         className="group block"
                       >
-                        <p className="text-sm font-medium text-slate-900 dark:text-white group-hover:text-primary transition-colors line-clamp-2">
+                        <p className="text-sm font-medium text-foreground dark:text-foreground group-hover:text-primary transition-colors line-clamp-2">
                           {related.title}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">{related.readTime} read</p>
@@ -248,7 +248,7 @@ export default function BlogPostPage({ post }) {
 
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent shadow-sm">
               <CardContent className="pt-6 pb-6">
-                <h2 className="font-semibold text-slate-900 dark:text-white mb-2">Popular tools</h2>
+                <h2 className="font-semibold text-foreground dark:text-foreground mb-2">Popular tools</h2>
                 <ul className="space-y-2 text-sm">
                   <li><Link href="/heic-to-jpg" className="text-primary hover:underline">HEIC to JPG</Link></li>
                   <li><Link href="/compress" className="text-primary hover:underline">Image Compressor</Link></li>

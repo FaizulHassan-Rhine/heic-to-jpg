@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
@@ -15,7 +14,6 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-import Head from "next/head";
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -393,28 +391,12 @@ export default function DocToPdf() {
 
   return (
     <>
-      <Head>
-        <title>Document to PDF - ConvertMastery</title>
-        <meta name="description" content="Convert TXT and DOCX documents to PDF for free. Fast, accurate, and easy to use." />
-      </Head>
-
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Head>
-          <title>Document to PDF - ConvertMastery</title>
-          <meta name="description" content="Convert TXT and DOCX documents to PDF for free. Fast, accurate, and easy to use." />
-        </Head>
-        <Navbar />
-
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+<ToolPageShell containerClassName="max-w-6xl">
           {/* Header */}
-          <div className="text-center mb-10">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-              Document to PDF
-            </h1>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-              Convert your TXT and DOCX files to PDF format with preserved formatting.
-            </p>
-          </div>
+          <ToolPageHeader
+          title="Document to PDF"
+          description="Convert your TXT and DOCX files to PDF format with preserved formatting."
+        />
 
           <div className="grid gap-8">
             {/* Upload */}
@@ -424,8 +406,6 @@ export default function DocToPdf() {
               title="Upload Documents to Convert"
               description="TXT, DOCX • Max 10 files • Max 20MB each"
               accept={ACCEPTED_TYPES}
-              borderColor="border-gray-300"
-              hoverColor="hover:border-green-500"
             />
 
             {/* Workspace */}
@@ -435,13 +415,13 @@ export default function DocToPdf() {
                 {/* Sidebar: Settings */}
                 <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                   <CardContent className="p-6 space-y-6">
-                    <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                      <Settings2 className="w-6 h-6 text-green-600" /> Settings
+                    <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                      <Settings2 className="w-6 h-6 text-primary" /> Settings
                     </div>
 
                     {/* Page Size */}
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Page Size</label>
+                      <label className="text-sm font-semibold text-foreground">Page Size</label>
                       <div className="grid grid-cols-3 gap-2">
                         {[
                           { id: "a4", label: "A4" },
@@ -455,8 +435,8 @@ export default function DocToPdf() {
                             className={cn(
                               "p-2 rounded-lg border text-sm font-medium transition-all",
                               pageSize === size.id
-                                ? "bg-green-50 border-green-200 text-green-700 ring-1 ring-green-200"
-                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                                ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy ring-1 ring-brand-mid/40"
+                                : "bg-card border-border text-muted-foreground hover:bg-muted/40"
                             )}
                           >
                             {size.label}
@@ -467,7 +447,7 @@ export default function DocToPdf() {
 
                     {/* Orientation */}
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Orientation</label>
+                      <label className="text-sm font-semibold text-foreground">Orientation</label>
                       <div className="grid grid-cols-2 gap-2">
                         {[
                           { id: "portrait", label: "Portrait", icon: "📄" },
@@ -480,8 +460,8 @@ export default function DocToPdf() {
                             className={cn(
                               "p-3 rounded-lg border text-sm font-medium transition-all",
                               orientation === orient.id
-                                ? "bg-green-50 border-green-200 text-green-700 ring-1 ring-green-200"
-                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                                ? "bg-brand-sky/50 border-brand-mid/30 text-brand-navy ring-1 ring-brand-mid/40"
+                                : "bg-card border-border text-muted-foreground hover:bg-muted/40"
                             )}
                           >
                             <div className="text-lg mb-1">{orient.icon}</div>
@@ -493,7 +473,7 @@ export default function DocToPdf() {
 
                     {/* Margins */}
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Margins (mm)</label>
+                      <label className="text-sm font-semibold text-foreground">Margins (mm)</label>
                       <div className="grid grid-cols-2 gap-2">
                         {[
                           { key: "top", label: "Top" },
@@ -502,7 +482,7 @@ export default function DocToPdf() {
                           { key: "left", label: "Left" },
                         ].map(({ key, label }) => (
                           <div key={key} className="space-y-1">
-                            <label className="text-xs text-gray-500">{label}</label>
+                            <label className="text-xs text-muted-foreground">{label}</label>
                             <input
                               type="number"
                               min="0"
@@ -515,7 +495,7 @@ export default function DocToPdf() {
                                 }))
                               }
                               disabled={processing}
-                              className="w-full px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                              className="w-full px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
                             />
                           </div>
                         ))}
@@ -527,7 +507,7 @@ export default function DocToPdf() {
                     <Button
                       onClick={convertAll}
                       disabled={processing || files.length === 0}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                      className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                     >
                       {processing ? (
                         <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Converting... </>
@@ -540,14 +520,14 @@ export default function DocToPdf() {
                       <Button
                         onClick={downloadAll}
                         variant="outline"
-                        className="w-full border-green-600 text-green-700 hover:bg-green-50"
+                        className="w-full border-primary text-brand-navy hover:bg-brand-sky/50"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download All ({completedResults})
                       </Button>
                     )}
 
-                    <Button onClick={resetAll} variant="outline" className="w-full text-gray-500">
+                    <Button onClick={resetAll} variant="outline" className="w-full text-muted-foreground">
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Reset All
                     </Button>
@@ -555,7 +535,7 @@ export default function DocToPdf() {
                     {/* Progress */}
                     {processing && (
                       <div className="space-y-2">
-                        <div className="flex justify-between text-sm text-gray-600">
+                        <div className="flex justify-between text-sm text-muted-foreground">
                           <span>Progress</span>
                           <span>{completedResults}/{files.length}</span>
                         </div>
@@ -568,11 +548,11 @@ export default function DocToPdf() {
                 {/* File List */}
                 <div className="space-y-5">
                   {/* Header with Stats */}
-                  <Card className="border border-gray-200">
+                  <Card className="border border-border">
                     <CardContent className="p-4">
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-gray-400" />
+                        <h3 className="font-bold text-xl text-foreground flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-muted-foreground" />
                           Files
                         </h3>
                       </div>
@@ -580,20 +560,20 @@ export default function DocToPdf() {
                       {/* Stats */}
                       <div className="flex gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600 font-medium">Total:</span>
+                          <span className="text-muted-foreground font-medium">Total:</span>
                           <Badge variant="secondary" className="font-semibold">
                             {files.length}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600 font-medium">Completed:</span>
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 font-semibold">
+                          <span className="text-muted-foreground font-medium">Completed:</span>
+                          <Badge className="bg-brand-sky text-brand-navy hover:bg-brand-sky border-brand-mid/30 font-semibold">
                             {completedResults}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600 font-medium">Processing:</span>
-                          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 font-semibold">
+                          <span className="text-muted-foreground font-medium">Processing:</span>
+                          <Badge className="bg-brand-sky text-brand-navy hover:bg-brand-sky border-brand-mid/30 font-semibold">
                             {Object.values(results).filter(r => r.status === "processing").length}
                           </Badge>
                         </div>
@@ -610,18 +590,18 @@ export default function DocToPdf() {
                     return (
                       <Card
                         key={key}
-                        className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group"
+                        className="overflow-hidden border border-border shadow-sm hover:shadow-md transition-all group"
                       >
                         <div className="p-4 flex gap-5 items-center">
                           {/* File Icon */}
-                          <div className="w-16 h-16 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-green-100">
-                            <FileText className="w-8 h-8 text-green-400" />
+                          <div className="w-16 h-16 bg-brand-sky/50 rounded-xl flex items-center justify-center flex-shrink-0 border border-brand-mid/30">
+                            <FileText className="w-8 h-8 text-brand-mid" />
                           </div>
 
                           {/* File Info */}
                           <div className="flex-1 min-w-0 space-y-2">
                             <div className="flex justify-between items-start">
-                              <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+                              <h4 className="font-semibold truncate pr-4 text-foreground text-lg">{file.name}</h4>
 
                               <div className="flex gap-2">
                                 {/* Preview Button */}
@@ -629,7 +609,7 @@ export default function DocToPdf() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-8 w-8 text-gray-400 hover:text-green-600"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
                                     onClick={() => togglePreview(key)}
                                     title={isPreviewOpen ? "Hide preview" : "Show preview"}
                                   >
@@ -642,7 +622,7 @@ export default function DocToPdf() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-8 w-8 text-green-600 bg-green-50 hover:bg-green-100"
+                                    className="h-8 w-8 text-primary bg-brand-sky/50 hover:bg-brand-sky"
                                     onClick={() => downloadPdf(key)}
                                     title="Download PDF"
                                   >
@@ -654,7 +634,7 @@ export default function DocToPdf() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                  className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50"
                                   onClick={() => removeFile(index)}
                                   title="Remove"
                                   disabled={processing}
@@ -665,7 +645,7 @@ export default function DocToPdf() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-3 text-sm">
-                              <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                              <Badge variant="secondary" className="bg-muted text-muted-foreground border-border font-mono">
                                 {formatSize(file.size)}
                               </Badge>
 
@@ -677,11 +657,11 @@ export default function DocToPdf() {
 
                               {result?.status === "done" && (
                                 <>
-                                  <ArrowRight className="w-3 h-3 text-gray-300" />
-                                  <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100 font-mono">
+                                  <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
+                                  <Badge className="bg-brand-sky text-brand-navy border-brand-mid/30 hover:bg-brand-sky font-mono">
                                     {formatSize(result.size)}
                                   </Badge>
-                                  <Badge variant="outline" className="border-green-200 text-green-700 uppercase">
+                                  <Badge variant="outline" className="border-brand-mid/30 text-brand-navy uppercase">
                                     PDF
                                   </Badge>
                                 </>
@@ -694,7 +674,7 @@ export default function DocToPdf() {
                               )}
 
                               {!result && !parsed?.error && (
-                                <span className="text-gray-400 italic text-xs">Ready to convert</span>
+                                <span className="text-muted-foreground italic text-xs">Ready to convert</span>
                               )}
                             </div>
                           </div>
@@ -704,7 +684,7 @@ export default function DocToPdf() {
                         {isPreviewOpen && parsed && !parsed.error && (
                           <div className="px-4 pb-4">
                             <Separator className="mb-3" />
-                            <div className="max-h-64 overflow-y-auto border rounded-lg p-4 bg-white">
+                            <div className="max-h-64 overflow-y-auto border rounded-lg p-4 bg-card">
                               <div
                                 dangerouslySetInnerHTML={{ __html: parsed.html }}
                                 className="prose prose-sm max-w-none"
@@ -717,12 +697,12 @@ export default function DocToPdf() {
                         {result?.status === "processing" && (
                           <div className="px-4 pb-4 space-y-1">
                             <div className="flex justify-between items-center text-xs">
-                              <span className="text-green-600 font-medium">Processing...</span>
-                              <span className="text-green-600 font-bold">{Math.round(result.progress || 0)}%</span>
+                              <span className="text-primary font-medium">Processing...</span>
+                              <span className="text-primary font-bold">{Math.round(result.progress || 0)}%</span>
                             </div>
-                            <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                            <div className="h-2 bg-brand-sky rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
+                                className="h-full bg-gradient-to-r from-primary to-brand-navy transition-all duration-300 ease-out"
                                 style={{ width: `${result.progress || 0}%` }}
                               />
                             </div>
@@ -735,10 +715,7 @@ export default function DocToPdf() {
               </div>
             )}
           </div>
-        </main>
-
-        <Footer />
-      </div>
+    </ToolPageShell>
     </>
   );
 }

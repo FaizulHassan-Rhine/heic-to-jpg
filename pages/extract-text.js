@@ -1,8 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAuth } from "../lib/authContext";
 import { generateThumbnail } from "../lib/thumbnailUtils";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
@@ -16,7 +15,6 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import Head from "next/head";
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -385,21 +383,11 @@ export default function ExtractText() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Head>
-        <title>Extract Text (OCR) - ConvertMastery</title>
-      </Head>
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-            Extract Text (OCR)
-          </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-            Convert images to editable text instantly.
-          </p>
-        </div>
+    <ToolPageShell containerClassName="max-w-6xl">
+        <ToolPageHeader
+          title="Extract Text (OCR)"
+          description="Convert images to editable text instantly."
+        />
 
 
         <div className="grid gap-8">
@@ -416,8 +404,6 @@ export default function ExtractText() {
               "image/bmp": [".bmp", ".BMP"],
               "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"]
             }}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-green-500"
           />
 
           {files.length > 0 && (
@@ -426,33 +412,33 @@ export default function ExtractText() {
               {/* Settings */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <ScanText className="w-6 h-6 text-green-600" /> OCR Options
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                    <ScanText className="w-6 h-6 text-primary" /> OCR Options
                   </div>
 
                   <div className="space-y-3">
-                    <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                    <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/40 cursor-pointer transition-all">
                       <input
                         type="checkbox"
                         checked={useProOCR}
                         onChange={(e) => setUseProOCR(e.target.checked)}
-                        className="w-5 h-5 accent-green-600"
+                        className="w-5 h-5 accent-primary"
                       />
                       <div>
-                        <span className="font-semibold text-gray-800 block text-sm">Enhanced Engine</span>
-                        <span className="text-xs text-gray-500">Better for numbers & tables (Slower)</span>
+                        <span className="font-semibold text-foreground block text-sm">Enhanced Engine</span>
+                        <span className="text-xs text-muted-foreground">Better for numbers & tables (Slower)</span>
                       </div>
                     </label>
                   </div>
 
                   {/* Language Selection */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">OCR Language</label>
+                    <label className="text-sm font-semibold text-foreground">OCR Language</label>
                     <select
                       value={ocrLanguage}
                       onChange={(e) => setOcrLanguage(e.target.value)}
                       disabled={processing}
-                      className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                      className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                     >
                       <option value="eng">English</option>
                       <option value="spa">Spanish</option>
@@ -471,7 +457,7 @@ export default function ExtractText() {
 
                   {/* Export Format */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Export Format</label>
+                    <label className="text-sm font-semibold text-foreground">Export Format</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { id: "txt", label: "TXT" },
@@ -485,8 +471,8 @@ export default function ExtractText() {
                           className={cn(
                             "p-2 rounded-lg border text-xs font-medium transition-all",
                             exportFormat === fmt.id
-                              ? "bg-teal-50 border-teal-200 text-teal-700 ring-1 ring-teal-200"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                              ? "bg-brand-sky/60 border-primary/40 text-primary ring-1 ring-primary/40"
+                              : "bg-card border-border text-muted-foreground hover:bg-muted/40"
                           )}
                         >
                           {fmt.label}
@@ -498,7 +484,7 @@ export default function ExtractText() {
                   <Button
                     onClick={processAll}
                     disabled={processing}
-                    className="w-full bg-teal-600 hover:bg-teal-700 text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
+                    className="w-full bg-primary hover:bg-brand-navy text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Extracting... </>
@@ -513,8 +499,8 @@ export default function ExtractText() {
               <div className="space-y-5">
                 <div className="flex justify-between items-end border-b pb-4">
                   <div>
-                    <h3 className="font-bold text-2xl text-gray-800">Files</h3>
-                    <p className="text-gray-500 text-sm mt-1">Images to extract text from</p>
+                    <h3 className="font-bold text-2xl text-foreground">Files</h3>
+                    <p className="text-muted-foreground text-sm mt-1">Images to extract text from</p>
                   </div>
                 </div>
 
@@ -523,34 +509,34 @@ export default function ExtractText() {
                   const preview = previewUrls[file.name];
 
                   return (
-                    <Card key={file.name + idx} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group">
+                    <Card key={file.name + idx} className="overflow-hidden border border-border shadow-sm hover:shadow-md transition-all group">
                       <div className="p-4 flex flex-col sm:flex-row gap-5 items-start">
 
                         {/* Thumbnail often helps for OCR reference */}
-                        <div className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden relative border border-gray-200 hidden sm:block">
+                        <div className="w-20 h-20 bg-muted rounded-xl flex-shrink-0 overflow-hidden relative border border-border hidden sm:block">
                           {preview ? (
                             <img src={preview} className="w-full h-full object-cover" />
                           ) : (
-                            <FileText className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                            <FileText className="w-8 h-8 text-muted-foreground/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                           )}
                         </div>
 
                         <div className="flex-1 min-w-0 w-full space-y-3">
                           <div className="flex justify-between items-start">
-                            <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+                            <h4 className="font-semibold truncate pr-4 text-foreground text-lg">{file.name}</h4>
 
                             <div className="flex gap-2">
                               {res?.status === "done" && (
                                 <>
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-teal-600 bg-teal-50 hover:bg-teal-100" onClick={() => copyText(res.text)} title="Copy Text">
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-primary bg-brand-sky/60 hover:bg-brand-sky" onClick={() => copyText(res.text)} title="Copy Text">
                                     <Copy className="w-4 h-4" />
                                   </Button>
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-teal-600 bg-teal-50 hover:bg-teal-100" onClick={() => downloadText(file.name, res.text, res.confidence)} title="Download Text">
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-primary bg-brand-sky/60 hover:bg-brand-sky" onClick={() => downloadText(file.name, res.text, res.confidence)} title="Download Text">
                                     <Download className="w-4 h-4" />
                                   </Button>
                                 </>
                               )}
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
@@ -561,10 +547,10 @@ export default function ExtractText() {
                             <div className="mt-2 space-y-2">
                               {res.confidence && (
                                 <div className="flex items-center gap-2 text-xs">
-                                  <span className="text-gray-500">Confidence:</span>
+                                  <span className="text-muted-foreground">Confidence:</span>
                                   <Badge variant="outline" className={cn(
                                     "text-xs",
-                                    res.confidence >= 80 ? "border-green-500 text-green-700" :
+                                    res.confidence >= 80 ? "border-primary text-brand-navy" :
                                     res.confidence >= 60 ? "border-yellow-500 text-yellow-700" :
                                     "border-red-500 text-red-700"
                                   )}>
@@ -572,13 +558,13 @@ export default function ExtractText() {
                                   </Badge>
                                 </div>
                               )}
-                              <div className="text-sm bg-gray-50 p-3 rounded-lg border border-gray-100 font-mono text-gray-700 max-h-40 overflow-y-auto whitespace-pre-wrap">
+                              <div className="text-sm bg-muted/40 p-3 rounded-lg border border-border font-mono text-foreground max-h-40 overflow-y-auto whitespace-pre-wrap">
                                 {res.text.slice(0, 300) + (res.text.length > 300 ? "..." : "")}
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <Badge variant="secondary" className="bg-gray-100 text-gray-600">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Badge variant="secondary" className="bg-muted text-muted-foreground">
                                 {formatSize(file.size)}
                               </Badge>
                               {res?.status === "error" && (
@@ -587,7 +573,7 @@ export default function ExtractText() {
                                 </Badge>
                               )}
                               {res?.status === "processing" && (
-                                <span className="text-teal-600 animate-pulse font-medium">Extracting text...</span>
+                                <span className="text-primary animate-pulse font-medium">Extracting text...</span>
                               )}
                             </div>
                           )}
@@ -596,12 +582,12 @@ export default function ExtractText() {
                       {res?.status === "processing" && (
                         <div className="px-4 pb-4 space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-teal-600 font-medium">Processing...</span>
-                            <span className="text-teal-600 font-bold">{Math.round(res.progress || 0)}%</span>
+                            <span className="text-primary font-medium">Processing...</span>
+                            <span className="text-primary font-bold">{Math.round(res.progress || 0)}%</span>
                           </div>
-                          <div className="h-2 bg-teal-100 rounded-full overflow-hidden">
+                          <div className="h-2 bg-brand-sky rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-teal-600 transition-all duration-300 ease-out"
+                              className="h-full bg-primary transition-all duration-300 ease-out"
                               style={{ width: `${res.progress || 0}%` }}
                             />
                           </div>
@@ -614,8 +600,6 @@ export default function ExtractText() {
             </div>
           )}
         </div>
-      </main>
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

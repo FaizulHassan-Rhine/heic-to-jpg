@@ -1,8 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
-import Head from "next/head";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
@@ -405,33 +403,14 @@ export default function MergePdf() {
 
     return (
         <>
-            <Head>
-                <title>Merge PDF - ConvertMastery</title>
-                <meta
-                    name="description"
-                    content="Combine multiple PDF files into a single document. Free, fast, and private PDF merger — all processing happens in your browser."
-                />
-            </Head>
-
-            <div className="min-h-screen bg-background flex flex-col">
-                <Navbar />
-
-                <main className="flex-1">
+<ToolPageShell containerClassName="max-w-7xl">
                     <div className="container mx-auto px-4 py-8 max-w-5xl">
                         {/* Header */}
-                        <div className="text-center mb-8">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-                                <Merge className="w-3.5 h-3.5" />
-                                100% Client-side • No upload to server
-                            </div>
-                            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-                                Merge PDF
-                            </h1>
-                            <p className="text-muted-foreground max-w-lg mx-auto">
-                                Combine multiple PDF files into a single document. Drag to
-                                reorder, then merge — all processed locally in your browser.
-                            </p>
-                        </div>
+                        <ToolPageHeader
+                            title="Merge PDF"
+                            description="Combine multiple PDF files into a single document. Drag to reorder, then merge — all processed locally in your browser."
+                            badge="100% Client-side • No upload to server"
+                        />
 
                         {/* Upload Area */}
                         <div
@@ -442,8 +421,8 @@ export default function MergePdf() {
                                 "w-full border-2 border-dashed rounded-2xl transition-all duration-300 cursor-pointer mb-8",
                                 "flex flex-col items-center justify-center py-12 px-8",
                                 "bg-gradient-to-br from-background to-muted/20",
-                                "hover:border-green-500/50 hover:bg-gradient-to-br hover:from-green-50 hover:to-green-100",
-                                "hover:shadow-xl hover:shadow-green-200 hover:scale-[1.005]",
+                                "hover:border-primary/50 hover:bg-gradient-to-br hover:from-brand-sky/40 hover:to-brand-sky",
+                                "hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.005]",
                                 "group",
                                 loadingFiles && "opacity-60 pointer-events-none"
                             )}
@@ -458,12 +437,12 @@ export default function MergePdf() {
                             />
                             <div className="mb-4 p-4 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 group-hover:from-primary/20 group-hover:to-primary/30 transition-all duration-300 group-hover:scale-110">
                                 {loadingFiles ? (
-                                    <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
+                                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
                                 ) : (
-                                    <FileUp className="h-8 w-8 text-green-600" />
+                                    <FileUp className="h-8 w-8 text-primary" />
                                 )}
                             </div>
-                            <p className="text-lg font-semibold mb-1 group-hover:text-green-600 transition-colors">
+                            <p className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors">
                                 {loadingFiles ? "Loading PDF files..." : "Drop PDF files here"}
                             </p>
                             <p className="text-sm text-muted-foreground">
@@ -535,9 +514,9 @@ export default function MergePdf() {
                                         }}
                                         className={cn(
                                             "flex items-center gap-4 p-4 rounded-xl border-2 bg-card transition-all duration-200",
-                                            "hover:shadow-md hover:border-green-200",
+                                            "hover:shadow-md hover:border-brand-mid/30",
                                             dragOverIndex === idx &&
-                                            "border-green-500 bg-green-50 shadow-lg shadow-green-200",
+                                            "border-primary bg-brand-sky/50 shadow-lg shadow-primary/20",
                                             dragSourceIndex === idx && "opacity-50"
                                         )}
                                     >
@@ -547,14 +526,14 @@ export default function MergePdf() {
                                         </div>
 
                                         {/* Order Number */}
-                                        <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                                            <span className="text-sm font-bold text-green-700">
+                                        <div className="w-8 h-8 rounded-lg bg-brand-sky flex items-center justify-center flex-shrink-0">
+                                            <span className="text-sm font-bold text-brand-navy">
                                                 {idx + 1}
                                             </span>
                                         </div>
 
                                         {/* Thumbnail */}
-                                        <div className="w-14 h-18 flex-shrink-0 rounded-lg overflow-hidden border bg-white shadow-sm">
+                                        <div className="w-14 h-18 flex-shrink-0 rounded-lg overflow-hidden border bg-card shadow-sm">
                                             {entry.thumbnails?.[0] ? (
                                                 <img
                                                     src={entry.thumbnails[0]}
@@ -664,7 +643,7 @@ export default function MergePdf() {
                                                 checked={splitMode}
                                                 onChange={(e) => setSplitMode(e.target.checked)}
                                                 disabled={merging}
-                                                className="w-4 h-4 accent-green-600"
+                                                className="w-4 h-4 accent-primary"
                                             />
                                             <span className="text-sm font-medium">Split Mode (One PDF per page)</span>
                                         </label>
@@ -677,7 +656,7 @@ export default function MergePdf() {
                                                     checked={addPageNumbers}
                                                     onChange={(e) => setAddPageNumbers(e.target.checked)}
                                                     disabled={merging}
-                                                    className="w-4 h-4 accent-green-600"
+                                                    className="w-4 h-4 accent-primary"
                                                 />
                                                 <span className="text-sm font-medium">Add Page Numbers</span>
                                             </label>
@@ -694,7 +673,7 @@ export default function MergePdf() {
                                 {merging && (
                                     <div className="w-full max-w-md">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
                                             <span className="text-sm font-medium">
                                                 {splitMode ? "Splitting PDFs..." : "Merging PDFs..."} {mergeProgress}%
                                             </span>
@@ -708,7 +687,7 @@ export default function MergePdf() {
                                         size="lg"
                                         onClick={handleMerge}
                                         disabled={merging}
-                                        className="gap-2 px-10 shadow-lg shadow-green-200 text-base bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                                        className="gap-2 px-10 shadow-lg shadow-primary/20 text-base bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white"
                                     >
                                         {merging ? (
                                             <>
@@ -829,10 +808,7 @@ export default function MergePdf() {
                             </div>
                         )}
                     </div>
-                </main>
-
-                <Footer />
-            </div>
+    </ToolPageShell>
         </>
     );
 }

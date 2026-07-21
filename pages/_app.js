@@ -3,13 +3,18 @@ import Head from "next/head";
 import { Analytics } from "@vercel/analytics/next";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AuthContextProvider } from "../lib/authContext";
-import { Toaster } from "react-hot-toast";
+import AppToaster, { patchGlobalToasts } from "../components/AppToaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import ScrollToTop from "../components/ScrollToTop";
 import FloatingHermesButton from "../components/FloatingHermesButton";
 import GlobalSeo from "../components/GlobalSeo";
 import { settingsQueryKey } from "../lib/queries/settings";
+
+// Brand every toast.success / toast.error across the whole site (client only)
+if (typeof window !== "undefined") {
+  patchGlobalToasts();
+}
 
 // Create a client instance
 function makeQueryClient() {
@@ -72,13 +77,6 @@ export default function App({ Component, pageProps }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/logo.png" />
         <link rel="apple-touch-icon" href="/logo.png" />
-        {/* Fonts */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
       </Head>
       <AuthContextProvider>
         <GlobalSeo />
@@ -87,7 +85,7 @@ export default function App({ Component, pageProps }) {
         <ScrollToTop />
         <GoogleAnalytics />
         <Analytics />
-        <Toaster position="top-center" toastOptions={{ duration: 3000, style: { zIndex: 9999 } }} />
+        <AppToaster />
       </AuthContextProvider>
     </QueryClientProvider>
   );

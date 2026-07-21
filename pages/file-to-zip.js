@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import AuthModal from "../components/AuthModal";
 import {
   Loader2, CheckCircle, Download, AlertCircle, FileText,
@@ -224,21 +223,14 @@ export default function FileToZip() {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+    <>
+    <ToolPageShell containerClassName="max-w-7xl">
         <div className="space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
-              File to Archive
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Combine multiple files (images, documents, PDFs) into compressed archives. 
-              Support for ZIP, TAR, TAR.GZ, and RAR formats with advanced compression.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="File to Archive"
+            description="Combine multiple files (images, documents, PDFs) into compressed archives. Support for ZIP, TAR, TAR.GZ, and RAR formats with advanced compression."
+          />
 
           {/* Upload Area */}
           <CollapsibleDropzone
@@ -266,8 +258,6 @@ export default function FileToZip() {
               "video/*": [".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm"],
               "audio/*": [".mp3", ".wav", ".ogg", ".flac", ".aac"],
             }}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-green-500"
           />
 
           {/* Files List & Settings */}
@@ -276,13 +266,13 @@ export default function FileToZip() {
               {/* Settings Sidebar */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-green-600" /> Settings
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                    <Settings2 className="w-6 h-6 text-primary" /> Settings
                   </div>
 
                   {/* Archive Format */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">
                       Archive Format
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -298,8 +288,8 @@ export default function FileToZip() {
                           className={cn(
                             "p-3 rounded-lg border-2 transition-all text-left",
                             archiveFormat === format.value
-                              ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
-                              : "border-gray-200 hover:border-gray-300 text-gray-600"
+                              ? "border-primary bg-brand-sky/50 text-brand-navy shadow-sm"
+                              : "border-border hover:border-border text-muted-foreground"
                           )}
                         >
                           <div className="font-semibold text-sm">{format.label}</div>
@@ -311,7 +301,7 @@ export default function FileToZip() {
 
                   {/* Compression Level */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">
                       Compression Level
                     </label>
                     <div className="space-y-2">
@@ -322,8 +312,8 @@ export default function FileToZip() {
                           className={cn(
                             "w-full p-3 rounded-lg border-2 transition-all text-left",
                             compressionLevel === level.value
-                              ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
-                              : "border-gray-200 hover:border-gray-300 text-gray-600"
+                              ? "border-primary bg-brand-sky/50 text-brand-navy shadow-sm"
+                              : "border-border hover:border-border text-muted-foreground"
                           )}
                         >
                           <div className="font-semibold text-sm">{level.label}</div>
@@ -337,30 +327,30 @@ export default function FileToZip() {
                   <div className="space-y-2 border-t pt-4">
                     <button
                       onClick={() => setAdvancedOptionsOpen(!advancedOptionsOpen)}
-                      className="w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-gray-50 transition-all"
+                      className="w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-muted/40 transition-all"
                     >
-                      <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                         <Settings2 className="h-4 w-4" />
                         Advanced Options
                       </span>
                       {advancedOptionsOpen ? (
-                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       )}
                     </button>
 
                     {advancedOptionsOpen && (
-                      <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
+                      <div className="space-y-3 border-2 rounded-lg p-4 bg-muted/40">
                         {/* Preserve Folder Structure */}
-                        <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white">
+                        <label className="flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card">
                           <input
                             type="checkbox"
                             checked={preserveStructure}
                             onChange={(e) => setPreserveStructure(e.target.checked)}
-                            className="w-4 h-4 accent-green-600"
+                            className="w-4 h-4 accent-primary"
                           />
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium text-foreground">
                             Preserve Folder Structure
                           </span>
                         </label>
@@ -371,30 +361,30 @@ export default function FileToZip() {
                   {/* Stats */}
                   <div className="space-y-2 border-t pt-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total Files:</span>
-                      <span className="font-semibold text-gray-900">{files.length}</span>
+                      <span className="text-muted-foreground">Total Files:</span>
+                      <span className="font-semibold text-foreground">{files.length}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total Size:</span>
-                      <span className="font-semibold text-gray-900">{formatSize(totalSize)}</span>
+                      <span className="text-muted-foreground">Total Size:</span>
+                      <span className="font-semibold text-foreground">{formatSize(totalSize)}</span>
                     </div>
                     {zipSize > 0 && (
                       <>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Archive Size:</span>
-                          <span className="font-semibold text-green-600">{formatSize(zipSize)}</span>
+                          <span className="text-muted-foreground">Archive Size:</span>
+                          <span className="font-semibold text-primary">{formatSize(zipSize)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Compression:</span>
-                          <span className="font-semibold text-green-600">
+                          <span className="text-muted-foreground">Compression:</span>
+                          <span className="font-semibold text-primary">
                             {totalSize > 0
                               ? `${Math.round(((totalSize - zipSize) / totalSize) * 100)}%`
                               : "0%"}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Saved:</span>
-                          <span className="font-semibold text-green-600">
+                          <span className="text-muted-foreground">Saved:</span>
+                          <span className="font-semibold text-primary">
                             {formatSize(Math.max(0, totalSize - zipSize))}
                           </span>
                         </div>
@@ -406,7 +396,7 @@ export default function FileToZip() {
                   <Button
                     onClick={createArchive}
                     disabled={processing || files.length === 0}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                    className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <>
@@ -423,7 +413,7 @@ export default function FileToZip() {
                   {zipBlob && (
                     <Button
                       onClick={downloadArchive}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                      className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                     >
                       <Download className="w-5 h-5 mr-2" /> Download {archiveFormat.toUpperCase()}
                     </Button>
@@ -435,12 +425,12 @@ export default function FileToZip() {
               <div className="space-y-4">
                 {/* Progress Bar */}
                 {processing && (
-                  <Card className="border border-gray-200">
+                  <Card className="border border-border">
                     <CardContent className="p-4">
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Creating {archiveFormat.toUpperCase()} archive...</span>
-                          <span className="font-semibold text-gray-900">{Math.round(progress)}%</span>
+                          <span className="text-muted-foreground">Creating {archiveFormat.toUpperCase()} archive...</span>
+                          <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
                         </div>
                         <Progress value={progress} className="h-2" />
                       </div>
@@ -449,11 +439,11 @@ export default function FileToZip() {
                 )}
 
                 {/* Files */}
-                <Card className="border border-gray-200">
+                <Card className="border border-border">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-gray-400" />
+                      <h3 className="font-bold text-xl text-foreground flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-muted-foreground" />
                         Files ({files.length})
                       </h3>
                       <Button
@@ -470,15 +460,15 @@ export default function FileToZip() {
                       {files.map((file, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/40 transition-colors"
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                            <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate">
+                              <div className="text-sm font-medium text-foreground truncate">
                                 {file.name}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-muted-foreground">
                                 {formatSize(file.size)}
                               </div>
                             </div>
@@ -500,17 +490,15 @@ export default function FileToZip() {
             </div>
           )}
         </div>
-      </main>
+    </ToolPageShell>
 
-      <Footer />
-
-      {/* Auth Modal */}
+    {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         initialMode={authModalMode}
       />
-    </div>
+    </>
   );
 }
 

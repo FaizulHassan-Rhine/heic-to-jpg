@@ -16,9 +16,32 @@ function escapeXml(str) {
 function getPriority(path) {
   if (path === "/") return "1.0";
   if (path.startsWith("/blog/")) return "0.6";
-  if (["/convert", "/compress", "/heic-to-jpg"].includes(path)) return "0.9";
+  if (
+    [
+      "/convert",
+      "/compress",
+      "/heic-to-jpg",
+      "/background-remover",
+      "/merge-pdf",
+      "/compress-pdf",
+      "/password-generator",
+    ].includes(path)
+  ) {
+    return "0.9";
+  }
   if (path.startsWith("/blog")) return "0.7";
-  if (["/about", "/contact", "/privacy-policy", "/terms-and-conditions", "/disclaimer", "/cookie-policy"].includes(path)) return "0.5";
+  if (
+    [
+      "/about",
+      "/contact",
+      "/privacy-policy",
+      "/terms-and-conditions",
+      "/disclaimer",
+      "/cookie-policy",
+    ].includes(path)
+  ) {
+    return "0.5";
+  }
   return "0.8";
 }
 

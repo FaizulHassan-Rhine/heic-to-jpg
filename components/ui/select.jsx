@@ -42,20 +42,20 @@ export function Select({ value, onChange, children, className, placeholder = "Se
         disabled={disabled}
         onClick={() => !disabled && setOpen((o) => !o)}
         className={cn(
-          "flex w-full min-w-0 items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-left text-sm text-slate-900 dark:text-slate-100 shadow-sm transition-colors",
-          "hover:border-slate-300 dark:hover:border-slate-600",
+          "flex w-full min-w-0 items-center justify-between rounded-lg border border-border dark:border-border bg-card dark:bg-card px-3 py-2 text-left text-sm text-foreground dark:text-slate-100 shadow-sm transition-colors",
+          "hover:border-border dark:hover:border-slate-600",
           "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
           "disabled:opacity-50 disabled:pointer-events-none",
           open && "ring-2 ring-primary/50 border-primary"
         )}
       >
         <span className="truncate">{displayLabel}</span>
-        <ChevronDown className={cn("h-4 w-4 flex-shrink-0 text-slate-500 transition-transform", open && "rotate-180")} />
+        <ChevronDown className={cn("h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
         <div
-          className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1 shadow-lg"
+          className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-border dark:border-border bg-card dark:bg-card py-1 shadow-lg"
           role="listbox"
         >
           {options.map((opt) => (
@@ -69,7 +69,7 @@ export function Select({ value, onChange, children, className, placeholder = "Se
                 "w-full px-3 py-2 text-left text-sm transition-colors",
                 String(opt.value) === String(value)
                   ? "bg-primary/10 text-primary font-medium"
-                  : "text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  : "text-foreground dark:text-slate-100 hover:bg-muted dark:hover:bg-slate-800"
               )}
             >
               {opt.label}

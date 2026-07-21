@@ -1,8 +1,7 @@
 import { useState, useRef } from "react";
 import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import AuthModal from "../components/AuthModal";
 import {
   Loader2, CheckCircle, Download, AlertCircle, FileText,
@@ -252,24 +251,17 @@ export default function PdfUnlockProtect() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+    <>
+    <ToolPageShell containerClassName="max-w-7xl">
         <div className="space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
-              PDF Unlock & Protect
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Unlock password-protected PDFs, add password protection, change passwords, and set advanced permissions. 
-              Secure your documents with powerful PDF security tools.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="PDF Unlock & Protect"
+            description="Unlock password-protected PDFs, add password protection, change passwords, and set advanced permissions. Secure your documents with powerful PDF security tools."
+          />
 
           {/* Mode Selection */}
-          <Card className="border border-gray-200">
+          <Card className="border border-border">
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-3 justify-center">
                 {[
@@ -283,8 +275,8 @@ export default function PdfUnlockProtect() {
                     className={cn(
                       "flex items-center gap-3 px-6 py-4 rounded-lg border-2 transition-all",
                       mode === m.value
-                        ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
-                        : "border-gray-200 hover:border-gray-300 text-gray-600"
+                        ? "border-primary bg-brand-sky/50 text-brand-navy shadow-sm"
+                        : "border-border hover:border-border text-muted-foreground"
                     )}
                   >
                     <m.icon className="w-5 h-5" />
@@ -299,12 +291,12 @@ export default function PdfUnlockProtect() {
           </Card>
 
           {/* File Upload */}
-          <Card className="border border-gray-200">
+          <Card className="border border-border">
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-gray-400" />
+                  <h3 className="font-bold text-xl text-foreground flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-muted-foreground" />
                     PDF File
                   </h3>
                   {file && (
@@ -320,7 +312,7 @@ export default function PdfUnlockProtect() {
                 </div>
 
                 {!file ? (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-green-500 transition-colors">
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -333,12 +325,12 @@ export default function PdfUnlockProtect() {
                       htmlFor="pdf-upload"
                       className="cursor-pointer flex flex-col items-center gap-4"
                     >
-                      <Upload className="w-12 h-12 text-gray-400" />
+                      <Upload className="w-12 h-12 text-muted-foreground" />
                       <div>
-                        <div className="font-semibold text-gray-700 mb-1">
+                        <div className="font-semibold text-foreground mb-1">
                           Click to upload PDF
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-muted-foreground">
                           {settings && settings.pdf
                             ? `Max ${Math.round(settings.pdf.maxSize / (1024 * 1024))}MB`
                             : "PDF files only"}
@@ -347,12 +339,12 @@ export default function PdfUnlockProtect() {
                     </label>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/40">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <FileText className="w-8 h-8 text-green-600 flex-shrink-0" />
+                      <FileText className="w-8 h-8 text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 truncate">{file.name}</div>
-                        <div className="text-sm text-gray-500">{formatSize(file.size)}</div>
+                        <div className="font-semibold text-foreground truncate">{file.name}</div>
+                        <div className="text-sm text-muted-foreground">{formatSize(file.size)}</div>
                       </div>
                     </div>
                   </div>
@@ -367,14 +359,14 @@ export default function PdfUnlockProtect() {
               {/* Settings Sidebar */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-green-600" /> Settings
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                    <Settings2 className="w-6 h-6 text-primary" /> Settings
                   </div>
 
                   {/* Current Password (for unlock/change) */}
                   {(mode === "unlock" || mode === "change") && (
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">
+                      <label className="text-sm font-semibold text-foreground">
                         Current Password
                       </label>
                       <div className="relative">
@@ -383,12 +375,12 @@ export default function PdfUnlockProtect() {
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
                           placeholder="Enter PDF password"
-                          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:outline-none pr-10"
+                          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none pr-10"
                         />
                         <button
                           type="button"
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         >
                           {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -399,7 +391,7 @@ export default function PdfUnlockProtect() {
                   {/* New Password (for protect/change) */}
                   {(mode === "protect" || mode === "change") && (
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">
+                      <label className="text-sm font-semibold text-foreground">
                         {mode === "protect" ? "Password" : "New Password"}
                       </label>
                       <div className="relative">
@@ -408,12 +400,12 @@ export default function PdfUnlockProtect() {
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="Enter password"
-                          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:outline-none pr-10"
+                          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none pr-10"
                         />
                         <button
                           type="button"
                           onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         >
                           {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -429,11 +421,11 @@ export default function PdfUnlockProtect() {
                     return (
                       <div className="space-y-2">
                         <label className={cn(
-                          "text-sm font-semibold text-gray-700 flex items-center gap-2",
+                          "text-sm font-semibold text-foreground flex items-center gap-2",
                           requiresAuth && "opacity-75"
                         )}>
                           Owner Password (Optional)
-                          {requiresAuth && <Lock className="w-4 h-4 text-gray-600" />}
+                          {requiresAuth && <Lock className="w-4 h-4 text-muted-foreground" />}
                         </label>
                         <div className="relative">
                           <input
@@ -451,19 +443,19 @@ export default function PdfUnlockProtect() {
                             placeholder="Leave empty to use same as user password"
                             disabled={requiresAuth}
                             className={cn(
-                              "w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:outline-none pr-10",
+                              "w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none pr-10",
                               requiresAuth && "opacity-50 cursor-not-allowed"
                             )}
                           />
                           <button
                             type="button"
                             onClick={() => setShowOwnerPassword(!showOwnerPassword)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           >
                             {showOwnerPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           Owner password controls permissions. If not set, user password is used.
                         </p>
                       </div>
@@ -488,31 +480,31 @@ export default function PdfUnlockProtect() {
                             setAdvancedOptionsOpen(!advancedOptionsOpen);
                           }}
                           className={cn(
-                            "w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-gray-50 transition-all",
+                            "w-full flex items-center justify-between p-3 border-2 rounded-lg hover:bg-muted/40 transition-all",
                             requiresAuth && "opacity-75"
                           )}
                         >
-                          <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                             <Shield className="h-4 w-4" />
                             Permissions
-                            {requiresAuth && <Lock className="w-4 h-4 text-gray-600" />}
+                            {requiresAuth && <Lock className="w-4 h-4 text-muted-foreground" />}
                           </span>
                           {advancedOptionsOpen ? (
-                            <ChevronUp className="h-4 w-4 text-gray-500" />
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
                           ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
                           )}
                         </button>
 
                         {advancedOptionsOpen && !requiresAuth && (
-                        <div className="space-y-3 border-2 rounded-lg p-4 bg-gray-50">
+                        <div className="space-y-3 border-2 rounded-lg p-4 bg-muted/40">
                           {/* Printing */}
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">Printing</label>
+                            <label className="text-sm font-medium text-foreground">Printing</label>
                             <select
                               value={permissions.printing}
                               onChange={(e) => setPermissions({ ...permissions, printing: e.target.value })}
-                              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:outline-none text-sm"
+                              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none text-sm"
                             >
                               <option value="none">Not Allowed</option>
                               <option value="lowResolution">Low Resolution</option>
@@ -531,7 +523,7 @@ export default function PdfUnlockProtect() {
                           ].map((perm) => (
                             <label
                               key={perm.key}
-                              className="flex items-center gap-3 p-2 border rounded-lg hover:bg-white cursor-pointer transition-all bg-white"
+                              className="flex items-center gap-3 p-2 border rounded-lg hover:bg-card cursor-pointer transition-all bg-card"
                             >
                               <input
                                 type="checkbox"
@@ -539,9 +531,9 @@ export default function PdfUnlockProtect() {
                                 onChange={(e) =>
                                   setPermissions({ ...permissions, [perm.key]: e.target.checked })
                                 }
-                                className="w-4 h-4 accent-green-600"
+                                className="w-4 h-4 accent-primary"
                               />
-                              <span className="text-sm font-medium text-gray-700">{perm.label}</span>
+                              <span className="text-sm font-medium text-foreground">{perm.label}</span>
                             </label>
                           ))}
                         </div>
@@ -554,7 +546,7 @@ export default function PdfUnlockProtect() {
                   <Button
                     onClick={processPdf}
                     disabled={processing || !file || (mode !== "unlock" && !newPassword)}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                    className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <>
@@ -579,7 +571,7 @@ export default function PdfUnlockProtect() {
                   {result && (
                     <Button
                       onClick={downloadResult}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                      className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold text-base"
                     >
                       <Download className="w-5 h-5 mr-2" /> Download PDF
                     </Button>
@@ -591,14 +583,14 @@ export default function PdfUnlockProtect() {
               <div className="space-y-4">
                 {/* Progress */}
                 {processing && (
-                  <Card className="border border-gray-200">
+                  <Card className="border border-border">
                     <CardContent className="p-4">
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">
+                          <span className="text-muted-foreground">
                             {mode === "unlock" ? "Unlocking PDF..." : mode === "protect" ? "Protecting PDF..." : "Changing password..."}
                           </span>
-                          <span className="font-semibold text-gray-900">{Math.round(progress)}%</span>
+                          <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
                         </div>
                         <Progress value={progress} className="h-2" />
                       </div>
@@ -608,22 +600,22 @@ export default function PdfUnlockProtect() {
 
                 {/* Result Info */}
                 {result && (
-                  <Card className="border border-green-200 bg-green-50">
+                  <Card className="border border-brand-mid/30 bg-brand-sky/50">
                     <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-4">
-                        <CheckCircle className="w-6 h-6 text-green-600" />
-                        <h3 className="font-bold text-lg text-green-900">
+                        <CheckCircle className="w-6 h-6 text-primary" />
+                        <h3 className="font-bold text-lg text-brand-navy">
                           {mode === "unlock" ? "PDF Unlocked Successfully!" : mode === "protect" ? "PDF Protected Successfully!" : "Password Changed Successfully!"}
                         </h3>
                       </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Original Size:</span>
-                          <span className="font-semibold text-gray-900">{formatSize(file.size)}</span>
+                          <span className="text-muted-foreground">Original Size:</span>
+                          <span className="font-semibold text-foreground">{formatSize(file.size)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">New Size:</span>
-                          <span className="font-semibold text-green-600">{formatSize(resultSize)}</span>
+                          <span className="text-muted-foreground">New Size:</span>
+                          <span className="font-semibold text-primary">{formatSize(resultSize)}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -633,17 +625,15 @@ export default function PdfUnlockProtect() {
             </div>
           )}
         </div>
-      </main>
+    </ToolPageShell>
 
-      <Footer />
-
-      {/* Auth Modal */}
+    {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         initialMode={authModalMode}
       />
-    </div>
+    </>
   );
 }
 

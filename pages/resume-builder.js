@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useId } from "react";
 import dynamic from "next/dynamic";
-import Head from "next/head";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Button } from "../components/ui/button";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Download, RotateCcw,
@@ -68,10 +66,10 @@ const DEFAULT = {
 
 function Field({ label, value, onChange, placeholder, type = "text", rows, className: cls }) {
   const id = useId();
-  const base = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all";
+  const base = "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-mid/30 focus:border-brand-mid transition-all";
   return (
     <div className={cls}>
-      {label && <label htmlFor={id} className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</label>}
+      {label && <label htmlFor={id} className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</label>}
       {rows ? (
         <textarea id={id} rows={rows} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={base + " resize-none"} />
       ) : (
@@ -87,7 +85,7 @@ function Grid2({ children }) {
 
 function AddBtn({ onClick, label }) {
   return (
-    <button onClick={onClick} className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600 hover:text-emerald-700 transition">
+    <button onClick={onClick} className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:text-brand-navy transition">
       <Plus size={14} /> {label}
     </button>
   );
@@ -96,8 +94,8 @@ function AddBtn({ onClick, label }) {
 function MoveButtons({ onUp, onDown }) {
   return (
     <div className="flex gap-0.5">
-      <button onClick={onUp} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"><ArrowUp size={12} /></button>
-      <button onClick={onDown} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"><ArrowDown size={12} /></button>
+      <button onClick={onUp} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-muted-foreground transition"><ArrowUp size={12} /></button>
+      <button onClick={onDown} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-muted-foreground transition"><ArrowDown size={12} /></button>
     </div>
   );
 }
@@ -105,32 +103,32 @@ function MoveButtons({ onUp, onDown }) {
 function SectionCard({ icon: Icon, title, children, defaultOpen = true, onRemove, accent }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-shadow hover:shadow-md">
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50/80 transition text-left"
+        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40/80 transition text-left"
       >
-        <div className={`p-1.5 rounded-lg ${accent || "bg-emerald-50"}`}>
-          <Icon size={15} className="text-emerald-600" />
+        <div className={`p-1.5 rounded-lg ${accent || "bg-brand-sky/50"}`}>
+          <Icon size={15} className="text-primary" />
         </div>
-        <span className="flex-1 text-[13px] font-semibold text-gray-800">{title}</span>
+        <span className="flex-1 text-[13px] font-semibold text-foreground">{title}</span>
         {onRemove && (
-          <button onClick={e => { e.stopPropagation(); onRemove(); }} className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 mr-1"><Trash2 size={13} /></button>
+          <button onClick={e => { e.stopPropagation(); onRemove(); }} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 mr-1"><Trash2 size={13} /></button>
         )}
-        {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+        {open ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
       </button>
-      {open && <div className="px-4 pb-4 pt-2 space-y-3 border-t border-gray-100">{children}</div>}
+      {open && <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border">{children}</div>}
     </div>
   );
 }
 
 function EntryCard({ children, onRemove, onMoveUp, onMoveDown }) {
   return (
-    <div className="relative rounded-lg border border-gray-200 bg-gray-50/80 p-3.5 space-y-2.5">
+    <div className="relative rounded-lg border border-border bg-muted/40/80 p-3.5 space-y-2.5">
       <div className="absolute top-2.5 right-2.5 flex items-center gap-0.5">
         {onMoveUp && <MoveButtons onUp={onMoveUp} onDown={onMoveDown} />}
         {onRemove && (
-          <button onClick={onRemove} title="Remove" className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition">
+          <button onClick={onRemove} title="Remove" className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition">
             <Trash2 size={13} />
           </button>
         )}
@@ -147,19 +145,19 @@ function BulletsEditor({ bullets, onChange }) {
 
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Bullet Points</label>
+      <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Bullet Points</label>
       <div className="space-y-1.5">
         {bullets.map((b, i) => (
           <div key={i} className="flex gap-2 items-center">
-            <span className="text-gray-400 text-xs select-none">•</span>
+            <span className="text-muted-foreground text-xs select-none">•</span>
             <input
               value={b}
               onChange={e => update(i, e.target.value)}
               placeholder={`Achievement ${i + 1}`}
-              className="flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all"
+              className="flex-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-mid/30 focus:border-brand-mid transition-all"
             />
             {bullets.length > 1 && (
-              <button onClick={() => remove(i)} className="text-gray-400 hover:text-red-500 transition"><Trash2 size={12} /></button>
+              <button onClick={() => remove(i)} className="text-muted-foreground hover:text-red-500 transition"><Trash2 size={12} /></button>
             )}
           </div>
         ))}
@@ -174,7 +172,7 @@ function BulletsEditor({ bullets, onChange }) {
 function PersonalInfoEditor({ resume, onChange }) {
   const set = (key) => (val) => onChange({ ...resume, [key]: val });
   return (
-    <SectionCard icon={User} title="Personal Information" defaultOpen accent="bg-emerald-50">
+    <SectionCard icon={User} title="Personal Information" defaultOpen accent="bg-brand-sky/50">
       <Grid2>
         <Field label="Full Name" value={resume.fullName} onChange={set("fullName")} placeholder="e.g. Alex Johnson" />
         <Field label="Headline / Title" value={resume.headline} onChange={set("headline")} placeholder="e.g. Senior Frontend Developer" />
@@ -239,9 +237,9 @@ function ExperienceEditor({ resume, onChange }) {
 
 function SkillsEditor({ resume, onChange }) {
   return (
-    <SectionCard icon={Layers} title="Skills" accent="bg-green-50">
+    <SectionCard icon={Layers} title="Skills" accent="bg-brand-sky/50">
       <Field value={resume.skills} onChange={v => onChange({ ...resume, skills: v })} placeholder="React.js, Next.js, TypeScript, Node.js, Git..." rows={3} />
-      <p className="text-[11px] text-gray-400 -mt-1">Separate skills with commas — they appear as badges.</p>
+      <p className="text-[11px] text-muted-foreground -mt-1">Separate skills with commas — they appear as badges.</p>
     </SectionCard>
   );
 }
@@ -398,7 +396,7 @@ function CustomSectionsEditor({ resume, onChange }) {
   return (
     <>
       {(resume.custom || []).map((sec, si) => (
-        <SectionCard key={sec.id} icon={Grip} title={sec.title || "Custom Section"} accent="bg-gray-100" onRemove={() => removeSection(si)}>
+        <SectionCard key={sec.id} icon={Grip} title={sec.title || "Custom Section"} accent="bg-muted" onRemove={() => removeSection(si)}>
           <Field label="Section Title" value={sec.title} onChange={v => update(si, { title: v })} placeholder="Volunteer Work, Awards..." />
           <div className="space-y-2">
             {(sec.entries || []).map((entry, ei) => (
@@ -414,7 +412,7 @@ function CustomSectionsEditor({ resume, onChange }) {
       ))}
       <button
         onClick={addSection}
-        className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 py-3.5 text-sm text-gray-500 font-medium hover:border-emerald-400 hover:text-emerald-600 transition-all"
+        className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-3.5 text-sm text-muted-foreground font-medium hover:border-brand-mid hover:text-primary transition-all"
       >
         <Plus size={14} /> Add Custom Section
       </button>
@@ -441,7 +439,7 @@ function DesignPanel({ fontFamily, onFontChange, accentColor, onAccentChange }) 
     <div className="space-y-5">
       {/* Font */}
       <div>
-        <label className="flex items-center gap-2 text-[12px] font-semibold text-gray-700 mb-2">
+        <label className="flex items-center gap-2 text-[12px] font-semibold text-foreground mb-2">
           <Type size={14} /> Font Family
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -451,8 +449,8 @@ function DesignPanel({ fontFamily, onFontChange, accentColor, onAccentChange }) 
               onClick={() => onFontChange(f)}
               className={`px-3 py-2 rounded-lg border text-[12px] text-left transition-all ${
                 fontFamily === f
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 font-semibold ring-1 ring-emerald-500/30"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                  ? "border-primary bg-brand-sky/50 text-brand-navy font-semibold ring-1 ring-brand-mid/30"
+                  : "border-border bg-card text-muted-foreground hover:border-border hover:bg-muted/40"
               }`}
               style={{ fontFamily: f === "Helvetica" ? "'Helvetica Neue', Helvetica, Arial, sans-serif" : `'${f}', sans-serif` }}
             >
@@ -464,7 +462,7 @@ function DesignPanel({ fontFamily, onFontChange, accentColor, onAccentChange }) 
 
       {/* Accent Color */}
       <div>
-        <label className="flex items-center gap-2 text-[12px] font-semibold text-gray-700 mb-2">
+        <label className="flex items-center gap-2 text-[12px] font-semibold text-foreground mb-2">
           <Palette size={14} /> Accent Color
         </label>
         <div className="flex flex-wrap gap-2.5">
@@ -473,7 +471,7 @@ function DesignPanel({ fontFamily, onFontChange, accentColor, onAccentChange }) 
               key={c}
               onClick={() => onAccentChange(c)}
               className={`w-8 h-8 rounded-full border-2 transition-all ${
-                accentColor === c ? "border-gray-900 scale-110 shadow-md" : "border-gray-200 hover:scale-105"
+                accentColor === c ? "border-foreground scale-110 shadow-md" : "border-border hover:scale-105"
               }`}
               style={{ backgroundColor: c }}
               title={c}
@@ -491,7 +489,7 @@ function DesignPanel({ fontFamily, onFontChange, accentColor, onAccentChange }) 
             type="text"
             value={accentColor}
             onChange={e => onAccentChange(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            className="flex-1 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-brand-mid/30"
             placeholder="#2563eb"
           />
         </div>
@@ -599,46 +597,37 @@ export default function ResumeBuilderPage() {
   ];
 
   return (
-    <>
-      <Head>
-        <title>Resume / CV Builder — ConvertMastery</title>
-        <meta name="description" content="Build a professional resume online. Choose fonts, colors, sections — download a clean PDF. Free, no sign up." />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href={GOOGLE_FONT_URL} rel="stylesheet" />
-      </Head>
-      <Navbar />
-
+    <ToolPageShell containerClassName="max-w-none" mainClassName="!px-0 !py-0 w-full">
       {/* ── Sticky Top Bar ── */}
-      <div className="sticky top-16 z-40 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-16 z-40 bg-card border-b border-border shadow-sm">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50">
-              <FileText size={16} className="text-emerald-600" />
-              <span className="text-sm font-bold text-emerald-700">Resume Builder</span>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-sky/50">
+              <FileText size={16} className="text-primary" />
+              <span className="text-sm font-bold text-brand-navy">Resume Builder</span>
             </div>
-            <span className="text-sm font-bold text-gray-900 sm:hidden">Resume Builder</span>
+            <span className="text-sm font-bold text-foreground sm:hidden">Resume Builder</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={resetForm}
-              className="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition"
+              className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-2 hover:bg-muted/40 transition"
             >
               <RotateCcw size={13} /> Reset
             </button>
 
             {/* Mobile: view toggle */}
-            <div className="flex sm:hidden border border-gray-200 rounded-lg overflow-hidden">
+            <div className="flex sm:hidden border border-border rounded-lg overflow-hidden">
               <button
                 onClick={() => setActiveTab("edit")}
-                className={`px-3 py-1.5 text-xs font-medium transition ${activeTab === "edit" ? "bg-emerald-600 text-white" : "text-gray-500"}`}
+                className={`px-3 py-1.5 text-xs font-medium transition ${activeTab === "edit" ? "bg-primary text-white" : "text-muted-foreground"}`}
               >
                 <PenLine size={14} />
               </button>
               <button
                 onClick={() => setActiveTab("preview")}
-                className={`px-3 py-1.5 text-xs font-medium transition ${activeTab === "preview" ? "bg-emerald-600 text-white" : "text-gray-500"}`}
+                className={`px-3 py-1.5 text-xs font-medium transition ${activeTab === "preview" ? "bg-primary text-white" : "text-muted-foreground"}`}
               >
                 <Eye size={14} />
               </button>
@@ -647,7 +636,7 @@ export default function ResumeBuilderPage() {
             <Button
               onClick={downloadPDF}
               disabled={generating}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg shadow-sm"
+              className="flex items-center gap-2 bg-primary hover:bg-brand-navy text-white text-sm px-4 py-2 rounded-lg shadow-sm"
             >
               <Download size={14} />
               <span className="hidden sm:inline">{generating ? "Generating..." : "Download PDF"}</span>
@@ -658,21 +647,21 @@ export default function ResumeBuilderPage() {
       </div>
 
       {/* ── Main Layout ── */}
-      <div className="flex min-h-[calc(100vh-120px)] bg-gray-100">
+      <div className="flex min-h-[calc(100vh-120px)] bg-muted">
 
         {/* ── LEFT PANEL (Editor) ── */}
-        <div className={`w-full sm:w-[480px] lg:w-[520px] flex-shrink-0 bg-white border-r border-gray-200 flex flex-col ${activeTab !== "edit" && activeTab !== "design" ? "hidden sm:flex" : "flex"}`}>
+        <div className={`w-full sm:w-[480px] lg:w-[520px] flex-shrink-0 bg-card border-r border-border flex flex-col ${activeTab !== "edit" && activeTab !== "design" ? "hidden sm:flex" : "flex"}`}>
 
           {/* Panel Tabs */}
-          <div className="flex border-b border-gray-200 bg-gray-50/80">
+          <div className="flex border-b border-border bg-muted/40/80">
             {LEFT_TABS.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 text-[12px] font-semibold transition-all border-b-2 ${
                   activeTab === key || (key === "edit" && activeTab === "edit")
-                    ? "border-emerald-600 text-emerald-700 bg-white"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    ? "border-primary text-brand-navy bg-card"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Icon size={14} />
@@ -686,8 +675,8 @@ export default function ResumeBuilderPage() {
             {activeTab === "edit" && (
               <>
                 {/* Section Toggles */}
-                <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2.5">Visible Sections</p>
+                <div className="p-4 border-b border-border bg-muted/40/50">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">Visible Sections</p>
                   <div className="flex flex-wrap gap-2">
                     {BUILT_IN_SECTIONS.map(({ key, label, icon: Icon }) => (
                       <button
@@ -695,8 +684,8 @@ export default function ResumeBuilderPage() {
                         onClick={() => toggleSection(key)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${
                           visibleSections.has(key)
-                            ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                            : "bg-white text-gray-500 border-gray-300 hover:border-emerald-400 hover:text-emerald-600"
+                            ? "bg-primary text-white border-primary shadow-sm"
+                            : "bg-card text-muted-foreground border-border hover:border-brand-mid hover:text-primary"
                         }`}
                       >
                         <Icon size={11} />
@@ -738,7 +727,7 @@ export default function ResumeBuilderPage() {
         {/* ── RIGHT PANEL (Live Preview) ── */}
         <div
           ref={previewContainerRef}
-          className={`flex-1 overflow-auto bg-gray-200 ${activeTab === "preview" ? "flex" : "hidden sm:flex"} justify-center items-start p-6`}
+          className={`flex-1 overflow-auto bg-muted ${activeTab === "preview" ? "flex" : "hidden sm:flex"} justify-center items-start p-6`}
         >
           <div
             className="shadow-2xl rounded-sm origin-top-left"
@@ -758,10 +747,10 @@ export default function ResumeBuilderPage() {
 
       {showResetConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl border border-gray-200">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h3 className="text-base font-semibold text-gray-900">Reset resume data?</h3>
-              <p className="mt-1 text-sm text-gray-600">
+          <div className="w-full max-w-md rounded-xl bg-card shadow-2xl border border-border">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="text-base font-semibold text-foreground">Reset resume data?</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
                 This will clear all fields and restore default design settings.
               </p>
             </div>
@@ -769,7 +758,7 @@ export default function ResumeBuilderPage() {
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(false)}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/40 transition"
               >
                 Cancel
               </button>
@@ -784,8 +773,6 @@ export default function ResumeBuilderPage() {
           </div>
         </div>
       )}
-
-      <Footer />
-    </>
+    </ToolPageShell>
   );
 }

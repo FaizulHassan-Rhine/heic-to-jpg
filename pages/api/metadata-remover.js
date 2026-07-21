@@ -1,6 +1,4 @@
 import sharp from "sharp";
-import connectDB from "../../lib/mongodb";
-import Order from "../../models/Order";
 
 export const config = {
   api: {
@@ -46,37 +44,6 @@ export default async function handler(req, res) {
         res.setHeader("Content-Type", "image/jpeg");
         res.setHeader("Content-Disposition", `attachment; filename="cleaned_${fileName}"`);
         res.status(200).send(cleanedImage);
-
-        // Track usage
-        const firebaseUid = req.headers["x-firebase-uid"];
-        if (firebaseUid && firebaseUid !== "anonymous") {
-          try {
-            await connectDB();
-            const order = new Order({
-              firebaseUid,
-              userEmail: req.headers["x-user-email"] || null,
-              isAnonymous: false,
-              toolName: "Metadata Remover",
-              toolPath: "/metadata-remover",
-              toolType: "image",
-              fileCount: 1,
-              status: "completed",
-              files: [
-                {
-                  inputName: fileName,
-                  inputSize: fileBuffer.length,
-                  inputFormat: "image",
-                  outputName: `cleaned_${fileName}`,
-                  outputSize: cleanedImage.length,
-                  outputFormat: "image",
-                },
-              ],
-            });
-            await order.save();
-          } catch (error) {
-            console.error("Error tracking usage:", error);
-          }
-        }
       } catch (error) {
         console.error("Metadata removal error:", error);
         if (!res.headersSent) {

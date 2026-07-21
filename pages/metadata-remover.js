@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Image, Upload, Download, Trash2, Shield, FileImage, Loader2
@@ -100,41 +99,42 @@ export default function MetadataRemover() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+    <ToolPageShell containerClassName="max-w-4xl">
         <div className="space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              Privacy Protection • Remove Sensitive Data
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Image Metadata Remover
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Remove EXIF metadata, GPS location, camera settings, and other sensitive data from your images to protect your privacy.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Image Metadata Remover"
+            description="Remove EXIF metadata, GPS location, camera settings, and other sensitive data from your images to protect your privacy."
+            badge="Privacy Protection • Remove Sensitive Data"
+          />
 
           {/* Upload Section */}
-          <Card className="border-2 border-green-200 dark:border-green-800">
+          <Card className="border border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5 text-green-600" />
+                <Upload className="w-5 h-5 text-primary" />
                 Upload Image
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!file ? (
                 <div 
+                  role="button"
+                  tabIndex={0}
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-12 text-center cursor-pointer hover:border-green-500 hover:bg-green-50/10 transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  className="border-2 border-dashed border-border/80 rounded-xl p-12 text-center cursor-pointer hover:border-primary/60 hover:bg-brand-sky/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
-                  <FileImage className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-sky/70 text-primary flex items-center justify-center">
+                    <Upload className="w-7 h-7" />
+                  </div>
+                  <p className="font-semibold text-foreground mb-1">Upload Image to Clean</p>
+                  <p className="text-sm text-muted-foreground mb-4">
                     Select an image file to remove metadata
                   </p>
                   <input
@@ -149,7 +149,7 @@ export default function MetadataRemover() {
                       e.stopPropagation();
                       fileInputRef.current?.click();
                     }}
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    className="bg-primary hover:bg-brand-navy"
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Choose Image
@@ -157,11 +157,11 @@ export default function MetadataRemover() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Image className="w-10 h-10 text-green-600" />
+                  <div className="flex items-center gap-4 p-4 bg-muted/40 dark:bg-muted rounded-lg">
+                    <Image className="w-10 h-10 text-primary" />
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white">{file.name}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-foreground dark:text-foreground">{file.name}</p>
+                      <p className="text-sm text-muted-foreground">
                         {(file.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
@@ -178,7 +178,7 @@ export default function MetadataRemover() {
                   <Button
                     onClick={removeMetadata}
                     disabled={processing}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 text-lg"
+                    className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white font-semibold py-6 text-lg"
                   >
                     {processing ? (
                       <>
@@ -199,31 +199,31 @@ export default function MetadataRemover() {
 
           {/* Result Section */}
           {result && (
-            <Card className="border-2 border-green-200 dark:border-green-800">
+            <Card className="border-2 border-brand-mid/30 dark:border-primary/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Download className="w-5 h-5 text-green-600" />
+                  <Download className="w-5 h-5 text-primary" />
                   Cleaned Image
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-muted/40 dark:bg-muted rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                    <p className="font-medium text-foreground dark:text-foreground">
                       cleaned_{file.name}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {(resultSize / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
-                  <Badge className="bg-green-600 text-white">
+                  <Badge className="bg-primary text-white">
                     Metadata Removed
                   </Badge>
                 </div>
 
                 <Button
                   onClick={downloadResult}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 text-lg"
+                  className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white font-semibold py-6 text-lg"
                 >
                   <Download className="w-5 h-5 mr-2" />
                   Download Cleaned Image
@@ -233,20 +233,20 @@ export default function MetadataRemover() {
           )}
 
           {/* Info */}
-          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <Card className="bg-brand-sky/50 dark:bg-primary/10 border-brand-mid/30 dark:border-primary/30">
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-green-600 mt-0.5" />
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  <Shield className="w-5 h-5 text-primary mt-0.5" />
+                  <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                     <p className="font-medium">What is Metadata?</p>
                     <p>Image metadata (EXIF data) can include camera settings, GPS location, date/time, device information, and more. Removing this data helps protect your privacy when sharing images online.</p>
                   </div>
                 </div>
                 <Separator />
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-green-600 mt-0.5" />
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  <Shield className="w-5 h-5 text-primary mt-0.5" />
+                  <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                     <p className="font-medium">Privacy Protection</p>
                     <p>All processing happens securely. Your images are processed and immediately deleted from our servers. We never store your files.</p>
                   </div>
@@ -255,10 +255,7 @@ export default function MetadataRemover() {
             </CardContent>
           </Card>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 

@@ -1,14 +1,15 @@
 import Head from "next/head";
+import { SITE_URL, SITE_NAME, SITE_OG_IMAGE, SITE_TWITTER } from "../lib/siteConfig";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://convertmastery.com";
-const siteName = "ConvertMastery";
-const defaultDescription = "Free online file converter and compressor. Image, video, document, and audio tools. Security and privacy: password generator, IP lookup, whois, metadata remover, fake email, URL shortener, QR code. Sign up to save files in My Orders.";
+const siteUrl = SITE_URL;
+const siteName = SITE_NAME;
+const defaultDescription = "Free online file converter and compressor. Image, video, document, and audio tools process on the fly — nothing is saved to our servers. Password generator, IP lookup, whois, metadata remover, URL shortener, QR code, and more.";
 
 export default function SEO({
   title,
   description = defaultDescription,
   keywords,
-  image = `${siteUrl}/logo.png`,
+  image = SITE_OG_IMAGE,
   url,
   type = "website",
   noindex = false,
@@ -49,15 +50,15 @@ export default function SEO({
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
-      <meta name="twitter:creator" content="@convertmastery" />
+      <meta name="twitter:creator" content={SITE_TWITTER} />
 
       {/* Additional Meta Tags */}
-      <meta name="theme-color" content="#3b82f6" />
+      <meta name="theme-color" content="#1C4D8D" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="apple-mobile-web-app-title" content={siteName} />
       <meta name="application-name" content={siteName} />
-      <meta name="msapplication-TileColor" content="#3b82f6" />
+      <meta name="msapplication-TileColor" content="#0F2854" />
 
       {/* Structured Data (JSON-LD) */}
       {structuredData && (Array.isArray(structuredData) ? structuredData : [structuredData]).map((schema, i) => (

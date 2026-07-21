@@ -18,10 +18,10 @@ export default function NotFoundPage() {
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <p className="text-8xl font-bold text-primary/20 mb-4">404</p>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
+          <h1 className="text-3xl font-bold text-foreground dark:text-foreground mb-4">
             Page Not Found
           </h1>
-          <p className="text-slate-600 dark:text-slate-300 mb-8">
+          <p className="text-muted-foreground dark:text-muted-foreground mb-8">
             The page you are looking for does not exist or has been moved.
             Try our popular tools or return to the homepage.
           </p>

@@ -866,10 +866,10 @@ export default function FeatureManagement() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading feature settings...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading feature settings...</p>
         </div>
       </div>
     );
@@ -883,20 +883,20 @@ export default function FeatureManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-white border-r border-gray-200 transition-all duration-300 flex flex-col",
+          "bg-white border-r border-border transition-all duration-300 flex flex-col",
           sidebarOpen ? "w-64" : "w-20"
         )}
       >
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             {sidebarOpen && (
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Admin Panel</h2>
-                <p className="text-xs text-gray-500">ConvertMastery</p>
+                <h2 className="text-lg font-bold text-foreground">Admin Panel</h2>
+                <p className="text-xs text-muted-foreground">ConvertMastery</p>
               </div>
             )}
             <Button
@@ -922,8 +922,8 @@ export default function FeatureManagement() {
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
                   isActive
-                    ? "bg-blue-50 text-blue-700 font-semibold"
-                    : "text-gray-700 hover:bg-gray-50"
+                    ? "bg-brand-sky/50 text-brand-navy font-semibold"
+                    : "text-foreground hover:bg-muted/40"
                 )}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
@@ -935,7 +935,7 @@ export default function FeatureManagement() {
 
         {/* Logout */}
         {sidebarOpen && (
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-border">
             <Button
               variant="outline"
               onClick={handleLogout}
@@ -951,12 +951,12 @@ export default function FeatureManagement() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <header className="bg-white border-b border-border sticky top-0 z-10">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">Feature Management</h1>
-                <p className="text-sm text-gray-500 mt-1">Control which features are free or require sign-in</p>
+                <h1 className="text-2xl font-bold text-foreground">Feature Management</h1>
+                <p className="text-sm text-muted-foreground mt-1">Control which features are free or require sign-in</p>
               </div>
               <Button
                 onClick={saveSettings}
@@ -974,14 +974,14 @@ export default function FeatureManagement() {
         <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
           <div className="flex items-center gap-3 mb-2">
-            <SettingsIcon className="w-5 h-5 text-purple-600" />
-            <h2 className="text-lg font-semibold text-gray-800">Feature Access Control</h2>
-            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Real-time</span>
+            <SettingsIcon className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Feature Access Control</h2>
+            <span className="text-xs bg-brand-sky/60 text-purple-700 px-2 py-1 rounded">Real-time</span>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Checked = Free (anyone can use), Unchecked = Requires Sign-in (locked for anonymous users)
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Changes take effect immediately across the entire site
           </p>
         </div>
@@ -997,11 +997,11 @@ export default function FeatureManagement() {
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-purple-600" />
+                      <Icon className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1">
                       <CardTitle className="text-lg">{tool.name}</CardTitle>
-                      <p className="text-xs text-gray-500 mt-1">{tool.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{tool.description}</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -1018,18 +1018,18 @@ export default function FeatureManagement() {
                           <div key={feature.id} className="space-y-2">
                             <button
                               onClick={() => toggleDropdown(tool.id, feature.id)}
-                              className="w-full flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-all"
+                              className="w-full flex items-center justify-between p-3 bg-white rounded-lg border border-border hover:border-primary/40 transition-all"
                             >
                               <div className="flex items-center gap-3 flex-1">
-                                <span className="text-sm font-medium text-gray-700">
+                                <span className="text-sm font-medium text-foreground">
                                   {feature.name}
                                 </span>
-                                <span className="text-xs text-gray-500">({feature.subFeatures.length} options)</span>
+                                <span className="text-xs text-muted-foreground">({feature.subFeatures.length} options)</span>
                               </div>
                               {isOpen ? (
-                                <ChevronUp className="w-4 h-4 text-gray-500" />
+                                <ChevronUp className="w-4 h-4 text-muted-foreground" />
                               ) : (
-                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
                               )}
                             </button>
                             
@@ -1040,24 +1040,24 @@ export default function FeatureManagement() {
                                   return (
                                     <label
                                       key={subFeature.id}
-                                      className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-all"
+                                      className="flex items-center gap-3 p-2 bg-muted/40 rounded-lg border border-border hover:border-primary/40 cursor-pointer transition-all"
                                     >
                                       <input
                                         type="checkbox"
                                         checked={isFree}
                                         onChange={(e) => updateFeature(tool.id, subFeature.id, e.target.checked, true)}
-                                        className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                        className="w-4 h-4 text-primary rounded focus:ring-purple-500"
                                       />
                                       <div className="flex-1">
-                                        <span className="text-sm font-medium text-gray-700 block">
+                                        <span className="text-sm font-medium text-foreground block">
                                           {subFeature.name}
                                         </span>
-                                        <p className="text-xs text-gray-500 mt-0.5">{subFeature.description}</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">{subFeature.description}</p>
                                       </div>
                                       <span
                                         className={`text-xs px-2 py-1 rounded font-medium ${
                                           isFree
-                                            ? "bg-green-100 text-green-700"
+                                            ? "bg-brand-sky text-brand-navy"
                                             : "bg-red-100 text-red-700"
                                         }`}
                                       >
@@ -1077,24 +1077,24 @@ export default function FeatureManagement() {
                       return (
                         <label
                           key={feature.id}
-                          className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-all"
+                          className="flex items-center gap-3 p-3 bg-white rounded-lg border border-border hover:border-primary/40 cursor-pointer transition-all"
                         >
                           <input
                             type="checkbox"
                             checked={isFree}
                             onChange={(e) => updateFeature(tool.id, feature.id, e.target.checked)}
-                            className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                            className="w-5 h-5 text-primary rounded focus:ring-purple-500"
                           />
                           <div className="flex-1">
-                            <span className="text-sm font-medium text-gray-700 block">
+                            <span className="text-sm font-medium text-foreground block">
                               {feature.name}
                             </span>
-                            <p className="text-xs text-gray-500 mt-0.5">{feature.description}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{feature.description}</p>
                           </div>
                           <span
                             className={`text-xs px-2 py-1 rounded font-medium ${
                               isFree
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-brand-sky text-brand-navy"
                                 : "bg-red-100 text-red-700"
                             }`}
                           >

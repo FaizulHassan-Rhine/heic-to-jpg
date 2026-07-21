@@ -415,17 +415,17 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <aside
         className={cn(
@@ -438,8 +438,8 @@ export default function AdminDashboard() {
           <div className="p-4 border-b flex items-center justify-between">
             {sidebarOpen && (
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Admin Panel</h2>
-                <p className="text-xs text-gray-500">ConvertMastery</p>
+                <h2 className="text-lg font-bold text-foreground">Admin Panel</h2>
+                <p className="text-xs text-muted-foreground">ConvertMastery</p>
               </div>
             )}
             <Button
@@ -464,7 +464,7 @@ export default function AdminDashboard() {
                     href={item.href}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-                      "text-gray-700 hover:bg-gray-50"
+                      "text-foreground hover:bg-muted/40"
                     )}
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" />
@@ -479,8 +479,8 @@ export default function AdminDashboard() {
                   className={cn(
                     "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
                     activeTab === item.id
-                      ? "bg-blue-50 text-blue-700 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50"
+                      ? "bg-brand-sky/50 text-brand-navy font-semibold"
+                      : "text-foreground hover:bg-muted/40"
                   )}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
@@ -500,10 +500,10 @@ export default function AdminDashboard() {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-2xl font-bold text-foreground">
                   {SIDEBAR_ITEMS.find((item) => item.id === activeTab)?.label || "Dashboard"}
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {activeTab === "stats" && "Overview of your platform statistics"}
                   {activeTab === "users" && "Manage and view all registered users"}
                   {activeTab === "orders" && "View and manage all orders and files"}
@@ -533,13 +533,13 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total Users</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                        <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                        <p className="text-3xl font-bold text-foreground mt-2">
                           {stats?.totalUsers || 0}
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-brand-sky rounded-full flex items-center justify-center">
+                        <Users className="w-6 h-6 text-primary" />
                       </div>
                     </div>
                   </CardContent>
@@ -549,13 +549,13 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Active Users (30d)</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                        <p className="text-sm font-medium text-muted-foreground">Active Users (30d)</p>
+                        <p className="text-3xl font-bold text-foreground mt-2">
                           {stats?.activeUsers || 0}
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <Activity className="w-6 h-6 text-green-600" />
+                      <div className="w-12 h-12 bg-brand-sky rounded-full flex items-center justify-center">
+                        <Activity className="w-6 h-6 text-primary" />
                       </div>
                     </div>
                   </CardContent>
@@ -565,13 +565,13 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total Conversions</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                        <p className="text-sm font-medium text-muted-foreground">Total Conversions</p>
+                        <p className="text-3xl font-bold text-foreground mt-2">
                           {stats?.totalConversions || 0}
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <TrendingUp className="w-6 h-6 text-purple-600" />
+                      <div className="w-12 h-12 bg-brand-sky/60 rounded-full flex items-center justify-center">
+                        <TrendingUp className="w-6 h-6 text-primary" />
                       </div>
                     </div>
                   </CardContent>
@@ -581,8 +581,8 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total Compressions</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                        <p className="text-sm font-medium text-muted-foreground">Total Compressions</p>
+                        <p className="text-3xl font-bold text-foreground mt-2">
                           {stats?.totalCompressions || 0}
                         </p>
                       </div>
@@ -600,8 +600,8 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                        <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
+                        <p className="text-3xl font-bold text-foreground mt-2">
                           {stats?.totalOrders || 0}
                         </p>
                       </div>
@@ -616,13 +616,13 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Orders (24h)</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                        <p className="text-sm font-medium text-muted-foreground">Orders (24h)</p>
+                        <p className="text-3xl font-bold text-foreground mt-2">
                           {stats?.ordersLast24Hours || 0}
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Clock className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-brand-sky rounded-full flex items-center justify-center">
+                        <Clock className="w-6 h-6 text-primary" />
                       </div>
                     </div>
                   </CardContent>
@@ -632,13 +632,13 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Conversion Orders</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                        <p className="text-sm font-medium text-muted-foreground">Conversion Orders</p>
+                        <p className="text-3xl font-bold text-foreground mt-2">
                           {stats?.conversionOrders || 0}
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <Package className="w-6 h-6 text-green-600" />
+                      <div className="w-12 h-12 bg-brand-sky rounded-full flex items-center justify-center">
+                        <Package className="w-6 h-6 text-primary" />
                       </div>
                     </div>
                   </CardContent>
@@ -648,13 +648,13 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Compression Orders</p>
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
+                        <p className="text-sm font-medium text-muted-foreground">Compression Orders</p>
+                        <p className="text-3xl font-bold text-foreground mt-2">
                           {stats?.compressionOrders || 0}
                         </p>
                       </div>
-                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <Package className="w-6 h-6 text-purple-600" />
+                      <div className="w-12 h-12 bg-brand-sky/60 rounded-full flex items-center justify-center">
+                        <Package className="w-6 h-6 text-primary" />
                       </div>
                     </div>
                   </CardContent>
@@ -665,24 +665,24 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                   <CardContent className="p-6">
-                    <p className="text-sm font-medium text-gray-600">New Users (7d)</p>
-                    <p className="text-2xl font-bold text-gray-800 mt-2">
+                    <p className="text-sm font-medium text-muted-foreground">New Users (7d)</p>
+                    <p className="text-2xl font-bold text-foreground mt-2">
                       {stats?.newUsersLastWeek || 0}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-6">
-                    <p className="text-sm font-medium text-gray-600">Google Sign-ins</p>
-                    <p className="text-2xl font-bold text-gray-800 mt-2">
+                    <p className="text-sm font-medium text-muted-foreground">Google Sign-ins</p>
+                    <p className="text-2xl font-bold text-foreground mt-2">
                       {stats?.googleUsers || 0}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-6">
-                    <p className="text-sm font-medium text-gray-600">Email Sign-ups</p>
-                    <p className="text-2xl font-bold text-gray-800 mt-2">
+                    <p className="text-sm font-medium text-muted-foreground">Email Sign-ups</p>
+                    <p className="text-2xl font-bold text-foreground mt-2">
                       {stats?.emailUsers || 0}
                     </p>
                   </CardContent>
@@ -699,7 +699,7 @@ export default function AdminDashboard() {
                   <CardTitle>Users</CardTitle>
                   <div className="flex items-center gap-2">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                       <input
                         type="text"
                         placeholder="Search users..."
@@ -708,7 +708,7 @@ export default function AdminDashboard() {
                           setSearchTerm(e.target.value);
                           setCurrentPage(1);
                         }}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                       />
                     </div>
                     <Button onClick={exportUsers} variant="outline" className="flex items-center gap-2">
@@ -723,26 +723,26 @@ export default function AdminDashboard() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Provider</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Conversions</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Compressions</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Tools Used</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Created</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Last Active</th>
+                        <th className="text-left py-3 px-4 font-semibold text-foreground">Email</th>
+                        <th className="text-left py-3 px-4 font-semibold text-foreground">Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-foreground">Provider</th>
+                        <th className="text-left py-3 px-4 font-semibold text-foreground">Conversions</th>
+                        <th className="text-left py-3 px-4 font-semibold text-foreground">Compressions</th>
+                        <th className="text-left py-3 px-4 font-semibold text-foreground">Tools Used</th>
+                        <th className="text-left py-3 px-4 font-semibold text-foreground">Created</th>
+                        <th className="text-left py-3 px-4 font-semibold text-foreground">Last Active</th>
                       </tr>
                     </thead>
                     <tbody>
                       {users.length === 0 ? (
                         <tr>
-                          <td colSpan="8" className="text-center py-8 text-gray-500">
+                          <td colSpan="8" className="text-center py-8 text-muted-foreground">
                             No users found
                           </td>
                         </tr>
                       ) : (
                         users.map((user) => (
-                          <tr key={user.id} className="border-b hover:bg-gray-50">
+                          <tr key={user.id} className="border-b hover:bg-muted/40">
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
                                 {user.photoURL && (
@@ -760,8 +760,8 @@ export default function AdminDashboard() {
                               <span
                                 className={`px-2 py-1 rounded text-xs font-medium ${
                                   user.provider === "google"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-gray-100 text-gray-800"
+                                    ? "bg-brand-sky text-brand-navy"
+                                    : "bg-muted text-foreground"
                                 }`}
                               >
                                 {user.provider}
@@ -770,10 +770,10 @@ export default function AdminDashboard() {
                             <td className="py-3 px-4 text-sm">{user.totalConversions}</td>
                             <td className="py-3 px-4 text-sm">{user.totalCompressions}</td>
                             <td className="py-3 px-4 text-sm">{user.totalToolsUsed}</td>
-                            <td className="py-3 px-4 text-sm text-gray-500">
+                            <td className="py-3 px-4 text-sm text-muted-foreground">
                               {new Date(user.createdAt).toLocaleDateString()}
                             </td>
-                            <td className="py-3 px-4 text-sm text-gray-500">
+                            <td className="py-3 px-4 text-sm text-muted-foreground">
                               {new Date(user.lastActive).toLocaleDateString()}
                             </td>
                           </tr>
@@ -786,7 +786,7 @@ export default function AdminDashboard() {
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4">
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       Showing {((currentPage - 1) * 20) + 1} to{" "}
                       {Math.min(currentPage * 20, pagination.total)} of {pagination.total} users
                     </p>
@@ -820,7 +820,7 @@ export default function AdminDashboard() {
                   <CardTitle>Orders & Files</CardTitle>
                   <div className="flex items-center gap-2">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                       <input
                         type="text"
                         placeholder="Search orders..."
@@ -829,7 +829,7 @@ export default function AdminDashboard() {
                           setOrdersSearchTerm(e.target.value);
                           setOrdersPage(1);
                         }}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -839,43 +839,43 @@ export default function AdminDashboard() {
                 {ordersLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="mt-4 text-gray-600">Loading orders...</p>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-4 text-muted-foreground">Loading orders...</p>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {orders.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         No orders found
                       </div>
                     ) : (
                       orders.map((order) => (
-                        <div key={order.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                        <div key={order.id} className="border rounded-lg p-4 hover:bg-muted/40">
                           <div className="flex items-start justify-between mb-3">
                             <div>
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-800">{order.toolName}</h3>
+                                <h3 className="font-semibold text-foreground">{order.toolName}</h3>
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
                                   order.toolType === "conversion" 
-                                    ? "bg-green-100 text-green-800" 
-                                    : "bg-blue-100 text-blue-800"
+                                    ? "bg-brand-sky text-brand-navy" 
+                                    : "bg-brand-sky text-brand-navy"
                                 }`}>
                                   {order.toolType}
                                 </span>
                                 {order.isAnonymous && (
-                                  <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                  <span className="px-2 py-1 rounded text-xs font-medium bg-muted text-muted-foreground">
                                     Anonymous
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-600 mt-1">
+                              <p className="text-sm text-muted-foreground mt-1">
                                 {order.userEmail || "Anonymous User"}
                                 {order.sessionId && (
-                                  <span className="text-xs text-gray-400 ml-2">({order.sessionId})</span>
+                                  <span className="text-xs text-muted-foreground ml-2">({order.sessionId})</span>
                                 )}
                               </p>
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-muted-foreground mt-1">
                                 {new Date(order.createdAt).toLocaleString()} • {order.fileCount} file{order.fileCount !== 1 ? 's' : ''}
                               </p>
                             </div>
@@ -910,13 +910,13 @@ export default function AdminDashboard() {
                                       {/* Input File */}
                                       <div>
                                         <div className="flex items-center gap-2 mb-2">
-                                          <InputIcon className="w-4 h-4 text-gray-600" />
-                                          <span className="text-sm font-semibold text-gray-700">Input File</span>
+                                          <InputIcon className="w-4 h-4 text-muted-foreground" />
+                                          <span className="text-sm font-semibold text-foreground">Input File</span>
                                         </div>
                                         <div className="space-y-2">
-                                          <p className="text-xs text-gray-600 truncate">{file.inputName}</p>
+                                          <p className="text-xs text-muted-foreground truncate">{file.inputName}</p>
                                           {file.inputThumbnail && (
-                                            <div className="border rounded overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: '120px', maxHeight: '200px' }}>
+                                            <div className="border rounded overflow-hidden bg-muted/40 flex items-center justify-center" style={{ minHeight: '120px', maxHeight: '200px' }}>
                                               <img
                                                 src={file.inputThumbnail.startsWith('data:') 
                                                   ? file.inputThumbnail 
@@ -931,7 +931,7 @@ export default function AdminDashboard() {
                                             </div>
                                           )}
                                           {file.inputSize && (
-                                            <p className="text-xs text-gray-500">Size: {formatSize(file.inputSize)}</p>
+                                            <p className="text-xs text-muted-foreground">Size: {formatSize(file.inputSize)}</p>
                                           )}
                                         </div>
                                       </div>
@@ -939,13 +939,13 @@ export default function AdminDashboard() {
                                       {/* Output File */}
                                       <div>
                                         <div className="flex items-center gap-2 mb-2">
-                                          <OutputIcon className="w-4 h-4 text-gray-600" />
-                                          <span className="text-sm font-semibold text-gray-700">Output File</span>
+                                          <OutputIcon className="w-4 h-4 text-muted-foreground" />
+                                          <span className="text-sm font-semibold text-foreground">Output File</span>
                                         </div>
                                         <div className="space-y-2">
-                                          <p className="text-xs text-gray-600 truncate">{file.outputName}</p>
+                                          <p className="text-xs text-muted-foreground truncate">{file.outputName}</p>
                                           {file.outputThumbnail && (
-                                            <div className="border rounded overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: '120px', maxHeight: '200px' }}>
+                                            <div className="border rounded overflow-hidden bg-muted/40 flex items-center justify-center" style={{ minHeight: '120px', maxHeight: '200px' }}>
                                               <img
                                                 src={file.outputThumbnail.startsWith('data:') 
                                                   ? file.outputThumbnail 
@@ -960,7 +960,7 @@ export default function AdminDashboard() {
                                             </div>
                                           )}
                                           {file.outputSize && (
-                                            <p className="text-xs text-gray-500">Size: {formatSize(file.outputSize)}</p>
+                                            <p className="text-xs text-muted-foreground">Size: {formatSize(file.outputSize)}</p>
                                           )}
                                           {file.hasOutputFileData && (
                                             <Button
@@ -988,7 +988,7 @@ export default function AdminDashboard() {
                     {/* Orders Pagination */}
                     {ordersPagination.totalPages > 1 && (
                       <div className="flex items-center justify-between mt-4">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           Showing {((ordersPage - 1) * 10) + 1} to{" "}
                           {Math.min(ordersPage * 10, ordersPagination.total)} of {ordersPagination.total} orders
                         </p>
@@ -1036,8 +1036,8 @@ export default function AdminDashboard() {
                 {settingsLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="mt-4 text-gray-600">Loading settings...</p>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-4 text-muted-foreground">Loading settings...</p>
                     </div>
                   </div>
                 ) : settings ? (
@@ -1045,12 +1045,12 @@ export default function AdminDashboard() {
                     {/* Image Settings */}
                     <div className="border rounded-lg p-6">
                       <div className="flex items-center gap-3 mb-4">
-                        <FileImage className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-800">Image Files</h3>
+                        <FileImage className="w-5 h-5 text-primary" />
+                        <h3 className="text-lg font-semibold text-foreground">Image Files</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum File Size (MB)
                           </label>
                           <input
@@ -1077,16 +1077,16 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="0.1"
                             step="0.1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Current: {formatSize(settings.imageMaxSize)}
                           </p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum Files Per Upload (Batch Limit)
                           </label>
                           <input
@@ -1112,10 +1112,10 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Users can upload up to {settings.imageMaxFiles} images at once
                           </p>
                         </div>
@@ -1125,12 +1125,12 @@ export default function AdminDashboard() {
                     {/* Document Settings */}
                     <div className="border rounded-lg p-6">
                       <div className="flex items-center gap-3 mb-4">
-                        <FileText className="w-5 h-5 text-green-600" />
-                        <h3 className="text-lg font-semibold text-gray-800">Document Files (DOC, DOCX, TXT)</h3>
+                        <FileText className="w-5 h-5 text-primary" />
+                        <h3 className="text-lg font-semibold text-foreground">Document Files (DOC, DOCX, TXT)</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum File Size (MB)
                           </label>
                           <input
@@ -1156,16 +1156,16 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="0.1"
                             step="0.1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Current: {formatSize(settings.documentMaxSize)}
                           </p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum Files Per Upload (Batch Limit)
                           </label>
                           <input
@@ -1191,10 +1191,10 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Users can upload up to {settings.documentMaxFiles} documents at once
                           </p>
                         </div>
@@ -1205,11 +1205,11 @@ export default function AdminDashboard() {
                     <div className="border rounded-lg p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <FileText className="w-5 h-5 text-red-600" />
-                        <h3 className="text-lg font-semibold text-gray-800">PDF Files</h3>
+                        <h3 className="text-lg font-semibold text-foreground">PDF Files</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum File Size (MB)
                           </label>
                           <input
@@ -1235,16 +1235,16 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="0.1"
                             step="0.1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Current: {formatSize(settings.pdfMaxSize)}
                           </p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum Files Per Upload (Batch Limit)
                           </label>
                           <input
@@ -1270,10 +1270,10 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Users can upload up to {settings.pdfMaxFiles} PDF files at once
                           </p>
                         </div>
@@ -1283,12 +1283,12 @@ export default function AdminDashboard() {
                     {/* Video Settings */}
                     <div className="border rounded-lg p-6">
                       <div className="flex items-center gap-3 mb-4">
-                        <FileVideo className="w-5 h-5 text-purple-600" />
-                        <h3 className="text-lg font-semibold text-gray-800">Video Files</h3>
+                        <FileVideo className="w-5 h-5 text-primary" />
+                        <h3 className="text-lg font-semibold text-foreground">Video Files</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum File Size (MB)
                           </label>
                           <input
@@ -1314,16 +1314,16 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="0.1"
                             step="0.1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Current: {formatSize(settings.videoMaxSize)}
                           </p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum Files Per Upload (Batch Limit)
                           </label>
                           <input
@@ -1349,10 +1349,10 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Users can upload up to {settings.videoMaxFiles} videos at once
                           </p>
                         </div>
@@ -1363,11 +1363,11 @@ export default function AdminDashboard() {
                     <div className="border rounded-lg p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <FileAudio className="w-5 h-5 text-pink-600" />
-                        <h3 className="text-lg font-semibold text-gray-800">Audio Files</h3>
+                        <h3 className="text-lg font-semibold text-foreground">Audio Files</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum File Size (MB)
                           </label>
                           <input
@@ -1393,16 +1393,16 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="0.1"
                             step="0.1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Current: {formatSize(settings.audioMaxSize)}
                           </p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum Files Per Upload (Batch Limit)
                           </label>
                           <input
@@ -1428,10 +1428,10 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Users can upload up to {settings.audioMaxFiles} audio files at once
                           </p>
                         </div>
@@ -1441,12 +1441,12 @@ export default function AdminDashboard() {
                     {/* General Settings */}
                     <div className="border rounded-lg p-6">
                       <div className="flex items-center gap-3 mb-4">
-                        <SettingsIcon className="w-5 h-5 text-gray-600" />
-                        <h3 className="text-lg font-semibold text-gray-800">General Files (Other Types)</h3>
+                        <SettingsIcon className="w-5 h-5 text-muted-foreground" />
+                        <h3 className="text-lg font-semibold text-foreground">General Files (Other Types)</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum File Size (MB)
                           </label>
                           <input
@@ -1472,16 +1472,16 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="0.1"
                             step="0.1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Current: {formatSize(settings.generalMaxSize)}
                           </p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Maximum Files Per Upload (Batch Limit)
                           </label>
                           <input
@@ -1507,10 +1507,10 @@ export default function AdminDashboard() {
                                 });
                               }
                             }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
                             min="1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Users can upload up to {settings.generalMaxFiles} files at once
                           </p>
                         </div>
@@ -1518,7 +1518,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     Failed to load settings
                   </div>
                 )}

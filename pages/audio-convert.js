@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import JSZip from "jszip";
 import { Loader2, CheckCircle, Download, AlertCircle, Music, Trash2, Upload, RotateCcw, Settings2, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -320,19 +319,12 @@ export default function AudioConvert() {
   const errorCount = Object.values(results).filter(r => r.status === "error").length;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+    <ToolPageShell containerClassName="max-w-6xl">
         {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-            Audio Converter
-          </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-            Convert audio between MP3, WAV, M4A, OGG, FLAC, AAC formats.
-          </p>
-        </div>
+        <ToolPageHeader
+          title="Audio Converter"
+          description="Convert audio between MP3, WAV, M4A, OGG, FLAC, AAC formats."
+        />
 
         <div className="grid gap-8">
           {/* Dropzone */}
@@ -355,8 +347,6 @@ export default function AudioConvert() {
             title="Drop audio files here"
             description="or click to browse • MP3, WAV, M4A, OGG, FLAC, AAC"
             disabled={processing}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-green-500"
           />
 
           {/* Settings and File List */}
@@ -365,8 +355,8 @@ export default function AudioConvert() {
               {/* Settings Sidebar */}
               <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                 <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                    <Settings2 className="w-6 h-6 text-green-600" />
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                    <Settings2 className="w-6 h-6 text-primary" />
                     Settings
                   </div>
 
@@ -374,14 +364,14 @@ export default function AudioConvert() {
                   {detectedInputFormat && (
                     <>
                       <div className="space-y-3">
-                        <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Input Format</label>
-                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Input Format</label>
+                        <div className="p-3 bg-muted/40 rounded-lg border border-border">
                           <div className="flex items-center gap-2">
-                            <Music className="w-5 h-5 text-green-600" />
-                            <span className="font-semibold text-gray-900">
+                            <Music className="w-5 h-5 text-primary" />
+                            <span className="font-semibold text-foreground">
                               {detectedInputFormat.toUpperCase()}
                             </span>
-                            <Badge variant="secondary" className="ml-auto bg-green-100 text-green-700 text-xs">
+                            <Badge variant="secondary" className="ml-auto bg-brand-sky text-brand-navy text-xs">
                               Auto-detected
                             </Badge>
                           </div>
@@ -394,7 +384,7 @@ export default function AudioConvert() {
 
                   {/* Output Format */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Output Format</label>
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Output Format</label>
                     <RadioGroup value={outputFormat} onValueChange={setOutputFormat}>
                       <div className="grid grid-cols-2 gap-2">
                         {audioFormats.filter(f => f.id !== detectedInputFormat).map((fmt) => (
@@ -414,7 +404,7 @@ export default function AudioConvert() {
                     <Button
                       onClick={handleConvert}
                       disabled={processing || files.length === 0}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-11 shadow-lg hover:shadow-xl transition-all font-semibold"
+                      className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-11 shadow-lg hover:shadow-xl transition-all font-semibold"
                     >
                       {processing ? (
                         <>
@@ -443,7 +433,7 @@ export default function AudioConvert() {
                       variant="outline"
                       onClick={clearAll}
                       disabled={processing}
-                      className="w-full text-gray-500"
+                      className="w-full text-muted-foreground"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Reset All
@@ -453,7 +443,7 @@ export default function AudioConvert() {
                   {/* Progress */}
                   {processing && (
                     <div className="space-y-2">
-                      <div className="flex justify-between text-sm text-gray-600">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Progress</span>
                         <span>{totalCompleted}/{files.length}</span>
                       </div>
@@ -466,9 +456,9 @@ export default function AudioConvert() {
               {/* File List */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-xl text-gray-800">Files ({files.length})</h3>
+                  <h3 className="font-bold text-xl text-foreground">Files ({files.length})</h3>
                   {Object.keys(results).length > 0 && (
-                    <Badge className="bg-green-100 text-green-700">
+                    <Badge className="bg-brand-sky text-brand-navy">
                       {successCount} ✓ {errorCount > 0 && `${errorCount} ✗`}
                     </Badge>
                   )}
@@ -478,7 +468,7 @@ export default function AudioConvert() {
                   {files.map((file) => {
                     const result = results[file.name];
                     return (
-                      <Card key={file.name} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all group">
+                      <Card key={file.name} className="overflow-hidden border border-border shadow-sm hover:shadow-md transition-all group">
                         <div className="p-4 flex gap-5 items-center">
                           <div className="w-16 h-16 bg-violet-100 rounded-xl flex-shrink-0 flex items-center justify-center border border-violet-200">
                             <Music className="w-8 h-8 text-violet-600" />
@@ -486,26 +476,26 @@ export default function AudioConvert() {
 
                           <div className="flex-1 min-w-0 space-y-2">
                             <div className="flex justify-between items-start">
-                              <h4 className="font-semibold truncate pr-4 text-gray-900 text-lg">{file.name}</h4>
+                              <h4 className="font-semibold truncate pr-4 text-foreground text-lg">{file.name}</h4>
                               <div className="flex gap-2">
                                 {result?.status === "success" && (
                                   <Button size="icon" variant="ghost" className="h-8 w-8 text-violet-600 bg-violet-50 hover:bg-violet-100" onClick={() => downloadFile(file.name)}>
                                     <Download className="w-4 h-4" />
                                   </Button>
                                 )}
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50" onClick={() => removeFile(file.name)}>
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-3 text-sm">
-                              <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 font-mono">
+                              <Badge variant="secondary" className="bg-muted text-muted-foreground border-border font-mono">
                                 {(file.size / 1024 / 1024).toFixed(2)} MB
                               </Badge>
                               {result?.status === "success" && (
                                 <>
-                                  <ArrowRight className="w-3 h-3 text-gray-300" />
+                                  <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
                                   <Badge className="bg-violet-100 text-violet-700 border-violet-200 hover:bg-violet-100">
                                     {outputFormat.toUpperCase()} Ready ({(result.size / 1024).toFixed(0)} KB)
                                   </Badge>
@@ -517,7 +507,7 @@ export default function AudioConvert() {
                                 </Badge>
                               )}
                               {!result && (
-                                <span className="text-gray-400 italic text-xs">Ready to convert</span>
+                                <span className="text-muted-foreground italic text-xs">Ready to convert</span>
                               )}
                             </div>
                           </div>
@@ -528,9 +518,9 @@ export default function AudioConvert() {
                               <span className="text-violet-600 font-medium">Processing...</span>
                               <span className="text-violet-600 font-bold">{Math.round(result.progress || 0)}%</span>
                             </div>
-                            <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                            <div className="h-2 bg-brand-sky rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300 ease-out"
+                                className="h-full bg-gradient-to-r from-primary to-brand-navy transition-all duration-300 ease-out"
                                 style={{ width: `${result.progress || 0}%` }}
                               />
                             </div>
@@ -545,9 +535,6 @@ export default function AudioConvert() {
           )}
 
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

@@ -4,6 +4,7 @@ import Footer from "./Footer";
 import SEO from "./SEO";
 import ToolSeoContent from "./ToolSeoContent";
 import Breadcrumbs from "./Breadcrumbs";
+import { ToolPageHeader } from "./ToolPageShell";
 import { Button } from "./ui/button";
 import { ArrowRight } from "lucide-react";
 import {
@@ -38,21 +39,21 @@ export default function SeoLandingPage({ content }) {
         structuredData={schemas.length === 1 ? schemas[0] : schemas}
       />
       <Navbar />
-      <Breadcrumbs items={breadcrumbs} />
       <main className="flex-1">
-        <section className="container mx-auto px-4 py-12 max-w-4xl">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-            {content.h1}
-          </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-            {content.intro}
-          </p>
-          <Link href={content.toolPath}>
-            <Button size="lg" className="h-12 px-8">
-              Open Free Tool
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+        <div className="container mx-auto px-4 pt-6 max-w-4xl">
+          <Breadcrumbs items={breadcrumbs} />
+        </div>
+        <section className="container mx-auto px-4 py-10 md:py-12 max-w-4xl">
+          <ToolPageHeader title={content.h1} description={content.intro} badge="Free online tool">
+            <div className="pt-2">
+              <Link href={content.toolPath}>
+                <Button size="lg" className="h-12 px-8">
+                  Open Free Tool
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+          </ToolPageHeader>
         </section>
         <ToolSeoContent content={content} showBreadcrumbs={false} />
       </main>

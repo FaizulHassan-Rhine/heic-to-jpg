@@ -71,7 +71,7 @@ export default function HermesAIPage() {
         structuredData={structuredData}
       />
 
-      <main className="h-screen bg-slate-100 dark:bg-slate-950">
+      <main className="h-screen bg-background">
         <div className="h-full w-full">
           <iframe
             src={CHAT_URL}

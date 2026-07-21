@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "../lib/authContext";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import {
   Download, RotateCcw, QrCode, Barcode, Copy, Palette,
   Type, Maximize2, Loader2
@@ -12,7 +11,6 @@ import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-import Head from "next/head";
 
 const QR_SIZES = [128, 200, 256, 300, 400, 512];
 
@@ -239,62 +237,52 @@ export default function QrBarcode() {
 
   return (
     <>
-      <Head>
-        <title>QR Code & Barcode Generator - ConvertMastery</title>
-        <meta name="description" content="Generate QR codes and barcodes for free. Custom colors, sizes, and multiple barcode formats. Download as PNG or SVG." />
-      </Head>
-
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar />
-
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+<ToolPageShell containerClassName="max-w-5xl">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-              QR Code & Barcode Generator
-            </h1>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">Generate custom QR codes and barcodes instantly.</p>
-          </div>
+          <ToolPageHeader
+            title="QR Code & Barcode Generator"
+            description="Generate custom QR codes and barcodes instantly."
+          />
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Left: Input & Settings */}
             <div className="space-y-6">
-              <Card className="border border-gray-200 shadow-sm">
+              <Card className="border border-border shadow-sm">
                 <CardContent className="p-6">
                   {/* Mode Toggle */}
                   <div className="flex justify-center mb-6">
-                    <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
+                    <div className="bg-muted p-1 rounded-lg flex gap-1">
                       <button
                         onClick={() => { setMode("qr"); setGeneratedImage(null); }}
                         className={cn("px-4 py-2 text-sm rounded-lg transition-all font-medium flex items-center gap-2",
-                          mode === "qr" ? "bg-white text-green-600 shadow-sm" : "text-gray-500 hover:text-gray-700")}
+                          mode === "qr" ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}
                       >
                         <QrCode className="h-4 w-4" /> QR Code
                       </button>
                       <button
                         onClick={() => { setMode("barcode"); setGeneratedImage(null); }}
                         className={cn("px-4 py-2 text-sm rounded-lg transition-all font-medium flex items-center gap-2",
-                          mode === "barcode" ? "bg-white text-green-600 shadow-sm" : "text-gray-500 hover:text-gray-700")}
+                          mode === "barcode" ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}
                       >
                         <Barcode className="h-4 w-4" /> Barcode
                       </button>
                     </div>
                   </div>
 
-                  <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                  <label className="text-sm font-semibold text-foreground uppercase tracking-wider mb-2 block">
                     {mode === "qr" ? "Text, URL, or Data" : "Barcode Data"}
                   </label>
                   <textarea
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder={mode === "qr" ? "Enter text, URL, email, phone, or any data..." : "Enter data matching the barcode format..."}
-                    className="w-full h-28 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-800 mb-3"
+                    className="w-full h-28 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground mb-3"
                   />
                   {mode === "qr" && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       {[{ label: "URL", prefix: "https://" }, { label: "Email", prefix: "mailto:" }, { label: "Phone", prefix: "tel:" }, { label: "SMS", prefix: "sms:" }, { label: "WiFi", prefix: "WIFI:T:WPA;S:MyNetwork;P:password;;" }].map((item) => (
                         <button key={item.label} onClick={() => setInputText(item.prefix)}
-                          className="text-xs px-2.5 py-1 bg-green-50 hover:bg-green-100 rounded-md text-green-600 transition-colors font-medium">
+                          className="text-xs px-2.5 py-1 bg-brand-sky/50 hover:bg-brand-sky rounded-md text-primary transition-colors font-medium">
                           {item.label}
                         </button>
                       ))}
@@ -306,14 +294,14 @@ export default function QrBarcode() {
                       <Separator className="my-4" />
                       <div className="space-y-4">
                         <div>
-                          <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-2">
+                          <label className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2 mb-2">
                             <Maximize2 className="h-4 w-4" /> Size: {qrSize}px
                           </label>
                           <div className="grid grid-cols-3 gap-2">
                             {QR_SIZES.map((size) => (
                               <button key={size} onClick={() => setQrSize(size)}
                                 className={cn("px-3 py-2 rounded-md text-sm border transition-colors",
-                                  qrSize === size ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white border-green-500" : "bg-white text-gray-600 hover:bg-gray-50")}>
+                                  qrSize === size ? "bg-gradient-to-r from-primary to-brand-navy text-white border-primary" : "bg-card text-muted-foreground hover:bg-muted/40")}>
                                 {size}px
                               </button>
                             ))}
@@ -321,40 +309,40 @@ export default function QrBarcode() {
                         </div>
 
                         <div>
-                          <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-2">
+                          <label className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2 mb-2">
                             <Palette className="h-4 w-4" /> Colors
                           </label>
                           <div className="grid grid-cols-4 gap-2">
                             {QR_COLORS.map((color, i) => (
                               <button key={i} onClick={() => { setQrColor(color); setUseCustomColors(false); }}
                                 className={cn("p-2 rounded-lg border-2 text-center transition-all",
-                                  !useCustomColors && qrColor === color ? "border-green-500 ring-2 ring-green-200" : "border-gray-200 hover:border-gray-300")}>
+                                  !useCustomColors && qrColor === color ? "border-primary ring-2 ring-brand-mid/40" : "border-border hover:border-border")}>
                                 <div className="flex justify-center gap-1 mb-1">
                                   <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: color.fg }} />
                                   <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: color.bg }} />
                                 </div>
-                                <span className="text-[10px] text-gray-500">{color.label}</span>
+                                <span className="text-[10px] text-muted-foreground">{color.label}</span>
                               </button>
                             ))}
                           </div>
                           <label className="flex items-center gap-2 cursor-pointer mt-3">
-                            <input type="checkbox" checked={useCustomColors} onChange={(e) => setUseCustomColors(e.target.checked)} className="w-4 h-4 accent-green-600 rounded" />
-                            <span className="text-sm text-gray-600">Use custom colors</span>
+                            <input type="checkbox" checked={useCustomColors} onChange={(e) => setUseCustomColors(e.target.checked)} className="w-4 h-4 accent-primary rounded" />
+                            <span className="text-sm text-muted-foreground">Use custom colors</span>
                           </label>
                           {useCustomColors && (
                             <div className="flex gap-4 mt-2">
                               <div>
-                                <label className="text-xs text-gray-500 block mb-1">Foreground</label>
+                                <label className="text-xs text-muted-foreground block mb-1">Foreground</label>
                                 <div className="flex items-center gap-2">
                                   <input type="color" value={customFg} onChange={(e) => setCustomFg(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0" />
-                                  <span className="text-xs text-gray-500 font-mono">{customFg}</span>
+                                  <span className="text-xs text-muted-foreground font-mono">{customFg}</span>
                                 </div>
                               </div>
                               <div>
-                                <label className="text-xs text-gray-500 block mb-1">Background</label>
+                                <label className="text-xs text-muted-foreground block mb-1">Background</label>
                                 <div className="flex items-center gap-2">
                                   <input type="color" value={customBg} onChange={(e) => setCustomBg(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0" />
-                                  <span className="text-xs text-gray-500 font-mono">{customBg}</span>
+                                  <span className="text-xs text-muted-foreground font-mono">{customBg}</span>
                                 </div>
                               </div>
                             </div>
@@ -368,14 +356,14 @@ export default function QrBarcode() {
                     <>
                       <Separator className="my-4" />
                       <div>
-                        <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2 block">Format</label>
+                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider mb-2 block">Format</label>
                         <div className="grid grid-cols-2 gap-2">
                           {BARCODE_FORMATS.map((fmt) => (
                             <button key={fmt.value} onClick={() => setBarcodeFormat(fmt.value)}
                               className={cn("p-2.5 rounded-lg border text-left transition-all",
-                                barcodeFormat === fmt.value ? "border-green-200 bg-green-50 text-green-700 ring-1 ring-green-200" : "border-gray-200 hover:border-gray-300 text-gray-600")}>
+                                barcodeFormat === fmt.value ? "border-brand-mid/30 bg-brand-sky/50 text-brand-navy ring-1 ring-brand-mid/40" : "border-border hover:border-border text-muted-foreground")}>
                               <span className="text-sm font-medium block">{fmt.label}</span>
-                              <span className="text-[10px] text-gray-400">{fmt.desc}</span>
+                              <span className="text-[10px] text-muted-foreground">{fmt.desc}</span>
                             </button>
                           ))}
                         </div>
@@ -385,12 +373,12 @@ export default function QrBarcode() {
 
                   <div className="mt-6 space-y-2">
                     <Button onClick={generate} disabled={!inputText.trim() || isGenerating}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-11 shadow-lg hover:shadow-xl transition-all font-semibold">
+                      className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-11 shadow-lg hover:shadow-xl transition-all font-semibold">
                       {isGenerating ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating...</> : (
                         <>{mode === "qr" ? <QrCode className="h-5 w-5 mr-2" /> : <Barcode className="h-5 w-5 mr-2" />} Generate {mode === "qr" ? "QR Code" : "Barcode"}</>
                       )}
                     </Button>
-                    <Button onClick={resetAll} variant="outline" className="w-full text-gray-500">
+                    <Button onClick={resetAll} variant="outline" className="w-full text-muted-foreground">
                       <RotateCcw className="w-4 h-4 mr-2" /> Reset
                     </Button>
                   </div>
@@ -400,20 +388,20 @@ export default function QrBarcode() {
 
             {/* Right: Preview */}
             <div>
-              <Card className="border border-gray-200 shadow-sm h-full">
+              <Card className="border border-border shadow-sm h-full">
                 <CardContent className="p-6">
-                  <h3 className="font-bold text-xl text-gray-800 mb-1">Preview</h3>
-                  <p className="text-gray-500 text-sm mb-6">{mode === "qr" ? "QR Code" : "Barcode"} output</p>
+                  <h3 className="font-bold text-xl text-foreground mb-1">Preview</h3>
+                  <p className="text-muted-foreground text-sm mb-6">{mode === "qr" ? "QR Code" : "Barcode"} output</p>
 
                   <div className="flex flex-col items-center justify-center min-h-[400px]">
                     {generatedImage ? (
                       <div className="text-center w-full">
-                        <div className="bg-white rounded-lg p-4 inline-block border shadow-sm mb-6">
+                        <div className="bg-card rounded-lg p-4 inline-block border shadow-sm mb-6">
                           <img src={generatedImage} alt={`Generated ${mode === "qr" ? "QR Code" : "Barcode"}`}
                             className="max-w-full mx-auto" style={mode === "qr" ? { width: qrSize, height: qrSize } : {}} />
                         </div>
                         <div className="flex flex-wrap justify-center gap-2">
-                          <Button onClick={() => downloadImage("png")} className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white">
+                          <Button onClick={() => downloadImage("png")} className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white">
                             <Download className="h-4 w-4 mr-2" /> PNG
                           </Button>
                           <Button onClick={downloadSVG} variant="outline">
@@ -426,9 +414,9 @@ export default function QrBarcode() {
                       </div>
                     ) : (
                       <div className="text-center py-12">
-                        {mode === "qr" ? <QrCode className="h-20 w-20 mx-auto text-gray-200 mb-4" /> : <Barcode className="h-20 w-20 mx-auto text-gray-200 mb-4" />}
-                        <h3 className="text-lg font-medium text-gray-400">{mode === "qr" ? "QR Code" : "Barcode"} Preview</h3>
-                        <p className="text-sm text-gray-300 mt-1">Enter data and click Generate</p>
+                        {mode === "qr" ? <QrCode className="h-20 w-20 mx-auto text-muted/40 mb-4" /> : <Barcode className="h-20 w-20 mx-auto text-muted/40 mb-4" />}
+                        <h3 className="text-lg font-medium text-muted-foreground">{mode === "qr" ? "QR Code" : "Barcode"} Preview</h3>
+                        <p className="text-sm text-muted-foreground/50 mt-1">Enter data and click Generate</p>
                       </div>
                     )}
                   </div>
@@ -436,10 +424,7 @@ export default function QrBarcode() {
               </Card>
             </div>
           </div>
-        </main>
-
-        <Footer />
-      </div>
+    </ToolPageShell>
     </>
   );
 }

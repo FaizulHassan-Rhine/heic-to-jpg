@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import AuthModal from "../components/AuthModal";
 import {
@@ -327,32 +326,21 @@ export default function FakeEmailGenerator() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+    <>
+    <ToolPageShell containerClassName="max-w-4xl">
         <div className="space-y-6">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              Temporary Email • Real Inbox
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Fake Email Generator
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Generate real temporary email addresses with inbox support. Receive
-              emails instantly — perfect for sign-ups, testing, and privacy
-              protection.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Fake Email Generator"
+            description="Generate real temporary email addresses with inbox support. Receive emails instantly — perfect for sign-ups, testing, and privacy protection."
+            badge="Temporary Email • Real Inbox"
+          />
 
           {/* Email Display */}
-          <Card className="border-2 border-green-200 dark:border-green-800">
+          <Card className="border border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-green-600" />
+                <Mail className="w-5 h-5 text-primary" />
                 Your Temporary Email
               </CardTitle>
             </CardHeader>
@@ -363,14 +351,14 @@ export default function FakeEmailGenerator() {
                   value={email}
                   readOnly
                   placeholder="Click 'Generate' to create a temporary email"
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-mono text-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg font-mono text-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <Button
                   onClick={() => copyToClipboard(email)}
                   disabled={!email}
                   className={cn(
-                    "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700",
-                    copied && "bg-green-600"
+                    "bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy",
+                    copied && "bg-primary"
                   )}
                 >
                   {copied ? (
@@ -382,9 +370,9 @@ export default function FakeEmailGenerator() {
               </div>
 
               {email && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                <div className="flex items-center gap-2 p-3 bg-brand-sky/50 dark:bg-primary/10 rounded-lg">
+                  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
+                  <p className="text-sm text-foreground dark:text-muted-foreground">
                     <span className="font-medium">
                       This email is active and can receive real emails.
                     </span>{" "}
@@ -405,12 +393,12 @@ export default function FakeEmailGenerator() {
               <div className="space-y-3">
                 <label className="text-sm font-medium flex items-center gap-2">
                   Select Domain
-                  <Badge className="bg-green-100 text-green-700 text-[10px]">
+                  <Badge className="bg-brand-sky text-brand-navy text-[10px]">
                     All domains support inbox
                   </Badge>
                 </label>
                 {loadingDomains ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading available domains...
                   </div>
@@ -428,8 +416,8 @@ export default function FakeEmailGenerator() {
                         className={cn(
                           "px-3 py-2.5 text-sm rounded-lg border transition-colors",
                           selectedDomain === domain
-                            ? "bg-green-600 text-white border-green-600"
-                            : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:border-green-500"
+                            ? "bg-primary text-white border-primary"
+                            : "bg-card dark:bg-muted border-border dark:border-border hover:border-primary"
                         )}
                       >
                         @{domain}
@@ -443,7 +431,7 @@ export default function FakeEmailGenerator() {
               <Button
                 onClick={generateEmail}
                 disabled={loadingEmail || loadingDomains || availableDomains.length === 0}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 text-lg"
+                className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white font-semibold py-6 text-lg"
               >
                 {loadingEmail ? (
                   <>
@@ -462,14 +450,14 @@ export default function FakeEmailGenerator() {
 
           {/* Inbox Section */}
           {email && (
-            <Card className="border-2 border-green-200 dark:border-green-800">
+            <Card className="border border-border shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Inbox className="w-5 h-5 text-green-600" />
+                    <Inbox className="w-5 h-5 text-primary" />
                     Inbox
                     {inboxEmails.length > 0 && (
-                      <Badge className="bg-green-600 text-white">
+                      <Badge className="bg-primary text-white">
                         {inboxEmails.length}
                       </Badge>
                     )}
@@ -480,16 +468,16 @@ export default function FakeEmailGenerator() {
                         type="checkbox"
                         checked={autoRefresh}
                         onChange={(e) => setAutoRefresh(e.target.checked)}
-                        className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                        className="w-4 h-4 text-primary rounded focus:ring-primary"
                       />
-                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                      <span className="text-xs text-muted-foreground dark:text-muted-foreground">
                         Auto-refresh
                       </span>
                     </label>
                     {autoRefresh && (
                       <Badge
                         variant="outline"
-                        className="text-green-600 border-green-300 text-[10px]"
+                        className="text-primary border-brand-mid/40 text-[10px]"
                       >
                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                         Live
@@ -500,7 +488,7 @@ export default function FakeEmailGenerator() {
                       disabled={loadingInbox}
                       variant="outline"
                       size="sm"
-                      className="border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                      className="border-brand-mid/40 dark:border-brand-mid text-brand-navy dark:text-brand-mid hover:bg-brand-sky/50 dark:hover:bg-brand-sky/20"
                     >
                       {loadingInbox ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -513,14 +501,14 @@ export default function FakeEmailGenerator() {
               </CardHeader>
               <CardContent>
                 {inboxEmails.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-10 text-muted-foreground dark:text-muted-foreground">
                     <div className="relative inline-block">
                       <Mail className="w-16 h-16 mx-auto mb-4 opacity-30" />
                       {autoRefresh && (
                         <div className="absolute -top-1 -right-1">
                           <span className="relative flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
                           </span>
                         </div>
                       )}
@@ -530,14 +518,14 @@ export default function FakeEmailGenerator() {
                     </p>
                     <p className="text-sm mt-1">
                       Send an email to{" "}
-                      <span className="font-mono text-green-600 font-medium">
+                      <span className="font-mono text-primary font-medium">
                         {email}
                       </span>
                     </p>
-                    <p className="text-xs mt-2 text-gray-500">
+                    <p className="text-xs mt-2 text-muted-foreground">
                       Make sure you're sending to the exact address above. Emails may take 10-30 seconds to appear.
                     </p>
-                    <p className="text-xs mt-3 text-gray-400">
+                    <p className="text-xs mt-3 text-muted-foreground">
                       {autoRefresh
                         ? "Checking every 7 seconds automatically"
                         : "Click the refresh button to check manually"}
@@ -551,32 +539,32 @@ export default function FakeEmailGenerator() {
                         className={cn(
                           "p-4 border rounded-lg cursor-pointer transition-all",
                           selectedEmailMsg?.id === msg.id
-                            ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-sm"
-                            : "border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-700 hover:shadow-sm"
+                            ? "border-primary bg-brand-sky/50 dark:bg-primary/10 shadow-sm"
+                            : "border-border dark:border-border hover:border-brand-mid dark:hover:border-brand-mid hover:shadow-sm"
                         )}
                         onClick={() => readFullEmail(msg)}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <User className="w-4 h-4 text-green-600 flex-shrink-0" />
-                              <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                              <User className="w-4 h-4 text-primary flex-shrink-0" />
+                              <span className="font-medium text-sm text-foreground dark:text-foreground truncate">
                                 {msg.from || "Unknown Sender"}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 mb-1">
-                              <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              <span className="font-semibold text-gray-900 dark:text-white truncate">
+                              <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <span className="font-semibold text-foreground dark:text-foreground truncate">
                                 {msg.subject || "(No Subject)"}
                               </span>
                             </div>
                             {msg.intro && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1 ml-6">
+                              <p className="text-sm text-muted-foreground dark:text-muted-foreground truncate mt-1 ml-6">
                                 {msg.intro}
                               </p>
                             )}
                             {msg.date && (
-                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
                                 <Clock className="w-3 h-3" />
                                 {formatDate(msg.date)}
                               </div>
@@ -584,7 +572,7 @@ export default function FakeEmailGenerator() {
                           </div>
                           <Badge
                             variant="outline"
-                            className="text-[10px] flex-shrink-0 border-green-300 text-green-600"
+                            className="text-[10px] flex-shrink-0 border-brand-mid/40 text-primary"
                           >
                             {loadingFullMsg &&
                             selectedEmailMsg?.id !== msg.id ? (
@@ -599,25 +587,25 @@ export default function FakeEmailGenerator() {
 
                         {/* Expanded email content */}
                         {selectedEmailMsg?.id === msg.id && (
-                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="mt-4 pt-4 border-t border-border dark:border-border">
                             {/* Sender details */}
                             {selectedEmailMsg.fromName && (
-                              <p className="text-xs text-gray-500 mb-2">
+                              <p className="text-xs text-muted-foreground mb-2">
                                 From: {selectedEmailMsg.fromName} &lt;{selectedEmailMsg.from}&gt;
                               </p>
                             )}
-                            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
+                            <div className="bg-card dark:bg-card rounded-lg p-4 border border-border dark:border-border">
                               {selectedEmailMsg.htmlBody ? (
                                 <div
                                   dangerouslySetInnerHTML={{
                                     __html: selectedEmailMsg.htmlBody,
                                   }}
-                                  className="text-sm text-gray-700 dark:text-gray-300 prose prose-sm max-w-none dark:prose-invert overflow-auto"
+                                  className="text-sm text-foreground dark:text-muted-foreground prose prose-sm max-w-none dark:prose-invert overflow-auto"
                                   style={{ maxHeight: "400px" }}
                                 />
                               ) : (
                                 <pre
-                                  className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-sans overflow-auto"
+                                  className="whitespace-pre-wrap text-sm text-foreground dark:text-muted-foreground font-sans overflow-auto"
                                   style={{ maxHeight: "400px" }}
                                 >
                                   {selectedEmailMsg.textBody || "No content"}
@@ -627,8 +615,8 @@ export default function FakeEmailGenerator() {
 
                             {selectedEmailMsg.attachments &&
                               selectedEmailMsg.attachments.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                                <div className="mt-3 pt-3 border-t border-border dark:border-border">
+                                  <p className="text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-2">
                                     📎 Attachments (
                                     {selectedEmailMsg.attachments.length})
                                   </p>
@@ -637,13 +625,13 @@ export default function FakeEmailGenerator() {
                                       (att, idx) => (
                                         <div
                                           key={idx}
-                                          className="flex items-center gap-2 text-xs text-gray-500 p-2 bg-gray-50 dark:bg-gray-800 rounded"
+                                          className="flex items-center gap-2 text-xs text-muted-foreground p-2 bg-muted/40 dark:bg-muted rounded"
                                         >
                                           <FileText className="w-3 h-3" />
                                           {att.filename ||
                                             `Attachment ${idx + 1}`}
                                           {att.size && (
-                                            <span className="text-gray-400">
+                                            <span className="text-muted-foreground">
                                               ({(att.size / 1024).toFixed(1)} KB)
                                             </span>
                                           )}
@@ -680,17 +668,17 @@ export default function FakeEmailGenerator() {
                       className={cn(
                         "flex items-center justify-between p-3 rounded-lg transition-colors",
                         item.email === email
-                          ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
-                          : "bg-gray-50 dark:bg-gray-800"
+                          ? "bg-brand-sky/50 dark:bg-primary/10 border border-brand-mid/30 dark:border-primary/30"
+                          : "bg-muted/40 dark:bg-muted"
                       )}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         {item.email === email && (
-                          <Badge className="bg-green-600 text-white text-[9px] px-1.5">
+                          <Badge className="bg-primary text-white text-[9px] px-1.5">
                             Active
                           </Badge>
                         )}
-                        <span className="font-mono text-sm text-gray-900 dark:text-white truncate">
+                        <span className="font-mono text-sm text-foreground dark:text-foreground truncate">
                           {item.email}
                         </span>
                       </div>
@@ -700,7 +688,7 @@ export default function FakeEmailGenerator() {
                             variant="ghost"
                             size="sm"
                             onClick={() => switchToEmail(item)}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            className="text-primary hover:text-brand-navy hover:bg-brand-sky/50"
                           >
                             <Inbox className="w-4 h-4" />
                           </Button>
@@ -724,12 +712,12 @@ export default function FakeEmailGenerator() {
           )}
 
           {/* Info */}
-          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <Card className="bg-brand-sky/50 dark:bg-primary/10 border-brand-mid/30 dark:border-primary/30">
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
+                  <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                     <p className="font-medium">Real Working Inbox</p>
                     <p>
                       Each generated email creates a real mailbox that can receive
@@ -740,8 +728,8 @@ export default function FakeEmailGenerator() {
                 </div>
                 <Separator />
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-green-600 mt-0.5" />
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  <Shield className="w-5 h-5 text-primary mt-0.5" />
+                  <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                     <p className="font-medium">Privacy First</p>
                     <p>
                       Emails are temporary and auto-deleted. Use them for sign-ups,
@@ -752,7 +740,7 @@ export default function FakeEmailGenerator() {
                 <Separator />
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                     <p className="font-medium">Important Note</p>
                     <p>
                       Do not use for sensitive information. These temporary emails
@@ -765,16 +753,14 @@ export default function FakeEmailGenerator() {
             </CardContent>
           </Card>
         </div>
-      </main>
+    </ToolPageShell>
 
-      <Footer />
-
-      <AuthModal
+    <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         mode={authModalMode}
         onModeChange={setAuthModalMode}
       />
-    </div>
+    </>
   );
 }

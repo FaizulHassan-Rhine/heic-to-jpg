@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Shield, CheckCircle, XCircle, AlertTriangle, Lock
@@ -45,15 +44,15 @@ export default function PasswordStrengthChecker() {
 
     if (score >= 90) {
       strength = "Very Strong";
-      color = "bg-green-500";
+      color = "bg-primary";
       level = 5;
     } else if (score >= 75) {
       strength = "Strong";
-      color = "bg-green-500";
+      color = "bg-primary";
       level = 4;
     } else if (score >= 60) {
       strength = "Good";
-      color = "bg-blue-500";
+      color = "bg-primary";
       level = 3;
     } else if (score >= 40) {
       strength = "Fair";
@@ -95,30 +94,20 @@ export default function PasswordStrengthChecker() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+    <ToolPageShell containerClassName="max-w-4xl">
         <div className="space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              100% Private • Client-side Analysis
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Password Strength Checker
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Test the strength and security of your passwords. Get detailed feedback and recommendations.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Password Strength Checker"
+            description="Test the strength and security of your passwords. Get detailed feedback and recommendations."
+            badge="100% Private • Client-side Analysis"
+          />
 
           {/* Password Input */}
-          <Card className="border-2 border-green-200 dark:border-green-800">
+          <Card className="border border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5 text-green-600" />
+                <Lock className="w-5 h-5 text-primary" />
                 Enter Password to Check
               </CardTitle>
             </CardHeader>
@@ -130,12 +119,12 @@ export default function PasswordStrengthChecker() {
                   onChange={(e) => setPassword(e.target.value)}
                   onBlur={handleCheck}
                   placeholder="Enter your password..."
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <Button
                   variant="outline"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="border-gray-300 dark:border-gray-700"
+                  className="border-border dark:border-border"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </Button>
@@ -153,7 +142,7 @@ export default function PasswordStrengthChecker() {
                         {result.strength} ({result.score}%)
                       </Badge>
                     </div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-3 bg-muted dark:bg-muted rounded-full overflow-hidden">
                       <div
                         className={cn("h-full transition-all", result.color)}
                         style={{ width: `${result.score}%` }}
@@ -162,10 +151,10 @@ export default function PasswordStrengthChecker() {
                   </div>
 
                   {/* Crack Time */}
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="p-3 bg-muted/40 dark:bg-muted rounded-lg">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Estimated Crack Time:</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">{result.crackTime}</span>
+                      <span className="text-sm text-muted-foreground dark:text-muted-foreground">Estimated Crack Time:</span>
+                      <span className="font-semibold text-foreground dark:text-foreground">{result.crackTime}</span>
                     </div>
                   </div>
                 </div>
@@ -197,13 +186,13 @@ export default function PasswordStrengthChecker() {
                     return (
                       <div key={check.key} className="flex items-center gap-3">
                         {passed ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <CheckCircle className="w-5 h-5 text-primary" />
                         ) : (
                           <XCircle className="w-5 h-5 text-red-500" />
                         )}
                         <span className={cn(
                           "text-sm",
-                          passed ? "text-gray-700 dark:text-gray-300" : "text-gray-500 dark:text-gray-400"
+                          passed ? "text-foreground dark:text-muted-foreground" : "text-muted-foreground dark:text-muted-foreground"
                         )}>
                           {check.label}
                           {check.required && <span className="text-red-500 ml-1">*</span>}
@@ -222,7 +211,7 @@ export default function PasswordStrengthChecker() {
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  <div className="space-y-2 text-sm text-foreground dark:text-muted-foreground">
                     <p className="font-medium">Recommendations:</p>
                     <ul className="list-disc list-inside space-y-1">
                       {!result.checks.length && <li>Use at least 8 characters</li>}
@@ -242,11 +231,11 @@ export default function PasswordStrengthChecker() {
           )}
 
           {/* Info */}
-          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <Card className="bg-brand-sky/50 dark:bg-primary/10 border-brand-mid/30 dark:border-primary/30">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-green-600 mt-0.5" />
-                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                <Lock className="w-5 h-5 text-primary mt-0.5" />
+                <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                   <p className="font-medium">Privacy & Security</p>
                   <p>All password analysis happens locally in your browser. Your password is never sent to any server or stored anywhere.</p>
                 </div>
@@ -254,10 +243,7 @@ export default function PasswordStrengthChecker() {
             </CardContent>
           </Card>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 

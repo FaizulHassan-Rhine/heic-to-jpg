@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import AuthModal from "../components/AuthModal";
 import {
@@ -73,30 +72,21 @@ export default function WhoisChecker() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+    <>
+    <ToolPageShell containerClassName="max-w-4xl">
         <div className="space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Globe className="w-3.5 h-3.5" />
-              Domain Information Lookup
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Whois Checker
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Get detailed domain registration information including registrar, creation date, expiration date, and more.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Whois Checker"
+            description="Get detailed domain registration information including registrar, creation date, expiration date, and more."
+            badge="Domain Information Lookup"
+          />
 
           {/* Input Section */}
-          <Card className="border-2 border-green-200 dark:border-green-800">
+          <Card className="border border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Search className="w-5 h-5 text-green-600" />
+                <Search className="w-5 h-5 text-primary" />
                 Enter Domain Name
               </CardTitle>
             </CardHeader>
@@ -108,12 +98,12 @@ export default function WhoisChecker() {
                   onChange={(e) => setDomain(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && checkWhois()}
                   placeholder="Enter domain (e.g., example.com)"
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <Button
                   onClick={checkWhois}
                   disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy"
                 >
                   {loading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -122,7 +112,7 @@ export default function WhoisChecker() {
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Enter domain name without http:// or https:// (e.g., example.com)
               </p>
             </CardContent>
@@ -136,79 +126,79 @@ export default function WhoisChecker() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {result.domain && (
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Globe className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Domain</span>
+                      <Globe className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Domain</span>
                     </div>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.domain}</p>
+                    <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.domain}</p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {result.registrar && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <Server className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Registrar</span>
+                        <Server className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Registrar</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.registrar}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.registrar}</p>
                     </div>
                   )}
 
                   {result.createdDate && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Created</span>
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Created</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.createdDate}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.createdDate}</p>
                     </div>
                   )}
 
                   {result.expiryDate && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Expires</span>
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Expires</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.expiryDate}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.expiryDate}</p>
                     </div>
                   )}
 
                   {result.updatedDate && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Last Updated</span>
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Last Updated</span>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{result.updatedDate}</p>
+                      <p className="text-lg font-semibold text-foreground dark:text-foreground">{result.updatedDate}</p>
                     </div>
                   )}
 
                   {result.nameServers && result.nameServers.length > 0 && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg md:col-span-2">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg md:col-span-2">
                       <div className="flex items-center gap-2 mb-2">
-                        <Server className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Name Servers</span>
+                        <Server className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Name Servers</span>
                       </div>
                       <div className="space-y-1">
                         {result.nameServers.map((ns, idx) => (
-                          <p key={idx} className="text-sm font-mono text-gray-900 dark:text-white">{ns}</p>
+                          <p key={idx} className="text-sm font-mono text-foreground dark:text-foreground">{ns}</p>
                         ))}
                       </div>
                     </div>
                   )}
 
                   {result.status && result.status.length > 0 && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg md:col-span-2">
+                    <div className="p-4 bg-muted/40 dark:bg-muted rounded-lg md:col-span-2">
                       <div className="flex items-center gap-2 mb-2">
-                        <Shield className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Status</span>
+                        <Shield className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Status</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {result.status.map((status, idx) => (
-                          <Badge key={idx} className="bg-green-600 text-white">
+                          <Badge key={idx} className="bg-primary text-white">
                             {status}
                           </Badge>
                         ))}
@@ -218,8 +208,8 @@ export default function WhoisChecker() {
                 </div>
 
                 {result.source && (
-                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="p-3 bg-brand-sky/50 dark:bg-primary/10 rounded-lg">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                       <span className="font-medium">Data Source:</span> {result.source}
                     </p>
                   </div>
@@ -229,16 +219,16 @@ export default function WhoisChecker() {
                   <>
                     <Separator />
                     <details className="group">
-                      <summary className="cursor-pointer p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                      <summary className="cursor-pointer p-4 bg-muted/40 dark:bg-muted rounded-lg hover:bg-muted dark:hover:bg-muted transition-colors">
                         <div className="inline-flex items-center gap-2">
-                          <User className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          <User className="w-4 h-4 text-primary" />
+                          <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">
                             Raw Whois Data (Click to expand)
                           </span>
                         </div>
                       </summary>
-                      <div className="mt-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <pre className="text-xs font-mono text-gray-900 dark:text-white whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+                      <div className="mt-2 p-4 bg-muted/40 dark:bg-muted rounded-lg">
+                        <pre className="text-xs font-mono text-foreground dark:text-foreground whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
                           {result.raw}
                         </pre>
                       </div>
@@ -250,11 +240,11 @@ export default function WhoisChecker() {
           )}
 
           {/* Info */}
-          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <Card className="bg-brand-sky/50 dark:bg-primary/10 border-brand-mid/30 dark:border-primary/30">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-green-600 mt-0.5" />
-                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                <Shield className="w-5 h-5 text-primary mt-0.5" />
+                <div className="space-y-1 text-sm text-foreground dark:text-muted-foreground">
                   <p className="font-medium">About Whois Lookup</p>
                   <p>Whois lookup provides public domain registration information. Some domains may have privacy protection enabled, which limits the information available.</p>
                 </div>
@@ -262,17 +252,15 @@ export default function WhoisChecker() {
             </CardContent>
           </Card>
         </div>
-      </main>
+    </ToolPageShell>
 
-      <Footer />
-
-      <AuthModal
+    <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         mode={authModalMode}
         onModeChange={setAuthModalMode}
       />
-    </div>
+    </>
   );
 }
 

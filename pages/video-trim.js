@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import Dropzone from "../components/Dropzone";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import {
@@ -15,7 +14,6 @@ import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import Head from "next/head";
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
@@ -266,21 +264,11 @@ export default function VideoTrim() {
   const currentPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Head>
-        <title>Video Trim - ConvertMastery</title>
-      </Head>
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">
-            Trim Video
-          </h1>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-            Cut video clips with frame-level precision.
-          </p>
-        </div>
+    <ToolPageShell containerClassName="max-w-6xl">
+        <ToolPageHeader
+          title="Trim Video"
+          description="Cut video clips with frame-level precision."
+        />
 
         {!file ? (
           <CollapsibleDropzone
@@ -295,15 +283,13 @@ export default function VideoTrim() {
               "video/x-matroska": [".mkv", ".MKV"],
               "video/webm": [".webm", ".WEBM"]
             }}
-            borderColor="border-gray-300"
-            hoverColor="hover:border-green-500"
             className="max-w-3xl mx-auto"
           />
         ) : (
           <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
             {/* Main Player Area */}
             <div className="space-y-6">
-              <Card className="overflow-hidden border-green-100 shadow-md">
+              <Card className="overflow-hidden border-brand-mid/30 shadow-md">
                 <div className="bg-black aspect-video relative flex items-center justify-center">
                   <video
                     ref={videoRef}
@@ -326,9 +312,9 @@ export default function VideoTrim() {
                 </div>
 
                 {/* Timeline Controls */}
-                <div className="p-6 bg-white border-t space-y-6">
+                <div className="p-6 bg-card border-t space-y-6">
                   {/* Time Display */}
-                  <div className="flex justify-between items-center text-sm font-mono font-medium text-gray-600">
+                  <div className="flex justify-between items-center text-sm font-mono font-medium text-muted-foreground">
                     <span>{formatTimeDetailed(currentTime)}</span>
                     <span>{formatTimeDetailed(duration)}</span>
                   </div>
@@ -336,7 +322,7 @@ export default function VideoTrim() {
                   {/* Timeline Bar */}
                   <div
                     ref={timelineRef}
-                    className="relative h-12 bg-gray-100 rounded-lg cursor-pointer select-none ring-1 ring-gray-200"
+                    className="relative h-12 bg-muted rounded-lg cursor-pointer select-none ring-1 ring-gray-200"
                     onClick={(e) => {
                       if (isDragging) return;
                       const rect = timelineRef.current.getBoundingClientRect();
@@ -346,24 +332,24 @@ export default function VideoTrim() {
                   >
                     {/* Active Range */}
                     <div
-                      className="absolute top-0 bottom-0 bg-green-100/50 border-x border-green-400"
+                      className="absolute top-0 bottom-0 bg-brand-sky/50 border-x border-brand-mid"
                       style={{ left: `${startPercent}%`, width: `${endPercent - startPercent}%` }}
                     >
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 pointer-events-none text-green-800 text-xs font-bold">
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 pointer-events-none text-brand-navy text-xs font-bold">
                         DRAG HANDLES
                       </div>
                     </div>
 
                     {/* Drag Handles */}
                     <div
-                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
+                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
                       style={{ left: `${startPercent}%` }}
                       onMouseDown={(e) => handleTimelineMouseDown(e, "start")}
                     >
                       <div className="w-0.5 h-6 bg-white/50 rounded-full" />
                     </div>
                     <div
-                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
+                      className="absolute top-0 bottom-0 w-4 -ml-2 bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy cursor-ew-resize rounded z-10 flex items-center justify-center shadow-sm"
                       style={{ left: `${endPercent}%` }}
                       onMouseDown={(e) => handleTimelineMouseDown(e, "end")}
                     >
@@ -372,7 +358,7 @@ export default function VideoTrim() {
 
                     {/* Playhead */}
                     <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-gray-800 z-0 pointer-events-none"
+                      className="absolute top-0 bottom-0 w-0.5 bg-foreground z-0 pointer-events-none"
                       style={{ left: `${currentPercent}%` }}
                     />
                   </div>
@@ -390,21 +376,21 @@ export default function VideoTrim() {
 
               {/* Result Card */}
               {result && (
-                <Card className="border border-green-200 bg-green-50 shadow-sm">
+                <Card className="border border-brand-mid/30 bg-brand-sky/50 shadow-sm">
                   <CardContent className="p-6 flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 shrink-0">
+                    <div className="w-12 h-12 bg-brand-sky rounded-full flex items-center justify-center text-primary shrink-0">
                       <CheckCircle className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-green-900">Video Trimmed Successfully!</h4>
-                      <p className="text-sm text-green-700 mt-1">{result.name} ({formatSize(result.size)})</p>
+                      <h4 className="font-bold text-brand-navy">Video Trimmed Successfully!</h4>
+                      <p className="text-sm text-brand-navy mt-1">{result.name} ({formatSize(result.size)})</p>
                     </div>
                     <Button onClick={() => {
                       const a = document.createElement("a");
                       a.href = result.url;
                       a.download = result.name;
                       a.click();
-                    }} className="bg-green-600 text-white hover:bg-green-700 shadow-sm">
+                    }} className="bg-primary text-white hover:bg-brand-navy shadow-sm">
                       <Download className="w-4 h-4 mr-2" /> Download
                     </Button>
                   </CardContent>
@@ -416,41 +402,41 @@ export default function VideoTrim() {
             <div className="space-y-4">
               <Card className="border-0 shadow-lg ring-1 ring-gray-100 h-fit lg:sticky lg:top-24">
                 <CardContent className="p-6 space-y-6">
-                  <div className="flex items-center gap-2 font-bold text-xl text-gray-900 border-b pb-4">
-                    <Settings2 className="w-5 h-5 text-green-600" /> Options
+                  <div className="flex items-center gap-2 font-bold text-xl text-foreground border-b pb-4">
+                    <Settings2 className="w-5 h-5 text-primary" /> Options
                   </div>
 
                   <div className="space-y-4">
-                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Start Time</label>
+                    <div className="bg-muted/40 p-3 rounded-lg border border-border">
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Start Time</label>
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-green-500" />
-                        <span className="font-mono text-lg font-medium text-gray-900">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <span className="font-mono text-lg font-medium text-foreground">
                           {formatTimeDetailed(startTime)}
                         </span>
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">End Time</label>
+                    <div className="bg-muted/40 p-3 rounded-lg border border-border">
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">End Time</label>
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-green-500" />
-                        <span className="font-mono text-lg font-medium text-gray-900">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <span className="font-mono text-lg font-medium text-foreground">
                           {formatTimeDetailed(endTime)}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-sm px-1">
-                      <span className="text-gray-500">Duration:</span>
-                      <span className="font-bold text-gray-900">{formatTimeDetailed(endTime - startTime)}</span>
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="font-bold text-foreground">{formatTimeDetailed(endTime - startTime)}</span>
                     </div>
                   </div>
 
                   <Button
                     onClick={trimVideo}
                     disabled={processing || (ffmpegLoading && !ffmpegReady)}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold"
+                    className="w-full bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white h-12 shadow-lg hover:shadow-xl transition-all font-semibold"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Trimming... </>
@@ -461,28 +447,26 @@ export default function VideoTrim() {
                     )}
                   </Button>
 
-                  <Button onClick={() => setFile(null)} variant="ghost" className="w-full text-gray-500 hover:text-red-500">
+                  <Button onClick={() => setFile(null)} variant="ghost" className="w-full text-muted-foreground hover:text-red-500">
                     <RotateCcw className="w-4 h-4 mr-2" /> Pick New Video
                   </Button>
                 </CardContent>
               </Card>
 
               {processing && (
-                <Card className="border-green-100 bg-green-50 animate-in fade-in slide-in-from-bottom-2">
+                <Card className="border-brand-mid/30 bg-brand-sky/50 animate-in fade-in slide-in-from-bottom-2">
                   <CardContent className="p-4">
-                    <div className="flex justify-between text-xs font-semibold text-green-700 mb-2">
+                    <div className="flex justify-between text-xs font-semibold text-brand-navy mb-2">
                       <span>Processing...</span>
                       <span>{progress}%</span>
                     </div>
-                    <Progress value={progress} className="h-2 bg-green-200" indicatorClassName="bg-gradient-to-r from-green-500 to-emerald-600" />
+                    <Progress value={progress} className="h-2 bg-brand-sky" indicatorClassName="bg-gradient-to-r from-primary to-brand-navy" />
                   </CardContent>
                 </Card>
               )}
             </div>
           </div>
         )}
-      </main>
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }

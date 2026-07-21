@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../lib/authContext";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import {
   Play, Pause, Square, Volume2, VolumeX, Languages, Gauge,
   RotateCcw, Download, Type, ChevronDown, Loader2
@@ -11,7 +10,6 @@ import { Card, CardContent } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-import Head from "next/head";
 
 const MAX_CHARS = 5000;
 
@@ -310,44 +308,33 @@ export default function TextToSpeech() {
 
   if (!supported) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <ToolPageShell containerClassName="max-w-6xl">
+        <div className="min-h-[50vh] flex items-center justify-center">
           <Card className="p-8 text-center">
             <VolumeX className="h-16 w-16 mx-auto text-red-400 mb-4" />
             <h2 className="text-xl font-bold mb-2">Not Supported</h2>
-            <p className="text-gray-500">Your browser does not support the Speech Synthesis API. Try Chrome or Edge.</p>
+            <p className="text-muted-foreground">Your browser does not support the Speech Synthesis API. Try Chrome or Edge.</p>
           </Card>
         </div>
-        <Footer />
-      </>
+      </ToolPageShell>
     );
   }
 
   return (
-    <>
-      <Head>
-        <title>Text to Speech - ConvertMastery</title>
-        <meta name="description" content="Convert text to speech in 40+ languages. Free, fast, and works right in your browser." />
-      </Head>
-
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar />
-
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+    <ToolPageShell containerClassName="max-w-6xl">
           {/* Header */}
-          <div className="text-center mb-10">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">Text to Speech</h1>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">Convert your text to natural speech in 40+ languages.</p>
-          </div>
+          <ToolPageHeader
+          title="Text to Speech"
+          description="Convert your text to natural speech in 40+ languages."
+        />
 
           <div className="grid gap-8">
             {/* Text Input Area (styled like dropzone) */}
-            <Card className="border-2 border-dashed border-gray-300 hover:border-green-500 bg-white shadow-sm transition-all">
+            <Card className="border-2 border-dashed border-border hover:border-primary bg-card shadow-sm transition-all">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Enter Text</label>
-                  <span className={cn("text-xs", text.length > MAX_CHARS ? "text-red-500" : "text-gray-400")}>
+                  <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Enter Text</label>
+                  <span className={cn("text-xs", text.length > MAX_CHARS ? "text-red-500" : "text-muted-foreground")}>
                     {text.length} / {MAX_CHARS}
                   </span>
                 </div>
@@ -358,7 +345,7 @@ export default function TextToSpeech() {
                     else toast.error(`Maximum ${MAX_CHARS} characters allowed`);
                   }}
                   placeholder="Type or paste your text here..."
-                  className="w-full h-48 p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-800 text-base leading-relaxed"
+                  className="w-full h-48 p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground text-base leading-relaxed"
                 />
               </CardContent>
             </Card>
@@ -370,19 +357,19 @@ export default function TextToSpeech() {
                 {/* Settings Sidebar */}
                 <Card className="lg:sticky lg:top-24 h-fit border-0 shadow-lg ring-1 ring-gray-100">
                   <CardContent className="p-6 space-y-6">
-                    <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-                      <Volume2 className="w-6 h-6 text-green-600" /> Voice Settings
+                    <div className="flex items-center gap-2 font-bold text-xl text-foreground">
+                      <Volume2 className="w-6 h-6 text-primary" /> Voice Settings
                     </div>
 
                     {/* Language */}
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                      <label className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
                         <Languages className="h-4 w-4" /> Language
                       </label>
                       <select
                         value={selectedLang}
                         onChange={(e) => { if (isSpeaking) stop(); setSelectedLang(e.target.value); }}
-                        className="w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                        className="w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-card"
                       >
                         {Object.entries(LANGUAGE_GROUPS).map(([group, langs]) => (
                           <optgroup key={group} label={group}>
@@ -395,11 +382,11 @@ export default function TextToSpeech() {
 
                       {filteredVoices.length > 0 && (
                         <div className="mt-2">
-                          <label className="text-xs text-gray-500 mb-1 block">Voice</label>
+                          <label className="text-xs text-muted-foreground mb-1 block">Voice</label>
                           <select
                             value={selectedVoice || ""}
                             onChange={(e) => { if (isSpeaking) stop(); setSelectedVoice(e.target.value); }}
-                            className="w-full p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                            className="w-full p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-card"
                           >
                             {filteredVoices.map((voice) => (
                               <option key={voice.name} value={voice.name}>
@@ -415,44 +402,44 @@ export default function TextToSpeech() {
                     </div>
 
                     {/* Speed */}
-                    <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 space-y-3">
+                    <div className="bg-muted/40/50 rounded-xl p-4 border border-border space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Gauge className="h-4 w-4" /> Speed</span>
-                        <span className="text-lg font-bold text-green-600">{rate.toFixed(1)}x</span>
+                        <span className="text-sm font-medium text-foreground flex items-center gap-2"><Gauge className="h-4 w-4" /> Speed</span>
+                        <span className="text-lg font-bold text-primary">{rate.toFixed(1)}x</span>
                       </div>
                       <input type="range" min="0.5" max="2" step="0.1" value={rate}
                         onChange={(e) => setRate(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
 
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Type className="h-4 w-4" /> Pitch</span>
-                        <span className="text-lg font-bold text-green-600">{pitch.toFixed(1)}</span>
+                        <span className="text-sm font-medium text-foreground flex items-center gap-2"><Type className="h-4 w-4" /> Pitch</span>
+                        <span className="text-lg font-bold text-primary">{pitch.toFixed(1)}</span>
                       </div>
                       <input type="range" min="0.5" max="2" step="0.1" value={pitch}
                         onChange={(e) => setPitch(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
 
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-700 flex items-center gap-2"><Volume2 className="h-4 w-4" /> Volume</span>
-                        <span className="text-lg font-bold text-green-600">{Math.round(volume * 100)}%</span>
+                        <span className="text-sm font-medium text-foreground flex items-center gap-2"><Volume2 className="h-4 w-4" /> Volume</span>
+                        <span className="text-lg font-bold text-primary">{Math.round(volume * 100)}%</span>
                       </div>
                       <input type="range" min="0" max="1" step="0.05" value={volume}
                         onChange={(e) => setVolume(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
                     </div>
 
                     <Button
                       onClick={!isSpeaking ? speak : stop}
                       className={cn(
                         "w-full h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base",
-                        isSpeaking ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white" : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                        isSpeaking ? "bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white" : "bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white"
                       )}
                       disabled={!text.trim()}
                     >
                       {isSpeaking ? <><Square className="w-5 h-5 mr-2" /> Stop</> : <><Play className="w-5 h-5 mr-2" /> Play Speech</>}
                     </Button>
 
-                    <Button onClick={resetAll} variant="outline" className="w-full text-gray-500">
+                    <Button onClick={resetAll} variant="outline" className="w-full text-muted-foreground">
                       <RotateCcw className="w-4 h-4 mr-2" /> Reset All
                     </Button>
                   </CardContent>
@@ -462,19 +449,19 @@ export default function TextToSpeech() {
                 <div className="space-y-5">
                   <div className="flex justify-between items-end border-b pb-4">
                     <div>
-                      <h3 className="font-bold text-2xl text-gray-800">Playback</h3>
-                      <p className="text-gray-500 text-sm mt-1">Listen and download your speech</p>
+                      <h3 className="font-bold text-2xl text-foreground">Playback</h3>
+                      <p className="text-muted-foreground text-sm mt-1">Listen and download your speech</p>
                     </div>
                   </div>
 
                   {/* Status Card */}
-                  <Card className="overflow-hidden border border-gray-200 shadow-sm">
+                  <Card className="overflow-hidden border border-border shadow-sm">
                     <div className="p-5">
                       {isSpeaking && (
                         <div className="flex items-center gap-3 mb-4">
                           <div className="flex gap-1">
                             {[...Array(8)].map((_, i) => (
-                              <div key={i} className="w-1 bg-green-500 rounded-full animate-pulse"
+                              <div key={i} className="w-1 bg-primary rounded-full animate-pulse"
                                 style={{ height: `${12 + Math.random() * 16}px`, animationDelay: `${i * 0.12}s` }} />
                             ))}
                           </div>
@@ -482,19 +469,19 @@ export default function TextToSpeech() {
                             {isPaused ? "Paused" : "Speaking..."}
                           </span>
                           {isPaused ? (
-                            <Button onClick={resume} size="sm" className="ml-auto bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white">
+                            <Button onClick={resume} size="sm" className="ml-auto bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy text-white">
                               <Play className="h-3 w-3 mr-1" /> Resume
                             </Button>
                           ) : (
-                            <Button onClick={pause} size="sm" variant="outline" className="ml-auto border-green-500 text-green-600">
+                            <Button onClick={pause} size="sm" variant="outline" className="ml-auto border-primary text-primary">
                               <Pause className="h-3 w-3 mr-1" /> Pause
                             </Button>
                           )}
                         </div>
                       )}
 
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 max-h-48 overflow-y-auto">
-                        <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      <div className="bg-muted/40 rounded-lg p-4 border border-border max-h-48 overflow-y-auto">
+                        <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
                           {text.slice(0, 600)}{text.length > 600 ? "..." : ""}
                         </p>
                       </div>
@@ -504,7 +491,7 @@ export default function TextToSpeech() {
                           onClick={downloadSpeech}
                           variant="outline"
                           disabled={!text.trim() || isDownloading}
-                          className="border-green-600 text-green-700 hover:bg-green-50"
+                          className="border-primary text-brand-navy hover:bg-brand-sky/50"
                         >
                           {isDownloading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
                           {isDownloading ? "Generating..." : "Download MP3"}
@@ -519,11 +506,7 @@ export default function TextToSpeech() {
               </div>
             )}
           </div>
-        </main>
-
-        <Footer />
-      </div>
-    </>
+    </ToolPageShell>
   );
 }
 

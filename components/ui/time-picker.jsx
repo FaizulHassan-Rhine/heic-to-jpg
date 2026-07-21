@@ -64,29 +64,29 @@ export function TimePicker({ value, onChange, className, placeholder = "Select t
         disabled={disabled}
         onClick={() => !disabled && setOpen((o) => !o)}
         className={cn(
-          "flex w-full min-w-0 items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-left text-sm text-slate-900 dark:text-slate-100 shadow-sm transition-colors",
-          "hover:border-slate-300 dark:hover:border-slate-600",
+          "flex w-full min-w-0 items-center justify-between rounded-lg border border-border dark:border-border bg-card dark:bg-card px-3 py-2 text-left text-sm text-foreground dark:text-slate-100 shadow-sm transition-colors",
+          "hover:border-border dark:hover:border-slate-600",
           "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
           "disabled:opacity-50 disabled:pointer-events-none",
           open && "ring-2 ring-primary/50 border-primary",
-          !value && "text-slate-500 dark:text-slate-400"
+          !value && "text-muted-foreground dark:text-muted-foreground"
         )}
       >
         <span className="truncate flex items-center gap-2">
-          <Clock className="h-4 w-4 flex-shrink-0 text-slate-500" />
+          <Clock className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
           {displayLabel}
         </span>
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full min-w-[200px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-lg">
+        <div className="absolute z-50 mt-1 w-full min-w-[200px] rounded-lg border border-border dark:border-border bg-card dark:bg-card p-3 shadow-lg">
           <div className="flex gap-2 items-center justify-center mb-3">
             <Select value={hour} onChange={(e) => setHour(Number(e.target.value))} className="flex-1">
               {hours.map((h) => (
                 <option key={h} value={h}>{pad(h)}</option>
               ))}
             </Select>
-            <span className="text-slate-500">:</span>
+            <span className="text-muted-foreground">:</span>
             <Select value={minute} onChange={(e) => setMinute(Number(e.target.value))} className="flex-1">
               {minutes.map((m) => (
                 <option key={m} value={m}>{pad(m)}</option>

@@ -1,12 +1,19 @@
 import Busboy from "busboy";
 import convert from "heic-convert";
 import sharp from "sharp";
-import connectDB from "../../lib/mongodb";
-import Settings from "../../models/Settings";
 
 export const config = {
   api: { bodyParser: false },
 };
+
+/** Hardcoded limits — no MongoDB required for processing */
+const DEFAULT_IMAGE_MAX_SIZE = 20 * 1024 * 1024; // 20MB
+const VERCEL_MAX_SIZE = 4.5 * 1024 * 1024;
+
+function getMaxUploadSize() {
+  const isVercel = process.env.VERCEL === "1";
+  return isVercel ? Math.min(VERCEL_MAX_SIZE, DEFAULT_IMAGE_MAX_SIZE) : DEFAULT_IMAGE_MAX_SIZE;
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -62,21 +69,8 @@ export default async function handler(req, res) {
           return resolve();
         }
 
-        // Check file size using dynamic settings from MongoDB
-        await connectDB();
-        const settings = await Settings.getSettings();
-        
-        // Get max size directly from database - no fallbacks
-        if (!settings || !settings.imageMaxSize) {
-          res.status(500).json({ error: "Upload limits not configured in database. Please contact administrator." });
-          return resolve();
-        }
-        
-        // Use Vercel's hard limit as absolute max, but prefer database setting
-        const isVercel = process.env.VERCEL === '1';
-        const vercelMaxSize = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
-        const dbMaxSize = settings.imageMaxSize; // From database
-        const maxSize = isVercel ? Math.min(vercelMaxSize, dbMaxSize) : dbMaxSize;
+        // Check file size (hardcoded limits — no MongoDB)
+        const maxSize = getMaxUploadSize();
         
         if (fileBuffer.length > maxSize) {
           res.status(413).json({ 

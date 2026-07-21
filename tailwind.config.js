@@ -44,6 +44,12 @@ module.exports = {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        brand: {
+          navy: "hsl(var(--brand-navy))",
+          mid: "hsl(var(--brand-mid))",
+          sky: "hsl(var(--brand-sky))",
+          success: "hsl(var(--brand-success))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",

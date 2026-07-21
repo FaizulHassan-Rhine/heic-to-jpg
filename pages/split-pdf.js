@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useAuth } from "../lib/authContext";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
@@ -229,32 +228,26 @@ export default function SplitPdf() {
 
   return (
     <>
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-2">
-              Split PDF
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              Split one PDF into multiple files by pages. Choose how many pages per output file.
-            </p>
-          </div>
+      <ToolPageShell containerClassName="max-w-2xl">
+          <ToolPageHeader
+            title="Split PDF"
+            description="Split one PDF into multiple files by pages. Choose how many pages per output file."
+          />
 
           <div className="space-y-6">
             {!file && (
               <Card
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-primary hover:bg-primary/5 cursor-pointer transition-all"
+                className="border-2 border-dashed border-border dark:border-border hover:border-primary hover:bg-primary/5 cursor-pointer transition-all"
               >
                 <CardContent className="flex flex-col items-center justify-center py-16">
                   <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                     <Scissors className="w-10 h-10 text-primary" />
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                  <h3 className="text-xl font-semibold text-foreground dark:text-foreground mb-2">
                     Choose a PDF file
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-400 mb-4">
+                  <p className="text-muted-foreground dark:text-muted-foreground mb-4">
                     Max 50MB. Processed in your browser.
                   </p>
                   <Button size="lg">Select PDF</Button>
@@ -271,17 +264,17 @@ export default function SplitPdf() {
 
             {file && !zipBlob && (
               <>
-                <Card className="border border-slate-200 dark:border-slate-700">
+                <Card className="border border-border dark:border-border">
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <FileText className="w-6 h-6 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-slate-900 dark:text-white truncate">
+                        <p className="font-medium text-foreground dark:text-foreground truncate">
                           {file.name}
                         </p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                           {formatFileSize(file.size)}
                           {pageCount === null && " · Detecting pages…"}
                           {pageCount !== null && pageCount > 0 && ` · ${pageCount} page${pageCount !== 1 ? "s" : ""}`}
@@ -304,10 +297,10 @@ export default function SplitPdf() {
                 </Card>
 
                 {/* Always show split options when a file is selected */}
-                <Card className="border border-slate-200 dark:border-slate-700">
+                <Card className="border border-border dark:border-border">
                   <CardContent className="pt-6 space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      <label className="block text-sm font-medium text-foreground dark:text-muted-foreground mb-2">
                         Split by
                       </label>
                       <div className="flex gap-4 mb-3">
@@ -317,7 +310,7 @@ export default function SplitPdf() {
                             name="splitMode"
                             checked={splitMode === SPLIT_MODE_EVERY_N}
                             onChange={() => setSplitMode(SPLIT_MODE_EVERY_N)}
-                            className="rounded border-slate-300 text-primary focus:ring-primary"
+                            className="rounded border-border text-primary focus:ring-primary"
                           />
                           <span className="text-sm">Every N pages</span>
                         </label>
@@ -327,7 +320,7 @@ export default function SplitPdf() {
                             name="splitMode"
                             checked={splitMode === SPLIT_MODE_CUSTOM}
                             onChange={() => setSplitMode(SPLIT_MODE_CUSTOM)}
-                            className="rounded border-slate-300 text-primary focus:ring-primary"
+                            className="rounded border-border text-primary focus:ring-primary"
                           />
                           <span className="text-sm">Custom ranges</span>
                         </label>
@@ -335,7 +328,7 @@ export default function SplitPdf() {
 
                       {splitMode === SPLIT_MODE_EVERY_N && (
                         <div className="mt-3">
-                          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                          <label className="block text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1">
                             Pages per output file
                           </label>
                           <Select
@@ -358,7 +351,7 @@ export default function SplitPdf() {
                             )}
                           </Select>
                           {pageCount != null && pageCount > 0 && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                               Result: {Math.ceil(pageCount / pagesPerFile)} PDF file(s)
                             </p>
                           )}
@@ -367,7 +360,7 @@ export default function SplitPdf() {
 
                       {splitMode === SPLIT_MODE_CUSTOM && (
                         <div className="mt-3">
-                          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                          <label className="block text-xs font-medium text-muted-foreground dark:text-muted-foreground mb-1">
                             Page ranges (one PDF per range)
                           </label>
                           <input
@@ -375,13 +368,13 @@ export default function SplitPdf() {
                             value={customRanges}
                             onChange={(e) => setCustomRanges(e.target.value)}
                             placeholder="e.g. 1-3, 5, 7-10, 15"
-                            className="input-theme placeholder:text-slate-400"
+                            className="input-theme placeholder:text-muted-foreground"
                           />
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                             Use commas between ranges. Examples: 1-5 (pages 1–5), 1,3,5 (only those pages).
                           </p>
                           {pageCount != null && pageCount > 0 && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-0.5">
                               This PDF has {pageCount} page{pageCount !== 1 ? "s" : ""}.
                             </p>
                           )}
@@ -421,17 +414,17 @@ export default function SplitPdf() {
             )}
 
             {zipBlob && (
-              <Card className="border border-slate-200 dark:border-slate-700">
+              <Card className="border border-border dark:border-border">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    <div className="w-12 h-12 rounded-lg bg-brand-sky/60 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-6 h-6 text-primary dark:text-brand-mid" />
                     </div>
                     <div>
-                      <p className="font-medium text-slate-900 dark:text-white">
+                      <p className="font-medium text-foreground dark:text-foreground">
                         Split complete
                       </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                         {splitCount} file(s) in ZIP
                       </p>
                     </div>
@@ -456,9 +449,7 @@ export default function SplitPdf() {
               </Card>
             )}
           </div>
-        </main>
-        <Footer />
-      </div>
+    </ToolPageShell>
     </>
   );
 }

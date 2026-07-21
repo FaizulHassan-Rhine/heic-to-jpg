@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Phone, Search, Loader2, Shield, AlertTriangle, CheckCircle, XCircle
@@ -54,42 +53,32 @@ export default function PhoneValidator() {
   };
 
   const getRiskColor = (riskLevel) => {
-    if (riskLevel === "Safe") return "text-green-600";
+    if (riskLevel === "Safe") return "text-primary";
     if (riskLevel === "Suspicious") return "text-yellow-600";
     return "text-red-600";
   };
 
   const getRiskBgColor = (riskLevel) => {
-    if (riskLevel === "Safe") return "bg-green-100 dark:bg-green-900/20";
+    if (riskLevel === "Safe") return "bg-brand-sky dark:bg-primary/10";
     if (riskLevel === "Suspicious") return "bg-yellow-100 dark:bg-yellow-900/20";
     return "bg-red-100 dark:bg-red-900/20";
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+    <ToolPageShell containerClassName="max-w-5xl">
         <div className="space-y-6">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              Phone Validation • Free Tool
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Phone Validator
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Validate phone numbers, detect carrier information, and assess risk level.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Phone Validator"
+            description="Validate phone numbers, detect carrier information, and assess risk level."
+            badge="Phone Validation • Free Tool"
+          />
 
           {/* Input Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-green-600" />
+                <Phone className="w-5 h-5 text-primary" />
                 Enter Phone Number
               </CardTitle>
             </CardHeader>
@@ -100,13 +89,13 @@ export default function PhoneValidator() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+1234567890 or 1234567890"
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   onKeyPress={(e) => e.key === "Enter" && !loading && validatePhone()}
                 />
                 <Button
                   onClick={validatePhone}
                   disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy"
                 >
                   {loading ? (
                     <>
@@ -121,7 +110,7 @@ export default function PhoneValidator() {
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Use international format (e.g., +1234567890) for best results
               </p>
             </CardContent>
@@ -136,7 +125,7 @@ export default function PhoneValidator() {
                   <div className="text-center space-y-4">
                     <div className="flex items-center justify-center gap-3">
                       {result.valid ? (
-                        <CheckCircle className="w-12 h-12 text-green-600" />
+                        <CheckCircle className="w-12 h-12 text-primary" />
                       ) : (
                         <XCircle className="w-12 h-12 text-red-600" />
                       )}
@@ -147,14 +136,14 @@ export default function PhoneValidator() {
                         <Badge
                           className={cn(
                             "text-lg px-4 py-2 mt-2",
-                            result.riskLevel === "Safe" ? "bg-green-600" : result.riskLevel === "Suspicious" ? "bg-yellow-600" : "bg-red-600"
+                            result.riskLevel === "Safe" ? "bg-primary" : result.riskLevel === "Suspicious" ? "bg-yellow-600" : "bg-red-600"
                           )}
                         >
                           {result.riskLevel} Risk
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                       Phone: <span className="font-mono font-medium">{result.phone}</span>
                     </p>
                   </div>
@@ -172,7 +161,7 @@ export default function PhoneValidator() {
                     <div>
                       <h3 className="font-semibold mb-3 flex items-center gap-2">
                         {result.checks.format.valid ? (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <CheckCircle className="w-4 h-4 text-primary" />
                         ) : (
                           <XCircle className="w-4 h-4 text-red-600" />
                         )}
@@ -182,7 +171,7 @@ export default function PhoneValidator() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm">Valid Format</span>
                           {result.checks.format.valid ? (
-                            <Badge className="bg-green-600">Yes</Badge>
+                            <Badge className="bg-primary">Yes</Badge>
                           ) : (
                             <Badge variant="destructive">No</Badge>
                           )}
@@ -261,10 +250,7 @@ export default function PhoneValidator() {
             </>
           )}
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 

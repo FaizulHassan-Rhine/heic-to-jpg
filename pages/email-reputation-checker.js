@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Mail, Search, Loader2, Shield, AlertTriangle, CheckCircle, XCircle
@@ -54,42 +53,32 @@ export default function EmailReputationChecker() {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 70) return "text-green-600";
+    if (score >= 70) return "text-primary";
     if (score >= 40) return "text-yellow-600";
     return "text-red-600";
   };
 
   const getScoreBgColor = (score) => {
-    if (score >= 70) return "bg-green-100 dark:bg-green-900/20";
+    if (score >= 70) return "bg-brand-sky dark:bg-primary/10";
     if (score >= 40) return "bg-yellow-100 dark:bg-yellow-900/20";
     return "bg-red-100 dark:bg-red-900/20";
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+    <ToolPageShell containerClassName="max-w-5xl">
         <div className="space-y-6">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              Email Security • Free Tool
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Email Reputation Checker
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Analyze email address and domain security to determine trust level and reputation score.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="Email Reputation Checker"
+            description="Analyze email address and domain security to determine trust level and reputation score."
+            badge="Email Security • Free Tool"
+          />
 
           {/* Input Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-green-600" />
+                <Mail className="w-5 h-5 text-primary" />
                 Enter Email Address
               </CardTitle>
             </CardHeader>
@@ -100,13 +89,13 @@ export default function EmailReputationChecker() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="example@domain.com"
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   onKeyPress={(e) => e.key === "Enter" && !loading && checkReputation()}
                 />
                 <Button
                   onClick={checkReputation}
                   disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy"
                 >
                   {loading ? (
                     <>
@@ -138,12 +127,12 @@ export default function EmailReputationChecker() {
                     <Badge
                       className={cn(
                         "text-lg px-4 py-2",
-                        result.trustScore >= 70 ? "bg-green-600" : result.trustScore >= 40 ? "bg-yellow-600" : "bg-red-600"
+                        result.trustScore >= 70 ? "bg-primary" : result.trustScore >= 40 ? "bg-yellow-600" : "bg-red-600"
                       )}
                     >
                       {result.riskLevel} Risk
                     </Badge>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                       Email: <span className="font-mono font-medium">{result.email}</span>
                     </p>
                   </div>
@@ -160,12 +149,12 @@ export default function EmailReputationChecker() {
                   {result.checks.format && (
                     <div>
                       <h3 className="font-semibold mb-3 flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <CheckCircle className="w-4 h-4 text-primary" />
                         Email Format
                       </h3>
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Valid Format</span>
-                        <Badge className="bg-green-600">Yes</Badge>
+                        <Badge className="bg-primary">Yes</Badge>
                       </div>
                     </div>
                   )}
@@ -183,7 +172,7 @@ export default function EmailReputationChecker() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm">Domain Exists</span>
                           {result.checks.domain.exists ? (
-                            <Badge className="bg-green-600">Yes</Badge>
+                            <Badge className="bg-primary">Yes</Badge>
                           ) : (
                             <Badge variant="destructive">No</Badge>
                           )}
@@ -192,7 +181,7 @@ export default function EmailReputationChecker() {
                           <div className="flex items-center justify-between">
                             <span className="text-sm">MX Records</span>
                             {result.checks.domain.hasMxRecords ? (
-                              <Badge className="bg-green-600">Present</Badge>
+                              <Badge className="bg-primary">Present</Badge>
                             ) : (
                               <Badge variant="destructive">Missing</Badge>
                             )}
@@ -216,7 +205,7 @@ export default function EmailReputationChecker() {
                         {result.checks.disposable.isDisposable ? (
                           <Badge variant="destructive">Yes</Badge>
                         ) : (
-                          <Badge className="bg-green-600">No</Badge>
+                          <Badge className="bg-primary">No</Badge>
                         )}
                       </div>
                     </div>
@@ -261,10 +250,7 @@ export default function EmailReputationChecker() {
             </>
           )}
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 

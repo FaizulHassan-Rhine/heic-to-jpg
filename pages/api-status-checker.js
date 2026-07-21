@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import { useAuth } from "@/lib/authContext";
 import {
   Server, Search, Loader2, Shield, AlertTriangle, CheckCircle, Globe, Lock
@@ -55,42 +54,32 @@ export default function ApiStatusChecker() {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 70) return "text-green-600";
+    if (score >= 70) return "text-primary";
     if (score >= 40) return "text-yellow-600";
     return "text-red-600";
   };
 
   const getScoreBgColor = (score) => {
-    if (score >= 70) return "bg-green-100 dark:bg-green-900/20";
+    if (score >= 70) return "bg-brand-sky dark:bg-primary/10";
     if (score >= 40) return "bg-yellow-100 dark:bg-yellow-900/20";
     return "bg-red-100 dark:bg-red-900/20";
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+    <ToolPageShell containerClassName="max-w-5xl">
         <div className="space-y-6">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium mb-4">
-              <Shield className="w-3.5 h-3.5" />
-              API Analysis • Free Tool
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              API Status Checker
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Analyze API endpoint health, performance, and security configuration.
-            </p>
-          </div>
+          <ToolPageHeader
+            title="API Status Checker"
+            description="Analyze API endpoint health, performance, and security configuration."
+            badge="API Analysis • Free Tool"
+          />
 
           {/* Input Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Server className="w-5 h-5 text-green-600" />
+                <Server className="w-5 h-5 text-primary" />
                 Enter API URL
               </CardTitle>
             </CardHeader>
@@ -99,7 +88,7 @@ export default function ApiStatusChecker() {
                 <select
                   value={method}
                   onChange={(e) => setMethod(e.target.value)}
-                  className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="GET">GET</option>
                   <option value="POST">POST</option>
@@ -111,13 +100,13 @@ export default function ApiStatusChecker() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://api.example.com/endpoint"
-                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-3 bg-muted/40 dark:bg-muted border border-border dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   onKeyPress={(e) => e.key === "Enter" && !loading && checkApi()}
                 />
                 <Button
                   onClick={checkApi}
                   disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  className="bg-gradient-to-r from-primary to-brand-navy hover:from-brand-navy hover:to-brand-navy"
                 >
                   {loading ? (
                     <>
@@ -149,12 +138,12 @@ export default function ApiStatusChecker() {
                     <Badge
                       className={cn(
                         "text-lg px-4 py-2",
-                        result.healthScore >= 70 ? "bg-green-600" : result.healthScore >= 40 ? "bg-yellow-600" : "bg-red-600"
+                        result.healthScore >= 70 ? "bg-primary" : result.healthScore >= 40 ? "bg-yellow-600" : "bg-red-600"
                       )}
                     >
                       {result.status}
                     </Badge>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                       API: <span className="font-mono font-medium">{result.url}</span>
                     </p>
                   </div>
@@ -178,7 +167,7 @@ export default function ApiStatusChecker() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm">Reachable</span>
                           {result.checks.connectivity.reachable ? (
-                            <Badge className="bg-green-600">Yes</Badge>
+                            <Badge className="bg-primary">Yes</Badge>
                           ) : (
                             <Badge variant="destructive">No</Badge>
                           )}
@@ -211,7 +200,7 @@ export default function ApiStatusChecker() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm">SSL Enabled</span>
                         {result.checks.ssl.hasSsl ? (
-                          <Badge className="bg-green-600">Yes</Badge>
+                          <Badge className="bg-primary">Yes</Badge>
                         ) : (
                           <Badge variant="destructive">No</Badge>
                         )}
@@ -236,7 +225,7 @@ export default function ApiStatusChecker() {
                             <div key={key} className="flex items-center justify-between">
                               <span className="text-sm">{headerName}</span>
                               {value === "Present" ? (
-                                <Badge className="bg-green-600">Present</Badge>
+                                <Badge className="bg-primary">Present</Badge>
                               ) : (
                                 <Badge variant="destructive">Missing</Badge>
                               )}
@@ -272,10 +261,7 @@ export default function ApiStatusChecker() {
             </>
           )}
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </ToolPageShell>
   );
 }
 
