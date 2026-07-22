@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
+import { formatMaxMb } from "../lib/formatMaxMb";
 import { generateFileThumbnails } from "../lib/thumbnailUtils";
 import { blobToBase64, extractBase64 } from "../lib/fileUtils";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
@@ -253,7 +254,7 @@ export default function CompressImage() {
     const oversized = [];
     newFiles.forEach(f => {
       if (f.size > maxSize) {
-        const maxSizeMB = (maxSize / 1024 / 1024).toFixed(1);
+        const maxSizeMB = formatMaxMb(maxSize);
         oversized.push(f.name);
         toast.error(`"${f.name}" is too large (max ${maxSizeMB}MB)`);
       } else {
@@ -704,7 +705,8 @@ export default function CompressImage() {
             maxFiles={settings?.image?.maxFiles}
             currentFileCount={files.length}
             title="Upload Images to Compress"
-            description={`JPG, PNG, WebP, HEIC, TIFF • Max ${Math.round(settings.image.maxSize / (1024 * 1024))}MB each • Up to ${settings.image.maxFiles} files`}
+            description="JPG, PNG, WebP, HEIC, TIFF"
+            limitsText={`Max ${formatMaxMb(settings.image.maxSize)}MB each • Up to ${settings.image.maxFiles} files`}
             accept={{
               "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
               "image/png": [".png", ".PNG"],
@@ -1250,7 +1252,7 @@ export default function CompressImage() {
                         size="sm"
                         onClick={processAll}
                         disabled={processing}
-                        className="h-9 rounded-lg bg-primary px-4 font-semibold text-primary-foreground shadow-sm hover:bg-brand-navy disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-primary/40"
+                        className="h-9 rounded-lg bg-primary px-4 font-semibold text-primary-foreground shadow-sm hover:bg-primary-hover disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
                         {processing ? (
                           <>

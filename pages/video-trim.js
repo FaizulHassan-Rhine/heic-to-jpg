@@ -390,7 +390,7 @@ export default function VideoTrim() {
                       a.href = result.url;
                       a.download = result.name;
                       a.click();
-                    }} className="bg-primary text-white hover:bg-brand-navy shadow-sm">
+                    }} className="bg-primary text-white hover:bg-primary-hover shadow-sm">
                       <Download className="w-4 h-4 mr-2" /> Download
                     </Button>
                   </CardContent>

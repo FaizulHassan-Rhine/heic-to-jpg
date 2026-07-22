@@ -10,6 +10,7 @@ export default function CollapsibleDropzone({
   accept,
   title,
   description,
+  limitsText,
   disabled,
   onDisabledClick,
   className,
@@ -153,6 +154,7 @@ export default function CollapsibleDropzone({
             accept={accept}
             title={title}
             description={description}
+            limitsText={limitsText}
             disabled={disabled}
             onDisabledClick={onDisabledClick}
             compact={hasFiles}

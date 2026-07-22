@@ -25,6 +25,7 @@ export default function SeoLandingPage({ content }) {
       name: content.h1,
       description: content.description,
       url: content.path,
+      category: content.applicationCategory || "UtilityApplication",
     }),
     faqPageSchema(content.faqs),
     breadcrumbSchema(breadcrumbs)

@@ -185,11 +185,100 @@ export default function AdminDashboard() {
 
   const formatSize = (bytes) => {
     if (!bytes) return "0 B";
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 0.1) {
+      return `${Number.parseFloat(mb.toFixed(1))} MB`;
+    }
     const k = 1024;
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
+
+  /** Functional updates — spreading stale inputValues was wiping other fields on multi-edit. */
+  const updateSizeMbInput = (key, value) => {
+    setInputValues((prev) => ({ ...prev, [key]: value }));
+    const mb = parseFloat(value);
+    if (!Number.isNaN(mb) && mb > 0) {
+      setSettings((prev) => ({ ...prev, [key]: mb * 1024 * 1024 }));
+    }
+  };
+
+  const updateFilesInput = (key, value) => {
+    setInputValues((prev) => ({ ...prev, [key]: value }));
+    const num = parseInt(value, 10);
+    if (!Number.isNaN(num) && num > 0) {
+      setSettings((prev) => ({ ...prev, [key]: num }));
+    }
+  };
+
+  const resetSizeMbOnBlur = (key) => {
+    setInputValues((prev) => {
+      const mb = parseFloat(prev[key]);
+      if (!Number.isNaN(mb) && mb > 0) return prev;
+      const bytes = settings?.[key] || 0;
+      return { ...prev, [key]: (bytes / (1024 * 1024)).toString() };
+    });
+  };
+
+  const resetFilesOnBlur = (key) => {
+    setInputValues((prev) => {
+      const num = parseInt(prev[key], 10);
+      if (!Number.isNaN(num) && num > 0) return prev;
+      return { ...prev, [key]: String(settings?.[key] ?? "") };
+    });
+  };
+
+  const FILE_LIMIT_SECTIONS = [
+    {
+      title: "Image Files",
+      icon: FileImage,
+      iconClass: "text-primary",
+      sizeKey: "imageMaxSize",
+      filesKey: "imageMaxFiles",
+      filesNoun: "images",
+    },
+    {
+      title: "Document Files (DOC, DOCX, TXT)",
+      icon: FileText,
+      iconClass: "text-primary",
+      sizeKey: "documentMaxSize",
+      filesKey: "documentMaxFiles",
+      filesNoun: "documents",
+    },
+    {
+      title: "PDF Files",
+      icon: FileText,
+      iconClass: "text-red-600",
+      sizeKey: "pdfMaxSize",
+      filesKey: "pdfMaxFiles",
+      filesNoun: "PDF files",
+    },
+    {
+      title: "Video Files",
+      icon: FileVideo,
+      iconClass: "text-purple-600",
+      sizeKey: "videoMaxSize",
+      filesKey: "videoMaxFiles",
+      filesNoun: "videos",
+    },
+    {
+      title: "Audio Files",
+      icon: FileAudio,
+      iconClass: "text-green-600",
+      sizeKey: "audioMaxSize",
+      filesKey: "audioMaxFiles",
+      filesNoun: "audio files",
+    },
+    {
+      title: "General Files (ZIP, etc.)",
+      icon: FileText,
+      iconClass: "text-muted-foreground",
+      sizeKey: "generalMaxSize",
+      filesKey: "generalMaxFiles",
+      filesNoun: "files",
+    },
+  ];
 
   const getFileIcon = (format) => {
     if (!format) return FileText;
@@ -317,66 +406,51 @@ export default function AdminDashboard() {
   const saveSettings = async () => {
     setSavingSettings(true);
     try {
-      // Build settings object from current input values to ensure we send the latest values
-      // Convert MB values from inputValues to bytes for the API
-      // ALWAYS use inputValues if they exist, otherwise fall back to current settings
-      const imageMaxSizeMB = inputValues.imageMaxSize !== undefined && inputValues.imageMaxSize !== "" 
-        ? parseFloat(inputValues.imageMaxSize) 
-        : (settings.imageMaxSize / (1024 * 1024));
-      const imageMaxSizeBytes = imageMaxSizeMB * 1024 * 1024;
+      const mbToBytes = (key) => {
+        const raw = inputValues[key];
+        if (raw !== undefined && raw !== "") {
+          const mb = parseFloat(raw);
+          if (!Number.isNaN(mb) && mb > 0) return mb * 1024 * 1024;
+        }
+        return settings[key];
+      };
+      const filesToInt = (key) => {
+        const raw = inputValues[key];
+        if (raw !== undefined && raw !== "") {
+          const n = parseInt(raw, 10);
+          if (!Number.isNaN(n) && n > 0) return n;
+        }
+        return settings[key];
+      };
 
       const settingsToSave = {
-        imageMaxSize: imageMaxSizeBytes,
-        imageMaxFiles: inputValues.imageMaxFiles !== undefined && inputValues.imageMaxFiles !== ""
-          ? parseInt(inputValues.imageMaxFiles)
-          : settings.imageMaxFiles,
-        documentMaxSize: inputValues.documentMaxSize !== undefined && inputValues.documentMaxSize !== ""
-          ? parseFloat(inputValues.documentMaxSize) * 1024 * 1024
-          : settings.documentMaxSize,
-        documentMaxFiles: inputValues.documentMaxFiles !== undefined && inputValues.documentMaxFiles !== ""
-          ? parseInt(inputValues.documentMaxFiles)
-          : settings.documentMaxFiles,
-        pdfMaxSize: inputValues.pdfMaxSize !== undefined && inputValues.pdfMaxSize !== ""
-          ? parseFloat(inputValues.pdfMaxSize) * 1024 * 1024
-          : settings.pdfMaxSize,
-        pdfMaxFiles: inputValues.pdfMaxFiles !== undefined && inputValues.pdfMaxFiles !== ""
-          ? parseInt(inputValues.pdfMaxFiles)
-          : settings.pdfMaxFiles,
-        videoMaxSize: inputValues.videoMaxSize !== undefined && inputValues.videoMaxSize !== ""
-          ? parseFloat(inputValues.videoMaxSize) * 1024 * 1024
-          : settings.videoMaxSize,
-        videoMaxFiles: inputValues.videoMaxFiles !== undefined && inputValues.videoMaxFiles !== ""
-          ? parseInt(inputValues.videoMaxFiles)
-          : settings.videoMaxFiles,
-        audioMaxSize: inputValues.audioMaxSize !== undefined && inputValues.audioMaxSize !== ""
-          ? parseFloat(inputValues.audioMaxSize) * 1024 * 1024
-          : settings.audioMaxSize,
-        audioMaxFiles: inputValues.audioMaxFiles !== undefined && inputValues.audioMaxFiles !== ""
-          ? parseInt(inputValues.audioMaxFiles)
-          : settings.audioMaxFiles,
-        generalMaxSize: inputValues.generalMaxSize !== undefined && inputValues.generalMaxSize !== ""
-          ? parseFloat(inputValues.generalMaxSize) * 1024 * 1024
-          : settings.generalMaxSize,
-        generalMaxFiles: inputValues.generalMaxFiles !== undefined && inputValues.generalMaxFiles !== ""
-          ? parseInt(inputValues.generalMaxFiles)
-          : settings.generalMaxFiles,
-        // Include features if they exist
+        imageMaxSize: mbToBytes("imageMaxSize"),
+        imageMaxFiles: filesToInt("imageMaxFiles"),
+        documentMaxSize: mbToBytes("documentMaxSize"),
+        documentMaxFiles: filesToInt("documentMaxFiles"),
+        pdfMaxSize: mbToBytes("pdfMaxSize"),
+        pdfMaxFiles: filesToInt("pdfMaxFiles"),
+        videoMaxSize: mbToBytes("videoMaxSize"),
+        videoMaxFiles: filesToInt("videoMaxFiles"),
+        audioMaxSize: mbToBytes("audioMaxSize"),
+        audioMaxFiles: filesToInt("audioMaxFiles"),
+        generalMaxSize: mbToBytes("generalMaxSize"),
+        generalMaxFiles: filesToInt("generalMaxFiles"),
         ...(settings.features && { features: settings.features }),
       };
 
-      console.log("Saving settings:", {
-        inputValue: inputValues.imageMaxSize,
-        inputValueMB: imageMaxSizeMB,
-        calculatedBytes: imageMaxSizeBytes,
-        calculatedMB: imageMaxSizeBytes / (1024 * 1024),
-        sendingToAPI: settingsToSave.imageMaxSize,
+      console.log("Saving all file limits (MB):", {
+        image: settingsToSave.imageMaxSize / (1024 * 1024),
+        document: settingsToSave.documentMaxSize / (1024 * 1024),
+        pdf: settingsToSave.pdfMaxSize / (1024 * 1024),
+        video: settingsToSave.videoMaxSize / (1024 * 1024),
+        audio: settingsToSave.audioMaxSize / (1024 * 1024),
+        general: settingsToSave.generalMaxSize / (1024 * 1024),
       });
 
       const response = await fetch("/api/admin/settings", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(settingsToSave),
       });
@@ -384,22 +458,21 @@ export default function AdminDashboard() {
       if (data.success) {
         toast.success("Settings saved successfully");
         setSettings(data.settings);
-        // Update input values to match the saved settings (convert bytes to MB)
+        const s = data.settings;
         setInputValues({
-          imageMaxSize: (data.settings.imageMaxSize / (1024 * 1024)).toString(),
-          imageMaxFiles: data.settings.imageMaxFiles.toString(),
-          documentMaxSize: (data.settings.documentMaxSize / (1024 * 1024)).toString(),
-          documentMaxFiles: data.settings.documentMaxFiles.toString(),
-          pdfMaxSize: (data.settings.pdfMaxSize / (1024 * 1024)).toString(),
-          pdfMaxFiles: data.settings.pdfMaxFiles.toString(),
-          videoMaxSize: (data.settings.videoMaxSize / (1024 * 1024)).toString(),
-          videoMaxFiles: data.settings.videoMaxFiles.toString(),
-          audioMaxSize: (data.settings.audioMaxSize / (1024 * 1024)).toString(),
-          audioMaxFiles: data.settings.audioMaxFiles.toString(),
-          generalMaxSize: (data.settings.generalMaxSize / (1024 * 1024)).toString(),
-          generalMaxFiles: data.settings.generalMaxFiles.toString(),
+          imageMaxSize: ((s.imageMaxSize || 0) / (1024 * 1024)).toString(),
+          imageMaxFiles: String(s.imageMaxFiles ?? ""),
+          documentMaxSize: ((s.documentMaxSize || 0) / (1024 * 1024)).toString(),
+          documentMaxFiles: String(s.documentMaxFiles ?? ""),
+          pdfMaxSize: ((s.pdfMaxSize || 0) / (1024 * 1024)).toString(),
+          pdfMaxFiles: String(s.pdfMaxFiles ?? ""),
+          videoMaxSize: ((s.videoMaxSize || 0) / (1024 * 1024)).toString(),
+          videoMaxFiles: String(s.videoMaxFiles ?? ""),
+          audioMaxSize: ((s.audioMaxSize || 0) / (1024 * 1024)).toString(),
+          audioMaxFiles: String(s.audioMaxFiles ?? ""),
+          generalMaxSize: ((s.generalMaxSize || 0) / (1024 * 1024)).toString(),
+          generalMaxFiles: String(s.generalMaxFiles ?? ""),
         });
-        // Clear cache so all pages get updated settings immediately
         queryClient.invalidateQueries({ queryKey: ["settings"] });
         queryClient.invalidateQueries({ queryKey: ["adminSettings"] });
       } else {
@@ -407,7 +480,7 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast.error(error?.message ? `Failed to save settings: ${error.message}` : "Failed to save settings");
+      toast.error(error?.message ? ("Failed to save settings: " + error.message) : "Failed to save settings");
     } finally {
       setSavingSettings(false);
     }
@@ -1042,480 +1115,52 @@ export default function AdminDashboard() {
                   </div>
                 ) : settings ? (
                   <div className="space-y-8">
-                    {/* Image Settings */}
-                    <div className="border rounded-lg p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <FileImage className="w-5 h-5 text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">Image Files</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum File Size (MB)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.imageMaxSize || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, imageMaxSize: value });
-                              const mb = parseFloat(value);
-                              if (!isNaN(mb) && mb > 0) {
-                                setSettings({
-                                  ...settings,
-                                  imageMaxSize: mb * 1024 * 1024,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const mb = parseFloat(e.target.value);
-                              if (isNaN(mb) || mb <= 0) {
-                                // Reset to current setting if invalid
-                                setInputValues({
-                                  ...inputValues,
-                                  imageMaxSize: (settings.imageMaxSize / (1024 * 1024)).toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="0.1"
-                            step="0.1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Current: {formatSize(settings.imageMaxSize)}
-                          </p>
+                    {FILE_LIMIT_SECTIONS.map((section) => {
+                      const Icon = section.icon;
+                      return (
+                        <div key={section.sizeKey} className="border rounded-lg p-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Icon className={cn("w-5 h-5", section.iconClass)} />
+                            <h3 className="text-lg font-semibold text-foreground">{section.title}</h3>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className="block text-sm font-medium text-foreground mb-2">
+                                Maximum File Size (MB)
+                              </label>
+                              <input
+                                type="number"
+                                value={inputValues[section.sizeKey] || ""}
+                                onChange={(e) => updateSizeMbInput(section.sizeKey, e.target.value)}
+                                onBlur={() => resetSizeMbOnBlur(section.sizeKey)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
+                                min="0.1"
+                                step="0.1"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Current: {formatSize(settings[section.sizeKey])}
+                              </p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-foreground mb-2">
+                                Maximum Files Per Upload (Batch Limit)
+                              </label>
+                              <input
+                                type="number"
+                                value={inputValues[section.filesKey] || ""}
+                                onChange={(e) => updateFilesInput(section.filesKey, e.target.value)}
+                                onBlur={() => resetFilesOnBlur(section.filesKey)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
+                                min="1"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Users can upload up to {settings[section.filesKey]} {section.filesNoun} at once
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum Files Per Upload (Batch Limit)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.imageMaxFiles || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, imageMaxFiles: value });
-                              const num = parseInt(value);
-                              if (!isNaN(num) && num > 0) {
-                                setSettings({
-                                  ...settings,
-                                  imageMaxFiles: num,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const num = parseInt(e.target.value);
-                              if (isNaN(num) || num <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  imageMaxFiles: settings.imageMaxFiles.toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Users can upload up to {settings.imageMaxFiles} images at once
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Document Settings */}
-                    <div className="border rounded-lg p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <FileText className="w-5 h-5 text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">Document Files (DOC, DOCX, TXT)</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum File Size (MB)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.documentMaxSize || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, documentMaxSize: value });
-                              const mb = parseFloat(value);
-                              if (!isNaN(mb) && mb > 0) {
-                                setSettings({
-                                  ...settings,
-                                  documentMaxSize: mb * 1024 * 1024,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const mb = parseFloat(e.target.value);
-                              if (isNaN(mb) || mb <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  documentMaxSize: (settings.documentMaxSize / (1024 * 1024)).toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="0.1"
-                            step="0.1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Current: {formatSize(settings.documentMaxSize)}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum Files Per Upload (Batch Limit)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.documentMaxFiles || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, documentMaxFiles: value });
-                              const num = parseInt(value);
-                              if (!isNaN(num) && num > 0) {
-                                setSettings({
-                                  ...settings,
-                                  documentMaxFiles: num,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const num = parseInt(e.target.value);
-                              if (isNaN(num) || num <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  documentMaxFiles: settings.documentMaxFiles.toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Users can upload up to {settings.documentMaxFiles} documents at once
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* PDF Settings */}
-                    <div className="border rounded-lg p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <FileText className="w-5 h-5 text-red-600" />
-                        <h3 className="text-lg font-semibold text-foreground">PDF Files</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum File Size (MB)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.pdfMaxSize || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, pdfMaxSize: value });
-                              const mb = parseFloat(value);
-                              if (!isNaN(mb) && mb > 0) {
-                                setSettings({
-                                  ...settings,
-                                  pdfMaxSize: mb * 1024 * 1024,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const mb = parseFloat(e.target.value);
-                              if (isNaN(mb) || mb <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  pdfMaxSize: (settings.pdfMaxSize / (1024 * 1024)).toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="0.1"
-                            step="0.1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Current: {formatSize(settings.pdfMaxSize)}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum Files Per Upload (Batch Limit)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.pdfMaxFiles || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, pdfMaxFiles: value });
-                              const num = parseInt(value);
-                              if (!isNaN(num) && num > 0) {
-                                setSettings({
-                                  ...settings,
-                                  pdfMaxFiles: num,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const num = parseInt(e.target.value);
-                              if (isNaN(num) || num <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  pdfMaxFiles: settings.pdfMaxFiles.toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Users can upload up to {settings.pdfMaxFiles} PDF files at once
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Video Settings */}
-                    <div className="border rounded-lg p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <FileVideo className="w-5 h-5 text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">Video Files</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum File Size (MB)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.videoMaxSize || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, videoMaxSize: value });
-                              const mb = parseFloat(value);
-                              if (!isNaN(mb) && mb > 0) {
-                                setSettings({
-                                  ...settings,
-                                  videoMaxSize: mb * 1024 * 1024,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const mb = parseFloat(e.target.value);
-                              if (isNaN(mb) || mb <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  videoMaxSize: (settings.videoMaxSize / (1024 * 1024)).toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="0.1"
-                            step="0.1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Current: {formatSize(settings.videoMaxSize)}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum Files Per Upload (Batch Limit)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.videoMaxFiles || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, videoMaxFiles: value });
-                              const num = parseInt(value);
-                              if (!isNaN(num) && num > 0) {
-                                setSettings({
-                                  ...settings,
-                                  videoMaxFiles: num,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const num = parseInt(e.target.value);
-                              if (isNaN(num) || num <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  videoMaxFiles: settings.videoMaxFiles.toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Users can upload up to {settings.videoMaxFiles} videos at once
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Audio Settings */}
-                    <div className="border rounded-lg p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <FileAudio className="w-5 h-5 text-pink-600" />
-                        <h3 className="text-lg font-semibold text-foreground">Audio Files</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum File Size (MB)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.audioMaxSize || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, audioMaxSize: value });
-                              const mb = parseFloat(value);
-                              if (!isNaN(mb) && mb > 0) {
-                                setSettings({
-                                  ...settings,
-                                  audioMaxSize: mb * 1024 * 1024,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const mb = parseFloat(e.target.value);
-                              if (isNaN(mb) || mb <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  audioMaxSize: (settings.audioMaxSize / (1024 * 1024)).toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="0.1"
-                            step="0.1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Current: {formatSize(settings.audioMaxSize)}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum Files Per Upload (Batch Limit)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.audioMaxFiles || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, audioMaxFiles: value });
-                              const num = parseInt(value);
-                              if (!isNaN(num) && num > 0) {
-                                setSettings({
-                                  ...settings,
-                                  audioMaxFiles: num,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const num = parseInt(e.target.value);
-                              if (isNaN(num) || num <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  audioMaxFiles: settings.audioMaxFiles.toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Users can upload up to {settings.audioMaxFiles} audio files at once
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* General Settings */}
-                    <div className="border rounded-lg p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <SettingsIcon className="w-5 h-5 text-muted-foreground" />
-                        <h3 className="text-lg font-semibold text-foreground">General Files (Other Types)</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum File Size (MB)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.generalMaxSize || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, generalMaxSize: value });
-                              const mb = parseFloat(value);
-                              if (!isNaN(mb) && mb > 0) {
-                                setSettings({
-                                  ...settings,
-                                  generalMaxSize: mb * 1024 * 1024,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const mb = parseFloat(e.target.value);
-                              if (isNaN(mb) || mb <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  generalMaxSize: (settings.generalMaxSize / (1024 * 1024)).toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="0.1"
-                            step="0.1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Current: {formatSize(settings.generalMaxSize)}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Maximum Files Per Upload (Batch Limit)
-                          </label>
-                          <input
-                            type="number"
-                            value={inputValues.generalMaxFiles || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setInputValues({ ...inputValues, generalMaxFiles: value });
-                              const num = parseInt(value);
-                              if (!isNaN(num) && num > 0) {
-                                setSettings({
-                                  ...settings,
-                                  generalMaxFiles: num,
-                                });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const num = parseInt(e.target.value);
-                              if (isNaN(num) || num <= 0) {
-                                setInputValues({
-                                  ...inputValues,
-                                  generalMaxFiles: settings.generalMaxFiles.toString(),
-                                });
-                              }
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-mid focus:border-transparent"
-                            min="1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Users can upload up to {settings.generalMaxFiles} files at once
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">

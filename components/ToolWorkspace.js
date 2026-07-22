@@ -1,8 +1,10 @@
+import { Children } from "react";
 import { cn } from "@/lib/utils";
 
 /**
  * Two-column workspace: settings sidebar + files panel.
- * Default sidebar width matches Convert Images (360px).
+ * Mobile stacks in normal page flow; desktop uses a sticky sidebar grid.
+ * minmax(0, …) + min-w-0 prevent children from forcing horizontal overflow.
  */
 export default function ToolWorkspace({
   children,
@@ -12,12 +14,17 @@ export default function ToolWorkspace({
   return (
     <div
       className={cn(
-        "grid gap-6 md:gap-8 items-start md:grid-cols-[var(--tool-sidebar)_1fr]",
+        "flex w-full min-w-0 max-w-full flex-col gap-6 overflow-x-hidden",
+        "md:grid md:grid-cols-[minmax(0,var(--tool-sidebar))_minmax(0,1fr)] md:items-start md:gap-8 md:overflow-x-visible",
         className
       )}
       style={{ "--tool-sidebar": sidebarWidth }}
     >
-      {children}
+      {Children.map(children, (child, index) => (
+        <div key={index} className="w-full min-w-0 max-w-full">
+          {child}
+        </div>
+      ))}
     </div>
   );
 }

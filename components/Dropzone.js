@@ -12,6 +12,7 @@ export default function Dropzone({
   accept,
   title,
   description,
+  limitsText,
   disabled,
   onDisabledClick,
   className,
@@ -141,7 +142,7 @@ export default function Dropzone({
   const displayTitle = title || "Drag & drop files here";
   const displayDesc =
     description ||
-    (inputType ? `Please select ${inputType.toUpperCase()} files` : "Support for multiple formats");
+    (inputType ? `Please select ${inputType.toUpperCase()} files` : null);
 
   const rootProps = getRootProps();
 
@@ -157,12 +158,12 @@ export default function Dropzone({
         "group w-full border-2 border-dashed rounded-xl transition-all duration-200",
         "flex flex-col items-center justify-center text-center",
         "bg-brand-sky/15 dark:bg-muted/30",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         disabled
           ? "cursor-not-allowed opacity-50"
-          : "cursor-pointer hover:border-primary/70 hover:bg-brand-sky/30",
+          : "cursor-pointer hover:border-primary/70 hover:bg-brand-sky/30 dark:hover:bg-accent/50",
         isDragActive && !disabled
-          ? "border-primary bg-brand-sky/45 scale-[1.01] shadow-sm shadow-primary/10"
+          ? "border-primary bg-brand-sky/45 dark:bg-accent/60 scale-[1.01] shadow-sm shadow-primary/10"
           : "border-brand-mid/35",
         compact
           ? "min-h-[120px] py-5 px-4"
@@ -180,11 +181,11 @@ export default function Dropzone({
       >
         <div
           className={cn(
-            "rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-brand-sky/40",
+            "rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-brand-sky/40 dark:ring-accent/50",
             compact ? "w-12 h-12" : "w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem]",
             isDragActive
               ? "bg-primary text-primary-foreground scale-105 ring-primary/20"
-              : "bg-brand-sky/80 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+              : "bg-brand-sky/80 dark:bg-accent text-primary group-hover:bg-primary group-hover:text-primary-foreground"
           )}
           aria-hidden
         >
@@ -205,9 +206,11 @@ export default function Dropzone({
               Drop files here to upload
             </p>
           )}
-          <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-            {displayDesc}
-          </p>
+          {displayDesc && (
+            <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+              {displayDesc}
+            </p>
+          )}
         </div>
 
         {!disabled && (
@@ -229,6 +232,20 @@ export default function Dropzone({
         {!compact && !isDragActive && (
           <p className="text-xs text-muted-foreground pt-0.5">
             or drag and drop anywhere in this area
+          </p>
+        )}
+
+        {limitsText && !isDragActive && (
+          <p
+            className={cn(
+              "w-full max-w-sm text-[11px] sm:text-xs leading-snug font-medium",
+              "rounded-lg border border-red-200 bg-red-50 text-red-700",
+              "dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
+              "px-3 py-2",
+              compact ? "mt-1" : "mt-1"
+            )}
+          >
+            {limitsText}
           </p>
         )}
       </div>

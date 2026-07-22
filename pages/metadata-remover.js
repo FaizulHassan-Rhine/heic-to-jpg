@@ -149,7 +149,7 @@ export default function MetadataRemover() {
                       e.stopPropagation();
                       fileInputRef.current?.click();
                     }}
-                    className="bg-primary hover:bg-brand-navy"
+                    className="bg-primary hover:bg-primary-hover"
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Choose Image

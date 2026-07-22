@@ -4,6 +4,7 @@ module.exports = {
   reactStrictMode: true,
   // Use standalone output for better server deployment (cPanel, VPS, etc.)
   output: 'standalone',
+  transpilePackages: ['upscaler', '@upscalerjs/esrgan-slim'],
   async redirects() {
     return [
       {
@@ -76,6 +77,16 @@ module.exports = {
       config.resolve.alias = {
         ...config.resolve.alias,
         'onnxruntime-web': false,
+      };
+    }
+
+    // UpscalerJS / TFJS are browser-only
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        upscaler: false,
+        '@upscalerjs/esrgan-slim': false,
+        '@tensorflow/tfjs': false,
       };
     }
 

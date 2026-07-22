@@ -121,7 +121,7 @@ export default function PasswordGenerator() {
                   onClick={copyToClipboard}
                   aria-label={copied ? "Copied" : "Copy password"}
                   className={cn(
-                    "bg-primary hover:bg-brand-navy focus-visible:ring-2 focus-visible:ring-primary/40",
+                    "bg-primary hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary/40",
                     copied && "bg-primary"
                   )}
                 >

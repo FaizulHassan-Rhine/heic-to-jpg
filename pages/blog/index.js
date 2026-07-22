@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 const CATEGORY_ICONS = {
+  "AI Tools": Sparkles,
   "File Conversion": FileImage,
   "Image Compression": FileImage,
   "PDF Tools": FileText,
@@ -31,23 +32,23 @@ export default function BlogIndexPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Blog & Guides – File Conversion, PDF & Privacy Tips"
-        description="Tips and guides for file conversion, image compression, PDF tools, and online privacy from ConvertMastery."
+        title="Blog & Guides – AI Tools, File Conversion & Privacy Tips"
+        description="Guides on AI paraphrasing, PDF summarization, image formats, compression, PDF tools, and online privacy from ConvertMastery."
+        keywords="ConvertMastery blog, AI paraphraser guide, AI summarizer, image upscaler, HEIC to JPG, compress images, PDF tools, privacy tips"
         url="/blog"
         structuredData={breadcrumbSchema(breadcrumbs)}
       />
       <Navbar />
 
-      {/* Hero */}
-      <section className="relative border-b bg-gradient-to-br from-brand-navy via-primary to-brand-navy text-white overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-brand-sky/25 via-transparent to-transparent" />
-        <div className="container mx-auto px-4 py-14 md:py-20 relative">
+      <section className="relative border-b bg-gradient-to-br from-[#0F2854] via-[#1C4D8D] to-[#0F2854] text-white overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(189,232,245,0.25),_transparent_60%)]" />
+        <div className="mx-auto w-full max-w-6xl px-4 py-14 md:py-20 relative">
           <Breadcrumbs items={breadcrumbs} variant="light" className="mb-6" />
-          <div className="flex items-center gap-2 text-brand-sky mb-4">
+          <div className="flex items-center gap-2 text-[#BDE8F5] mb-4">
             <BookOpen className="h-5 w-5" />
             <span className="text-sm font-medium">ConvertMastery Guides</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 max-w-2xl">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 max-w-2xl text-white">
             Blog &amp; Guides
           </h1>
           <p className="text-lg text-white/80 max-w-2xl leading-relaxed">
@@ -59,7 +60,7 @@ export default function BlogIndexPage() {
               return (
                 <span
                   key={cat}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 text-xs font-medium text-brand-sky"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 text-xs font-medium text-[#BDE8F5]"
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {cat}
@@ -70,7 +71,8 @@ export default function BlogIndexPage() {
         </div>
       </section>
 
-      <main className="flex-1 container mx-auto px-4 py-12 md:py-16">
+      <main className="flex-1">
+        <div className="mx-auto w-full max-w-6xl px-4 py-12 md:py-16">
         {/* Featured post */}
         {featured && (
           <section className="mb-14">
@@ -80,35 +82,32 @@ export default function BlogIndexPage() {
             </div>
             <Link href={`/blog/${featured.slug}`}>
               <Card className="overflow-hidden border-border shadow-md hover:shadow-xl hover:border-primary/40 transition-all group">
-                <div className="grid md:grid-cols-5">
-                  <div className="md:col-span-2 bg-gradient-to-br from-brand-sky/50 via-primary/10 to-muted p-8 md:p-10 flex flex-col justify-center border-b md:border-b-0 md:border-r border-border">
-                    <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/15 text-primary px-3 py-1 text-xs font-semibold mb-4">
+                <CardContent className="pt-8 pb-8 px-8 md:px-10">
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/15 text-primary px-3 py-1 text-xs font-semibold">
                       {featured.category}
                     </span>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5" />
-                      {featured.readTime} read
-                    </p>
-                  </div>
-                  <CardContent className="md:col-span-3 pt-8 pb-8 px-8 md:px-10 flex flex-col justify-center">
-                    <h3 className="text-2xl md:text-3xl font-bold text-foreground group-hover:text-primary transition-colors mb-3">
-                      {featured.title}
-                    </h3>
-                    <p className="text-muted-foreground leading-relaxed mb-6">
-                      {featured.description}
-                    </p>
-                    <span className="inline-flex items-center text-sm font-semibold text-primary">
-                      Read full guide
-                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      {featured.readTime} read · {featured.datePublished}
                     </span>
-                  </CardContent>
-                </div>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-foreground group-hover:text-primary transition-colors mb-3 max-w-3xl">
+                    {featured.title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-6 max-w-3xl">
+                    {featured.description}
+                  </p>
+                  <span className="inline-flex items-center text-sm font-semibold text-primary">
+                    Read full guide
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </CardContent>
               </Card>
             </Link>
           </section>
         )}
 
-        {/* Post grid */}
         <section>
           <h2 className="text-lg font-semibold text-foreground mb-6">All guides</h2>
           <div className="grid md:grid-cols-2 gap-6">
@@ -146,7 +145,6 @@ export default function BlogIndexPage() {
           </div>
         </section>
 
-        {/* CTA */}
         <section className="mt-16">
           <Card className="border-primary/20 bg-gradient-to-r from-brand-sky/40 via-card to-primary/5 shadow-sm">
             <CardContent className="pt-10 pb-10 px-8 text-center">
@@ -167,6 +165,7 @@ export default function BlogIndexPage() {
             </CardContent>
           </Card>
         </section>
+        </div>
       </main>
 
       <Footer />

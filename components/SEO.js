@@ -3,7 +3,8 @@ import { SITE_URL, SITE_NAME, SITE_OG_IMAGE, SITE_TWITTER } from "../lib/siteCon
 
 const siteUrl = SITE_URL;
 const siteName = SITE_NAME;
-const defaultDescription = "Free online file converter and compressor. Image, video, document, and audio tools process on the fly — nothing is saved to our servers. Password generator, IP lookup, whois, metadata remover, URL shortener, QR code, and more.";
+const defaultDescription =
+  "Free online file converter, AI paraphraser, summarizer, email writer, and image upscaler. Image, video, PDF, and privacy tools — fast, private, no signup required.";
 
 export default function SEO({
   title,
@@ -15,9 +16,13 @@ export default function SEO({
   noindex = false,
   structuredData,
 }) {
-  const fullTitle = title ? `${title} | ${siteName}` : `${siteName} - Free File Converter & Compressor`;
+  const fullTitle = title
+    ? `${title} | ${siteName}`
+    : `${siteName} - Free File Converter, AI Tools & PDF Utilities`;
   const canonicalUrl = url ? `${siteUrl}${url}` : siteUrl;
-  const defaultKeywords = "file converter, image converter, video converter, document converter, audio converter, file compressor, HEIC converter, password generator, IP lookup, whois checker, metadata remover, fake email, URL shortener, QR code, PDF tools, security tools, privacy tools, free online tools, privacy-first, secure file conversion";
+  const ogImage = image?.startsWith("http") ? image : `${siteUrl}${image || ""}`;
+  const defaultKeywords =
+    "file converter, AI paraphraser, AI summarizer, AI email writer, AI image upscaler, image converter, video converter, document converter, PDF tools, HEIC converter, password generator, free online tools, privacy-first";
   const metaKeywords = keywords ? `${defaultKeywords}, ${keywords}` : defaultKeywords;
 
   return (
@@ -38,7 +43,7 @@ export default function SEO({
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
-      <meta property="og:image" content={image} />
+      <meta property="og:image" content={ogImage} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content={siteName} />
@@ -49,7 +54,7 @@ export default function SEO({
       <meta name="twitter:url" content={canonicalUrl} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={image} />
+      <meta name="twitter:image" content={ogImage} />
       <meta name="twitter:creator" content={SITE_TWITTER} />
 
       {/* Additional Meta Tags */}

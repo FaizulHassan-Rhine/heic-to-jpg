@@ -636,7 +636,7 @@ export default function ResumeBuilderPage() {
             <Button
               onClick={downloadPDF}
               disabled={generating}
-              className="flex items-center gap-2 bg-primary hover:bg-brand-navy text-white text-sm px-4 py-2 rounded-lg shadow-sm"
+              className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm px-4 py-2 rounded-lg shadow-sm"
             >
               <Download size={14} />
               <span className="hidden sm:inline">{generating ? "Generating..." : "Download PDF"}</span>

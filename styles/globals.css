@@ -14,6 +14,7 @@
     --popover-foreground: 218 70% 19%;
     --primary: 214 67% 33%;              /* #1C4D8D */
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 218 70% 19%;        /* #0F2854 — darker press/hover */
     --secondary: 194 74% 92%;            /* soft sky tint */
     --secondary-foreground: 218 70% 19%;
     --muted: 200 35% 95%;
@@ -41,6 +42,7 @@
     --popover-foreground: 194 74% 92%;
     --primary: 209 51% 53%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 209 51% 42%;        /* slightly deeper blue — never light */
     --secondary: 218 40% 18%;
     --secondary-foreground: 194 74% 92%;
     --muted: 218 40% 18%;
@@ -65,11 +67,24 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    overflow-x: hidden;
     background-image:
       radial-gradient(ellipse 90% 55% at 50% -25%, hsl(194 74% 85% / 0.55), transparent 55%),
       radial-gradient(ellipse 50% 40% at 100% 0%, hsl(209 51% 53% / 0.12), transparent 50%),
       radial-gradient(ellipse 40% 30% at 0% 100%, hsl(214 67% 33% / 0.06), transparent 45%);
     background-attachment: fixed;
+  }
+  .dark body {
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -25%, hsl(209 51% 40% / 0.18), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, hsl(209 51% 53% / 0.08), transparent 50%),
+      radial-gradient(ellipse 40% 30% at 0% 100%, hsl(218 70% 12% / 0.4), transparent 45%);
+  }
+
+  button,
+  [role="button"],
+  a {
+    -webkit-tap-highlight-color: transparent;
   }
 
   h1, h2, h3, h4 {
@@ -93,6 +108,7 @@
 
 @layer components {
   select.input-theme,
+  input.input-theme,
   input.input-theme[type="date"],
   input.input-theme[type="time"],
   input.input-theme[type="datetime-local"],
@@ -151,4 +167,15 @@
 }
 .cm-toast-progress {
   animation: cm-toast-progress 4.8s linear forwards;
+}
+
+@keyframes cm-hero-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }

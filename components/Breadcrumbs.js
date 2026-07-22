@@ -14,7 +14,10 @@ export default function Breadcrumbs({ items, variant = "default", className = ""
           <li key={item.href || item.name} className="flex items-center gap-1">
             {i > 0 && (
               <ChevronRight
-                className={cn("h-3.5 w-3.5 shrink-0", isLight ? "text-muted-foreground" : "text-muted-foreground")}
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0",
+                  isLight ? "text-white/50" : "text-muted-foreground"
+                )}
                 aria-hidden
               />
             )}
@@ -23,7 +26,9 @@ export default function Breadcrumbs({ items, variant = "default", className = ""
                 href={item.href}
                 className={cn(
                   "transition-colors",
-                  isLight ? "text-muted-foreground hover:text-white" : "text-muted-foreground hover:text-primary"
+                  isLight
+                    ? "text-white/70 hover:text-white"
+                    : "text-muted-foreground hover:text-primary"
                 )}
               >
                 {item.name}
@@ -31,7 +36,8 @@ export default function Breadcrumbs({ items, variant = "default", className = ""
             ) : (
               <span
                 className={cn(
-                  i === items.length - 1 && (isLight ? "text-brand-sky font-medium" : "text-foreground font-medium")
+                  i === items.length - 1 &&
+                    (isLight ? "text-white font-medium" : "text-foreground font-medium")
                 )}
                 aria-current={i === items.length - 1 ? "page" : undefined}
               >

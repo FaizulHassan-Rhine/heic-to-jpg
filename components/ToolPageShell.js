@@ -17,7 +17,7 @@ export default function ToolPageShell({
       <Navbar />
       <main
         className={cn(
-          "flex-1 container mx-auto px-4 py-8 md:py-10",
+          "flex-1 container mx-auto w-full min-w-0 max-w-full overflow-x-hidden px-4 py-8 md:py-10",
           wide ? "max-w-7xl" : containerClassName,
           mainClassName
         )}

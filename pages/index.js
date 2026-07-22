@@ -8,7 +8,8 @@ import {
   Zap, Shield, Download, Image, Video, FileText, Music,
   ArrowRight, CheckCircle, Lock, Clock, Globe, Star,
   FileImage, ScanLine, Type, Minimize2, Merge, QrCode, Link2, Archive,
-  Mail, Phone, Database, Server, Calculator, ChevronDown
+  Mail, Phone, Database, Server, Calculator, ChevronDown,
+  Hash, Pipette, Braces, Binary, Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -18,25 +19,26 @@ import { organizationSchema, websiteSchema, faqPageSchema, combineSchemas } from
 const ICON_MAP = {
   Image, FileText, Video, Music, QrCode, Link2, Archive, Lock, Shield, Globe,
   Mail, Phone, Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator,
+  Hash, Pipette, Braces, Binary, Sparkles,
 };
 
 const POPULAR_TOOLS = [
+  { href: "/ai-paraphraser", label: "AI Paraphraser", iconKey: "Sparkles" },
+  { href: "/ai-summarizer", label: "AI Summarizer", iconKey: "Sparkles" },
   { href: "/heic-to-jpg", label: "HEIC to JPG", iconKey: "Image" },
   { href: "/convert", label: "Image Converter", iconKey: "Image" },
+  { href: "/pdf-to-image", label: "PDF to JPG/PNG", iconKey: "FileImage" },
+  { href: "/ai-image-upscaler", label: "AI Upscaler", iconKey: "Sparkles" },
   { href: "/compress", label: "Image Compressor", iconKey: "Minimize2" },
-  { href: "/merge-pdf", label: "Merge PDF", iconKey: "Merge" },
-  { href: "/compress-pdf", label: "Compress PDF", iconKey: "FileText" },
   { href: "/password-generator", label: "Password Generator", iconKey: "Lock" },
-  { href: "/qr-code-generator", label: "QR Code Generator", iconKey: "QrCode" },
-  { href: "/image-to-pdf", label: "Image to PDF", iconKey: "FileImage" },
 ];
 
 const HOME_FAQS = [
-  { q: "Is ConvertMastery really free?", a: "Yes. All core tools are free to use. Optional sign-in unlocks advanced settings only — we never store your files." },
-  { q: "Are my files uploaded to your servers?", a: "Processing is on-the-fly. Results are not saved to a database or My Orders. Download what you need in your session." },
+  { q: "Is ConvertMastery really free?", a: "Yes. Core converters, PDF tools, and AI tools (paraphraser, summarizer, email writer, image upscaler) are free to use. AI text tools include a fair daily quota. Optional sign-in unlocks advanced settings only — we never store your files." },
+  { q: "Are my files uploaded to your servers?", a: "Most converters and the AI image upscaler process in your browser. AI text tools send only the text you paste to generate a response — files are not saved to a database or My Orders." },
+  { q: "What AI tools do you offer?", a: "Free AI Paraphraser, AI Summarizer (text or PDF extract), AI Email Writer, AI Image Upscaler (browser-based), and Hermes AI chat." },
   { q: "What formats can I convert?", a: "Images (HEIC, JPG, PNG, WebP), videos (MP4, WebM), documents (PDF, DOCX), and audio (MP3, WAV, OGG), plus PDF and security utilities." },
   { q: "Do I need to install software?", a: "No. ConvertMastery runs entirely in your web browser on any modern device." },
-  { q: "Is ConvertMastery safe for sensitive documents?", a: "We use privacy-first processing. For highly confidential files, review our Privacy Policy and prefer browser-based tools that do not upload data." },
 ];
 
 const LANDING_CATEGORIES = [
@@ -156,9 +158,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Free File Converter, Compressor & Privacy Tools - Images, Video, Document, Audio, Security"
-        description="Convert and compress files for free. On-the-fly processing — nothing is saved to our servers. Image, video, document, audio, and privacy tools for HEIC, JPG, PNG, WebP, MP4, PDF, DOCX, and more."
-        keywords="free file converter, image converter, video converter, document converter, audio converter, file compressor, HEIC converter, password generator, IP lookup, whois checker, metadata remover, fake email generator, URL shortener, QR code, PDF tools, security tools, privacy tools, online file tools"
+        title="Free File Converter, AI Tools & PDF Utilities – ConvertMastery"
+        description="Convert and compress files for free. Use AI paraphraser, summarizer, email writer, and image upscaler. Image, video, PDF, and privacy tools — nothing saved to our servers."
+        keywords="free file converter, AI paraphraser, AI summarizer, AI email writer, AI image upscaler, image converter, HEIC converter, PDF tools, video converter, password generator, online file tools"
         url="/"
         structuredData={structuredData}
       />
@@ -179,57 +181,81 @@ export default function Home() {
             }}
             aria-hidden
           />
-          <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-10 md:py-14">
-            <div className="mx-auto max-w-3xl text-center space-y-6 md:space-y-7">
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-bold tracking-tight leading-[1.05]">
+          {/* Soft brand atmosphere */}
+          <div
+            className="pointer-events-none absolute -right-24 -top-16 h-64 w-64 rounded-full bg-brand-sky/50 blur-3xl sm:h-80 sm:w-80 md:right-0"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -left-20 bottom-10 h-48 w-48 rounded-full bg-primary/10 blur-3xl sm:h-64 sm:w-64"
+            aria-hidden
+          />
+
+          <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-8 sm:py-10 md:py-14">
+            <div className="mx-auto w-full max-w-3xl text-center">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary/80 sm:mb-4 sm:text-xs animate-[cm-hero-in_0.55s_ease-out_both]">
+                Free online file tools
+              </p>
+
+              <h1 className="text-[2.65rem] leading-[1.05] font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-[5.25rem] animate-[cm-hero-in_0.6s_ease-out_0.05s_both]">
                 <span className="bg-gradient-to-r from-brand-navy via-primary to-brand-mid bg-clip-text text-transparent dark:from-brand-sky dark:via-brand-mid dark:to-primary">
                   ConvertMastery
                 </span>
               </h1>
 
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto">
-                Convert, compress, and secure your files in seconds —{" "}
-                <span className="font-semibold text-foreground">free, fast, and privacy-first.</span>
+              <p className="mx-auto mt-3 max-w-[20rem] text-[15px] leading-snug text-muted-foreground sm:mt-5 sm:max-w-xl sm:text-lg sm:leading-relaxed md:text-xl animate-[cm-hero-in_0.6s_ease-out_0.1s_both]">
+                Convert &amp; compress in seconds —{" "}
+                <span className="font-semibold text-foreground">free &amp; private.</span>
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-1">
-                <Link href="/convert">
+              <div className="mt-6 flex w-full max-w-sm flex-col gap-2.5 mx-auto sm:mt-8 sm:max-w-none sm:flex-row sm:justify-center sm:gap-3 animate-[cm-hero-in_0.65s_ease-out_0.15s_both]">
+                <Link href="/convert" className="w-full sm:w-auto">
                   <Button
                     size="lg"
-                    className="min-w-[200px] h-12 text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                    className="h-12 w-full text-base font-semibold shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 sm:min-w-[200px]"
                   >
                     Start Converting
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <Link href="/compress">
+                <Link href="/compress" className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="min-w-[200px] h-12 text-base font-semibold bg-card/60 backdrop-blur-sm"
+                    className="h-12 w-full bg-card/70 text-base font-semibold backdrop-blur-sm sm:min-w-[200px]"
                   >
                     Compress Files
                   </Button>
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto pt-4 md:pt-6">
-                {[
-                  { label: "Free forever", sub: "No credit card" },
-                  { label: "40+ tools", sub: "One platform" },
-                  { label: "Browser-based", sub: "Privacy-first" },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-xl border border-border/80 bg-card/80 backdrop-blur px-4 py-3 shadow-sm"
-                  >
-                    <div className="text-sm font-bold text-foreground">{stat.label}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{stat.sub}</div>
-                  </div>
-                ))}
+              {/* Value strip — compact on mobile, no stacked cards */}
+              <div className="mx-auto mt-7 max-w-2xl animate-[cm-hero-in_0.7s_ease-out_0.22s_both] sm:mt-9">
+                <div className="flex items-stretch justify-between gap-0 overflow-hidden rounded-2xl border border-brand-mid/25 bg-card/90 px-1 py-3 shadow-sm shadow-primary/5 backdrop-blur-md sm:grid sm:grid-cols-3 sm:gap-0 sm:px-0 sm:py-0">
+                  {[
+                    { label: "Free forever", sub: "No credit card" },
+                    { label: "40+ tools", sub: "One platform" },
+                    { label: "In-browser", sub: "Privacy-first" },
+                  ].map((stat, i) => (
+                    <div
+                      key={stat.label}
+                      className={cn(
+                        "flex flex-1 flex-col items-center justify-center px-2 sm:px-4 sm:py-4",
+                        i > 0 && "border-l border-brand-mid/20"
+                      )}
+                    >
+                      <div className="text-[12px] font-bold leading-tight text-brand-navy sm:text-sm">
+                        {stat.label}
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-muted-foreground sm:text-xs">
+                        {stat.sub}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <div className="mt-5 hidden flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground sm:mt-6 sm:flex animate-[cm-hero-in_0.7s_ease-out_0.28s_both]">
                 {["100% Free", "No install", "Privacy-first"].map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5">
                     <CheckCircle className="h-4 w-4 text-primary" />
@@ -240,14 +266,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative z-10 pb-5 md:pb-7 flex justify-center">
+          <div className="relative z-10 flex justify-center pb-4 sm:pb-5 md:pb-7">
             <a
               href="#browse-tools"
-              className="inline-flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-lg px-3 py-2"
+              className="inline-flex flex-col items-center gap-0.5 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               aria-label="Scroll to browse tools"
             >
-              <span className="text-xs font-medium tracking-wide uppercase">Explore tools</span>
-              <ChevronDown className="h-5 w-5 animate-bounce" aria-hidden />
+              <span className="text-[10px] font-semibold tracking-[0.16em] uppercase sm:text-xs">
+                Explore tools
+              </span>
+              <ChevronDown className="h-4 w-4 animate-bounce sm:h-5 sm:w-5" aria-hidden />
             </a>
           </div>
         </section>
@@ -257,7 +285,7 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <SectionHeading
               title="Browse Tools by Category"
-              subtitle="Image, document, video, audio, security, and utility tools — all free and online."
+              subtitle="AI, image, document, video, audio, security, and utility tools — all free and online."
             />
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto">
               {[
@@ -299,7 +327,7 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <SectionHeading
               title="Popular Tools"
-              subtitle="Most-used converters and utilities on ConvertMastery"
+              subtitle="Most-used AI tools, converters, and utilities on ConvertMastery"
             />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
               {POPULAR_TOOLS.map((tool) => {
@@ -389,8 +417,8 @@ export default function Home() {
         <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
             <SectionHeading
-              title="All-in-One Conversion & Privacy Tools"
-              subtitle="Convert images, videos, documents, and audio. Plus security, privacy, and utility tools — all in one place."
+              title="All-in-One Conversion, AI & Privacy Tools"
+              subtitle="Convert images, videos, documents, and audio. Rewrite and summarize with AI. Plus security and utility tools — all in one place."
             />
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
               {LANDING_CATEGORIES.map((cat) => {

@@ -484,7 +484,7 @@ export default function ExtractText() {
                   <Button
                     onClick={processAll}
                     disabled={processing}
-                    className="w-full bg-primary hover:bg-brand-navy text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
+                    className="w-full bg-primary hover:bg-primary-hover text-white h-12 shadow-md hover:shadow-lg transition-all font-semibold text-base"
                   >
                     {processing ? (
                       <> <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Extracting... </>

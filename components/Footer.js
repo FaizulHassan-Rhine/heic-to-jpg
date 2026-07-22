@@ -10,19 +10,19 @@ import { MAIN_CATEGORIES } from "../lib/toolsConfig";
 const ToolSeoContent = dynamic(() => import("./ToolSeoContent"), { ssr: true });
 
 const POPULAR_TOOLS = [
+  { href: "/ai-paraphraser", label: "AI Paraphraser" },
+  { href: "/ai-summarizer", label: "AI Summarizer" },
   { href: "/convert", label: "Image Converter" },
   { href: "/compress", label: "Image Compressor" },
   { href: "/heic-to-jpg", label: "HEIC to JPG" },
+  { href: "/ai-image-upscaler", label: "AI Image Upscaler" },
   { href: "/merge-pdf", label: "Merge PDF" },
-  { href: "/compress-pdf", label: "Compress PDF" },
   { href: "/password-generator", label: "Password Generator" },
-  { href: "/background-remover", label: "Background Remover" },
-  { href: "/qr-barcode", label: "QR & Barcode" },
 ];
 
 export default function Footer() {
   const router = useRouter();
-  const seo = getSeoByPath(router.pathname);
+  const seo = getSeoByPath((router.asPath || router.pathname).split("?")[0]);
   const toolContent = seo?.type === "tool" ? seo : null;
 
   return (

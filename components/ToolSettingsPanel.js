@@ -18,12 +18,15 @@ export default function ToolSettingsPanel({
   return (
     <Card
       className={cn(
-        "flex h-fit max-h-[min(92vh,calc(100vh-5.5rem))] flex-col overflow-hidden border border-border shadow-sm md:sticky md:top-24",
+        // Mobile: full height in page flow (no nested scroll under FAB).
+        // Desktop: sticky card with internal scroll.
+        "flex h-fit w-full min-w-0 max-w-full flex-col overflow-x-hidden border border-border shadow-sm",
+        "md:sticky md:top-24 md:max-h-[min(92vh,calc(100vh-5.5rem))] md:overflow-hidden",
         className
       )}
     >
       <CardContent className="flex min-h-0 flex-1 flex-col gap-0 p-0">
-        <div className="shrink-0 space-y-3 border-b border-border px-5 pb-4 pt-5">
+        <div className="shrink-0 space-y-3 border-b border-border px-4 pb-4 pt-4 sm:px-5 sm:pt-5">
           <div className="flex items-center gap-2 w-full">
             <div className="flex items-center gap-2 font-semibold text-lg text-foreground flex-1 min-w-0">
               <Icon className="w-5 h-5 flex-shrink-0 text-primary" aria-hidden />
@@ -36,7 +39,7 @@ export default function ToolSettingsPanel({
 
         <div
           className={cn(
-            "min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-4",
+            "w-full min-w-0 space-y-6 px-4 py-4 pb-24 sm:px-5 md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain md:pb-4",
             "[scrollbar-width:thin] [scrollbar-color:hsl(var(--muted-foreground)/0.35)_transparent]",
             "[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-track]:bg-transparent",
             bodyClassName
@@ -46,7 +49,7 @@ export default function ToolSettingsPanel({
         </div>
 
         {footer && (
-          <div className="shrink-0 border-t border-border bg-card px-5 py-4">
+          <div className="shrink-0 border-t border-border bg-card px-4 py-4 pb-20 sm:px-5 md:pb-4">
             {footer}
           </div>
         )}

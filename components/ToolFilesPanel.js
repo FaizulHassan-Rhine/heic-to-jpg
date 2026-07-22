@@ -16,14 +16,14 @@ export default function ToolFilesPanel({
   headerExtra,
 }) {
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("w-full min-w-0 max-w-full space-y-4", className)}>
       <Card className="border border-border shadow-sm overflow-hidden">
         <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 flex-1 space-y-3">
               <h2 className="text-lg font-semibold text-foreground">{title}</h2>
               {showStats && (
-                <div className="flex flex-nowrap items-center gap-x-3 sm:gap-x-5 text-sm">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-5 text-sm">
                   <Stat label="Total" value={total} tone="muted" />
                   <Stat label="Completed" value={completed} tone="sky" />
                   <Stat label="Processing" value={processing} tone="mid" />
@@ -32,7 +32,7 @@ export default function ToolFilesPanel({
               {headerExtra}
             </div>
             {actions && (
-              <div className="flex w-full shrink-0 flex-col gap-3 xl:w-auto xl:max-w-none xl:items-end">
+              <div className="flex w-full min-w-0 shrink-0 flex-col gap-3 xl:w-auto xl:max-w-none xl:items-end">
                 {actions}
               </div>
             )}
@@ -40,7 +40,7 @@ export default function ToolFilesPanel({
         </CardContent>
       </Card>
 
-      <div className="space-y-3">{children}</div>
+      <div className="w-full min-w-0 space-y-3">{children}</div>
     </div>
   );
 }

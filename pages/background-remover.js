@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import { useSettings } from "../lib/useSettings";
+import { formatMaxMb } from "../lib/formatMaxMb";
 import { Image as ImageIcon, Loader2, Download, RotateCcw, Settings2, Trash2, Eye, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -139,7 +140,7 @@ export default function BackgroundRemoverPage() {
     }
     const oversized = files.find((f) => f.size > maxSize);
     if (oversized) {
-      toast.error(`${oversized.name} exceeds max size (${Math.round(maxSize / (1024 * 1024))}MB).`);
+      toast.error(`${oversized.name} exceeds max size (${formatMaxMb(maxSize)}MB).`);
       return;
     }
     setError("");
@@ -292,7 +293,8 @@ export default function BackgroundRemoverPage() {
           maxFiles={settings?.image?.maxFiles || 20}
           currentFileCount={items.length}
           title="Upload Images to Remove Background"
-          description={`JPG, PNG, WebP • Max ${Math.round((settings?.image?.maxSize || 20 * 1024 * 1024) / (1024 * 1024))}MB each • Up to ${settings?.image?.maxFiles || 20} files • ${backendLabel || "Backend auto-detects WebGPU/WASM"}`}
+          description="JPG, PNG, WebP"
+          limitsText={`Max ${formatMaxMb(settings?.image?.maxSize || 20 * 1024 * 1024)}MB each • Up to ${settings?.image?.maxFiles || 20} files • ${backendLabel || "Backend auto-detects WebGPU/WASM"}`}
           accept={{
             "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
             "image/png": [".png", ".PNG"],

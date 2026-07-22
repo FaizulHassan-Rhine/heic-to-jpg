@@ -14,9 +14,8 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-
-const MAX_FILES = 10;
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+import { useSettings } from "../lib/useSettings";
+import { formatMaxMb } from "../lib/formatMaxMb";
 
 const ACCEPTED_TYPES = {
   "text/plain": [".txt"],
@@ -40,6 +39,9 @@ const loadHtml2Pdf = () => {
 
 export default function DocToPdf() {
   const { user, trackUsage } = useAuth();
+  const { settings } = useSettings();
+  const maxFiles = settings?.document?.maxFiles || 10;
+  const maxFileSize = settings?.document?.maxSize || 20 * 1024 * 1024;
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -72,8 +74,8 @@ export default function DocToPdf() {
   };
 
   const handleFilesAdded = (newFiles) => {
-    if (files.length + newFiles.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} documents allowed at a time.`);
+    if (files.length + newFiles.length > maxFiles) {
+      toast.error(`Maximum ${maxFiles} documents allowed at a time.`);
       return;
     }
 
@@ -81,7 +83,7 @@ export default function DocToPdf() {
     const valid = [];
 
     newFiles.forEach((file) => {
-      if (file.size > MAX_FILE_SIZE) {
+      if (file.size > maxFileSize) {
         oversized.push(file.name);
       } else {
         valid.push(file);
@@ -89,7 +91,7 @@ export default function DocToPdf() {
     });
 
     if (oversized.length > 0) {
-      toast.error(`${oversized.join(", ")} exceed${oversized.length > 1 ? "" : "s"} 20MB limit`);
+      toast.error(`${oversized.join(", ")} exceed${oversized.length > 1 ? "" : "s"} ${formatMaxMb(maxFileSize)}MB limit`);
     }
 
     if (valid.length === 0) return;
@@ -404,8 +406,11 @@ export default function DocToPdf() {
               files={files}
               setFiles={handleFilesAdded}
               title="Upload Documents to Convert"
-              description="TXT, DOCX • Max 10 files • Max 20MB each"
+              description="TXT, DOCX"
+              limitsText={`Max ${maxFiles} files • Max ${formatMaxMb(maxFileSize)}MB each`}
               accept={ACCEPTED_TYPES}
+              maxFiles={maxFiles}
+              currentFileCount={files.length}
             />
 
             {/* Workspace */}

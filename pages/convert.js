@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
+import { formatMaxMb } from "../lib/formatMaxMb";
 import { generateFileThumbnails } from "../lib/thumbnailUtils";
 import { blobToBase64, extractBase64 } from "../lib/fileUtils";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
@@ -116,6 +118,7 @@ const sanitizeZipBaseName = (raw) => {
 // ─────────────────────────── COMPONENT ───────────────────────────
 
 export default function ConvertImage() {
+  const router = useRouter();
   const { user, trackUsage } = useAuth();
   const { settings } = useSettings();
   const [files, setFiles] = useState([]);
@@ -168,6 +171,17 @@ export default function ConvertImage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState("login");
   const [zipFileName, setZipFileName] = useState("converted_images");
+
+  // Deep-link presets from SEO landings (e.g. /convert?from=heic&to=jpg)
+  useEffect(() => {
+    if (!router.isReady) return;
+    const to = String(router.query.to || "").toLowerCase();
+    const allowed = ["jpg", "png", "webp", "avif", "ico"];
+    if (allowed.includes(to)) {
+      setTargetFormat(to);
+      setFormatPreset("custom");
+    }
+  }, [router.isReady, router.query.to]);
 
   // Get current settings (for selected file or global)
   const getCurrentSettings = () => {
@@ -264,7 +278,7 @@ export default function ConvertImage() {
     const oversized = [];
     newFiles.forEach(f => {
       if (f.size > maxSize) {
-        const maxSizeMB = (maxSize / 1024 / 1024).toFixed(1);
+        const maxSizeMB = formatMaxMb(maxSize);
         oversized.push(f.name);
         toast.error(`"${f.name}" is too large (max ${maxSizeMB}MB)`);
       } else {
@@ -680,7 +694,8 @@ export default function ConvertImage() {
             maxFiles={settings?.image?.maxFiles}
             currentFileCount={files.length}
             title="Upload Images to Convert"
-            description={`JPG, PNG, WebP, AVIF, ICO, HEIC, TIFF • Max ${Math.round(settings.image.maxSize / (1024 * 1024))}MB each • Up to ${settings.image.maxFiles} files`}
+            description="JPG, PNG, WebP, AVIF, ICO, HEIC, TIFF"
+            limitsText={`Max ${formatMaxMb(settings.image.maxSize)}MB each • Up to ${settings.image.maxFiles} files`}
             accept={{
               "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
               "image/png": [".png", ".PNG"],
@@ -730,7 +745,7 @@ export default function ConvertImage() {
                   {/* Format Presets */}
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-muted-foreground">Format Preset</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid w-full grid-cols-2 gap-2">
                       {[
                         { id: "custom", label: "Custom", icon: "⚙️" },
                         { id: "web", label: "Web", icon: "🌐" },
@@ -785,9 +800,9 @@ export default function ConvertImage() {
                               }
                             }}
                             className={cn(
-                              "p-2 rounded-lg border-2 transition-all text-center text-xs relative",
+                              "p-2 rounded-lg border-2 transition-all text-center text-xs relative min-w-0",
                               current.formatPreset === preset.id
-                                ? "border-primary bg-brand-sky/50 text-brand-navy shadow-sm"
+                                ? "border-primary bg-brand-sky/50 text-brand-navy dark:bg-accent dark:text-foreground shadow-sm"
                                 : "border-border hover:border-border text-muted-foreground",
                               requiresAuth && "opacity-75"
                             )}
@@ -809,7 +824,7 @@ export default function ConvertImage() {
                   {/* Format Selection */}
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-muted-foreground">Target Format</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3">
                       {['jpg', 'png', 'webp', 'avif', 'ico'].map(fmt => {
                         const current = getCurrentSettings();
                         return (
@@ -820,12 +835,14 @@ export default function ConvertImage() {
                               updateCurrentSettings({ targetFormat: fmt, formatPreset: "custom" });
                             }}
                             className={cn(
-                              "flex items-center justify-between px-3 py-3 text-sm rounded-lg border-2 transition-all uppercase font-medium",
-                              current.targetFormat === fmt ? "border-primary bg-brand-sky/50 text-brand-navy shadow-sm" : "border-border hover:border-border text-muted-foreground"
+                              "flex min-w-0 items-center justify-center gap-1.5 px-2 py-2.5 sm:px-3 sm:py-3 text-xs sm:text-sm rounded-lg border-2 transition-all uppercase font-medium",
+                              current.targetFormat === fmt
+                                ? "border-primary bg-brand-sky/50 text-brand-navy dark:bg-accent dark:text-foreground shadow-sm"
+                                : "border-border hover:border-border text-muted-foreground"
                             )}
                           >
                             {fmt}
-                            {current.targetFormat === fmt && <CheckCircle className="w-4 h-4 ml-2 shrink-0" />}
+                            {current.targetFormat === fmt && <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
                           </button>
                         );
                       })}
@@ -899,17 +916,18 @@ export default function ConvertImage() {
                   {/* Rotation */}
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-muted-foreground">Rotation</label>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid w-full grid-cols-4 gap-1.5 sm:gap-2">
                       {[0, 90, 180, 270].map((angle) => {
                         const current = getCurrentSettings();
                         return (
                           <button
                             key={angle}
+                            type="button"
                             onClick={() => updateCurrentSettings({ rotation: angle })}
                             className={cn(
-                              "px-3 py-2 text-sm rounded-lg border-2 transition-all font-medium",
+                              "min-w-0 px-1 py-2 sm:px-3 text-xs sm:text-sm rounded-lg border-2 transition-all font-medium tabular-nums",
                               current.rotation === angle
-                                ? "border-primary bg-brand-sky/50 text-brand-navy"
+                                ? "border-primary bg-brand-sky/50 text-brand-navy dark:bg-accent dark:text-foreground"
                                 : "border-border hover:border-border text-muted-foreground"
                             )}
                           >
@@ -1288,7 +1306,7 @@ export default function ConvertImage() {
                         size="sm"
                         onClick={processAll}
                         disabled={processing}
-                        className="h-9 rounded-lg bg-primary px-4 font-semibold text-primary-foreground shadow-sm hover:bg-brand-navy disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-primary/40"
+                        className="h-9 rounded-lg bg-primary px-4 font-semibold text-primary-foreground shadow-sm hover:bg-primary-hover disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
                         {processing ? (
                           <>
@@ -1417,16 +1435,16 @@ export default function ConvertImage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 text-sm mt-1">
+                          <div className="flex flex-wrap items-center gap-2 text-sm mt-1">
                             <Badge variant="secondary" className="font-normal text-muted-foreground bg-muted hover:bg-muted">
                               {formatSize(file.size)}
                             </Badge>
 
-                            <ArrowRight className="w-3 h-3 text-muted-foreground/50" />
+                            <ArrowRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />
 
                             {res?.status === "done" ? (
                               <>
-                                <Badge className="bg-brand-sky text-brand-navy hover:bg-brand-sky border-brand-mid/30">
+                                <Badge className="bg-brand-sky text-brand-navy hover:bg-brand-sky border-brand-mid/30 dark:bg-accent dark:text-foreground">
                                   {formatSize(res.size)}
                                 </Badge>
                                 {res.percent !== 0 && (
@@ -1437,7 +1455,7 @@ export default function ConvertImage() {
                                     ({res.percent > 0 ? '-' : '+'}{Math.abs(res.percent)}%)
                                   </span>
                                 )}
-                                <Badge variant="outline" className="border-brand-mid/30 text-brand-navy uppercase">
+                                <Badge variant="outline" className="border-brand-mid/30 text-brand-navy dark:text-foreground uppercase">
                                   {res.ext}
                                 </Badge>
                               </>

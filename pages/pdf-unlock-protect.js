@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
+import { formatMaxMb } from "../lib/formatMaxMb";
 import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import AuthModal from "../components/AuthModal";
 import {
@@ -332,7 +333,7 @@ export default function PdfUnlockProtect() {
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {settings && settings.pdf
-                            ? `Max ${Math.round(settings.pdf.maxSize / (1024 * 1024))}MB`
+                            ? `Max ${formatMaxMb(settings.pdf.maxSize)}MB`
                             : "PDF files only"}
                         </div>
                       </div>

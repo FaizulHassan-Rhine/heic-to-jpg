@@ -21,15 +21,24 @@ function getPriority(path) {
       "/convert",
       "/compress",
       "/heic-to-jpg",
+      "/pdf-to-image",
+      "/word-counter",
       "/background-remover",
       "/merge-pdf",
       "/compress-pdf",
       "/password-generator",
+      "/json-formatter",
+      "/hash-generator",
+      "/ai-paraphraser",
+      "/ai-summarizer",
+      "/ai-email-writer",
+      "/ai-image-upscaler",
     ].includes(path)
   ) {
     return "0.9";
   }
   if (path.startsWith("/blog")) return "0.7";
+  if (path === "/sample-files" || path.startsWith("/sample-files/")) return "0.7";
   if (
     [
       "/about",

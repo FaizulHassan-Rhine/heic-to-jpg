@@ -17,9 +17,9 @@ export default function Guide() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Documentation & Guide - All Tools"
-        description="Complete guide to ConvertMastery: image, video, document, and audio conversion; security and privacy tools (password generator, IP lookup, whois, metadata remover); utilities (QR code, URL shortener). How to use each tool."
-        keywords="ConvertMastery guide, file converter guide, image converter, video converter, document tools, security tools, privacy tools, how to convert HEIC, how to compress PDF"
+        title="Documentation & Guide - All Tools Including AI"
+        description="Complete guide to ConvertMastery: AI paraphraser, summarizer, email writer, image upscaler, plus image, video, document, PDF, security, and privacy tools."
+        keywords="ConvertMastery guide, AI paraphraser, AI summarizer, AI email writer, AI image upscaler, file converter guide, HEIC converter, PDF tools, how to compress PDF"
         url="/guide"
       />
       <Navbar />
@@ -32,7 +32,7 @@ export default function Guide() {
               Complete Guide to ConvertMastery
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Learn how to use our image, video, document, and audio tools—plus security, privacy, and utility tools. All free and privacy-first.
+              Learn how to use our AI tools, file converters, PDF utilities, and privacy features — all free and privacy-first.
             </p>
           </div>
 

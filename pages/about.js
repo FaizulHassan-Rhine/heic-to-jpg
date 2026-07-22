@@ -4,8 +4,8 @@ import Link from "next/link";
 export default function AboutPage() {
   return (
     <PolicyPage
-      title="About ConvertMastery – Free Online File Tools"
-      description="Learn about ConvertMastery, our mission to provide free, privacy-first file conversion and security tools online."
+      title="About ConvertMastery – Free Online File & AI Tools"
+      description="Learn about ConvertMastery: free AI paraphraser, summarizer, email writer, image upscaler, plus privacy-first file conversion and PDF tools."
       path="/about"
       h1="About ConvertMastery"
       subtitle="Free, privacy-first file tools for everyone — no installs, no hassle."

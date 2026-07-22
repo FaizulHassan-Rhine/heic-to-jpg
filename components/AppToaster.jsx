@@ -6,28 +6,28 @@ import { cn } from "@/lib/utils";
 const TONES = {
   success: {
     icon: Check,
-    rail: "bg-gradient-to-b from-brand-navy via-primary to-brand-mid",
-    iconBg: "bg-gradient-to-br from-primary to-brand-navy text-white",
+    rail: "bg-gradient-to-b from-primary via-brand-mid to-primary",
+    iconBg: "bg-gradient-to-br from-primary to-primary-hover text-white",
   },
   error: {
     icon: X,
-    rail: "bg-gradient-to-b from-brand-navy via-primary to-destructive",
-    iconBg: "bg-gradient-to-br from-destructive to-brand-navy text-white",
+    rail: "bg-gradient-to-b from-destructive via-primary to-destructive",
+    iconBg: "bg-gradient-to-br from-destructive to-primary-hover text-white",
   },
   warning: {
     icon: AlertTriangle,
-    rail: "bg-gradient-to-b from-brand-navy via-brand-mid to-primary",
-    iconBg: "bg-gradient-to-br from-brand-mid to-brand-navy text-white",
+    rail: "bg-gradient-to-b from-brand-mid via-primary to-brand-mid",
+    iconBg: "bg-gradient-to-br from-brand-mid to-primary-hover text-white",
   },
   info: {
     icon: Info,
-    rail: "bg-gradient-to-b from-brand-navy via-primary to-brand-mid",
-    iconBg: "bg-gradient-to-br from-primary to-brand-navy text-white",
+    rail: "bg-gradient-to-b from-primary via-brand-mid to-primary",
+    iconBg: "bg-gradient-to-br from-primary to-primary-hover text-white",
   },
   loading: {
     icon: Loader2,
-    rail: "bg-gradient-to-b from-brand-navy via-primary to-brand-mid",
-    iconBg: "bg-gradient-to-br from-primary to-brand-navy text-white",
+    rail: "bg-gradient-to-b from-primary via-brand-mid to-primary",
+    iconBg: "bg-gradient-to-br from-primary to-primary-hover text-white",
   },
 };
 
@@ -39,15 +39,15 @@ function ToastCard({ t, type = "info", title, message }) {
     <div
       className={cn(
         "pointer-events-auto relative w-[min(100vw-1.5rem,20rem)] overflow-hidden rounded-xl",
-        "border border-brand-mid/20 bg-white/95 backdrop-blur-xl",
-        "shadow-[0_16px_40px_-14px_rgba(15,40,84,0.32)]",
+        "border border-border bg-card text-card-foreground backdrop-blur-xl",
+        "shadow-lg shadow-brand-navy/20 dark:shadow-black/50",
         t.visible ? "cm-toast-enter" : "cm-toast-leave"
       )}
       role="status"
       aria-live="polite"
     >
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-sky/30 via-white to-white"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-sky/40 via-transparent to-transparent dark:from-primary/10"
         aria-hidden
       />
       <div className={cn("absolute inset-y-0 left-0 w-1", tone.rail)} aria-hidden />
@@ -67,7 +67,7 @@ function ToastCard({ t, type = "info", title, message }) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold leading-snug text-brand-navy">{title}</p>
+          <p className="text-[13px] font-semibold leading-snug text-foreground">{title}</p>
           {message ? (
             <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground line-clamp-2">
               {message}
@@ -79,7 +79,7 @@ function ToastCard({ t, type = "info", title, message }) {
           <button
             type="button"
             onClick={() => toast.dismiss(t.id)}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-brand-sky/60 hover:text-brand-navy"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Dismiss"
           >
             <X className="h-3.5 w-3.5" strokeWidth={2.25} />
@@ -88,8 +88,8 @@ function ToastCard({ t, type = "info", title, message }) {
       </div>
 
       {type !== "loading" && t.visible && (
-        <div className="relative h-0.5 w-full bg-brand-sky/40">
-          <div className="cm-toast-progress absolute inset-y-0 left-0 bg-gradient-to-r from-brand-navy via-primary to-brand-mid" />
+        <div className="relative h-0.5 w-full bg-muted">
+          <div className="cm-toast-progress absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-brand-mid to-primary" />
         </div>
       )}
     </div>

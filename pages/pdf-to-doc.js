@@ -14,9 +14,9 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import { useSettings } from "../lib/useSettings";
+import { formatMaxMb } from "../lib/formatMaxMb";
 
-const MAX_FILES = 10;
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const RENDER_SCALE = 2;
 
 const formatSize = (bytes) => {
@@ -39,6 +39,9 @@ const getPdfJs = async () => {
 
 export default function PdfToDoc() {
   const { user, trackUsage } = useAuth();
+  const { settings } = useSettings();
+  const maxFiles = settings?.pdf?.maxFiles || 10;
+  const maxFileSize = settings?.pdf?.maxSize || 20 * 1024 * 1024;
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState({});
   const [processing, setProcessing] = useState(false);
@@ -53,15 +56,15 @@ export default function PdfToDoc() {
   // ── File Handling ──
 
   const handleFilesAdded = (newFiles) => {
-    if (files.length + newFiles.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} PDFs allowed.`);
+    if (files.length + newFiles.length > maxFiles) {
+      toast.error(`Maximum ${maxFiles} PDFs allowed.`);
       return;
     }
 
     const valid = [];
     newFiles.forEach((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(`"${file.name}" is too large (>20MB)`);
+      if (file.size > maxFileSize) {
+        toast.error(`"${file.name}" is too large (>${formatMaxMb(maxFileSize)}MB)`);
       } else if (!file.name.toLowerCase().endsWith(".pdf")) {
         toast.error(`"${file.name}" — only PDF files accepted`);
       } else {
@@ -413,7 +416,10 @@ export default function PdfToDoc() {
             setFiles={handleFilesAdded}
             accept={{ "application/pdf": [".pdf"] }}
             title="Upload PDF Files"
-            description="PDF only • Max 10 files • Max 20MB each"
+            description="PDF"
+            limitsText={`Max ${maxFiles} files • Max ${formatMaxMb(maxFileSize)}MB each`}
+            maxFiles={maxFiles}
+            currentFileCount={files.length}
           />
 
           {/* Workspace: Sidebar + File List */}

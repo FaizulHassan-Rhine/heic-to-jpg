@@ -9,11 +9,11 @@ export default function FloatingHermesButton() {
   return (
     <Link
       href="/hermes-ai"
-      className="fixed bottom-6 left-6 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:bg-brand-navy hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-brand-mid focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+      className="fixed bottom-5 left-4 z-40 flex items-center justify-center gap-2 rounded-full bg-primary p-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-primary-hover hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-brand-mid focus:ring-offset-2 dark:focus:ring-offset-background sm:bottom-6 sm:left-6 sm:px-4 sm:py-3"
       aria-label="Open Hermes AI chat"
     >
       <MessageSquare className="h-5 w-5 shrink-0" />
-      <span>Hermes AI</span>
+      <span className="hidden sm:inline">Hermes AI</span>
     </Link>
   );
 }

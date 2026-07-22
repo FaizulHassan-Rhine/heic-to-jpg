@@ -218,28 +218,47 @@ export default async function handler(req, res) {
         settings.markModified('features');
       }
 
-      // Always apply file/batch limits when the client sent them.
-      // Previously we only applied when `!features`, but the dashboard always sends `features`
-      // alongside limits — so limits were skipped and save could fail or ignore edits.
+      // Always apply file/batch limits with $set so nested features edits
+      // cannot leave document/pdf/video/audio/general limits unsaved.
       if (Object.keys(fileLimitUpdates).length > 0) {
         Object.keys(fileLimitUpdates).forEach((key) => {
-          const oldValue = settings[key];
           settings[key] = fileLimitUpdates[key];
           settings.markModified(key);
-          if (key === "imageMaxSize" && oldValue != null && Number.isFinite(oldValue)) {
-            console.log(
-              `Updating ${key}: ${oldValue} bytes (${oldValue / (1024 * 1024)} MB) -> ${fileLimitUpdates[key]} bytes (${fileLimitUpdates[key] / (1024 * 1024)} MB)`
-            );
-          }
         });
+        console.log(
+          "Applying file limits:",
+          Object.fromEntries(
+            Object.entries(fileLimitUpdates).map(([k, v]) => [
+              k,
+              k.includes("Size") ? `${v} bytes (${v / (1024 * 1024)} MB)` : v,
+            ])
+          )
+        );
       }
 
       await settings.save();
+
+      // Belt-and-suspenders: force-persist limits via $set in case document.save
+      // skipped any top-level path while merging features.
+      if (Object.keys(fileLimitUpdates).length > 0) {
+        settings = await Settings.findOneAndUpdate(
+          { _id: settings._id },
+          { $set: fileLimitUpdates },
+          { new: true }
+        );
+      }
+
       console.log("Settings saved. imageMaxSize in DB:", settings.imageMaxSize, "bytes =", settings.imageMaxSize / (1024 * 1024), "MB");
+      console.log("document/pdf/video/audio/general sizes (MB):", {
+        document: settings.documentMaxSize / (1024 * 1024),
+        pdf: settings.pdfMaxSize / (1024 * 1024),
+        video: settings.videoMaxSize / (1024 * 1024),
+        audio: settings.audioMaxSize / (1024 * 1024),
+        general: settings.generalMaxSize / (1024 * 1024),
+      });
 
       // Convert Mongoose document to plain object for JSON serialization
       const settingsObj = settings.toObject ? settings.toObject() : JSON.parse(JSON.stringify(settings));
-      console.log("Returning settings. imageMaxSize:", settingsObj.imageMaxSize, "bytes =", settingsObj.imageMaxSize / (1024 * 1024), "MB");
       
       return res.status(200).json({ success: true, settings: settingsObj });
     } else {

@@ -14,6 +14,7 @@ const NOINDEX_PREFIXES = ["/admin", "/my-orders"];
 export default function GlobalSeo() {
   const router = useRouter();
   const pathname = router.pathname;
+  const asPath = (router.asPath || pathname).split("?")[0].replace(/\/$/, "") || "/";
 
   if (NOINDEX_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return (
@@ -28,23 +29,28 @@ export default function GlobalSeo() {
 
   if (PAGES_WITH_OWN_SEO.includes(pathname)) return null;
   if (pathname.startsWith("/blog/") && pathname !== "/blog") return null;
+  if (pathname.startsWith("/sample-files")) return null;
 
-  const seo = getSeoByPath(pathname);
+  const seo = getSeoByPath(asPath);
+  // Landing pages (SeoLandingPage) and static pages ship their own <SEO />
   if (!seo || seo.type !== "tool") return null;
 
-  const breadcrumbs = [
-    { name: "Home", href: "/" },
-    { name: seo.h1, href: seo.path },
-  ];
+  const breadcrumbs = [{ name: "Home", href: "/" }];
+  if (seo.category) {
+    breadcrumbs.push({
+      name: seo.category,
+      href: seo.categoryPath || seo.path,
+    });
+  }
+  breadcrumbs.push({ name: seo.h1, href: seo.path });
 
   const schemas = combineSchemas(
-    seo.type === "tool" || seo.type === "landing"
-      ? softwareApplicationSchema({
-          name: seo.h1,
-          description: seo.description,
-          url: seo.path,
-        })
-      : null,
+    softwareApplicationSchema({
+      name: seo.h1,
+      description: seo.description,
+      url: seo.path,
+      category: seo.applicationCategory || "UtilityApplication",
+    }),
     faqPageSchema(seo.faqs),
     breadcrumbSchema(breadcrumbs)
   );

@@ -1,14 +1,16 @@
-import { useState, useCallback, useRef } from "react";
+import { useState } from "react";
 import { useAuth } from "../lib/authContext";
 import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
+import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { useSettings } from "../lib/useSettings";
+import { formatMaxMb } from "../lib/formatMaxMb";
 import {
-    Upload,
     FileText,
     Trash2,
     Download,
@@ -20,8 +22,6 @@ import {
     Settings2,
     FileOutput,
 } from "lucide-react";
-
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 function formatFileSize(bytes) {
     if (bytes === 0) return "0 B";
@@ -59,6 +59,8 @@ function parsePageRange(rangeStr, maxPages) {
 
 export default function CompressPdf() {
     const { user, trackUsage } = useAuth();
+    const { settings: siteSettings } = useSettings();
+    const maxFileSize = siteSettings?.pdf?.maxSize || 20 * 1024 * 1024;
     const [file, setFile] = useState(null);
     const [result, setResult] = useState(null);
     const [processing, setProcessing] = useState(false);
@@ -66,7 +68,6 @@ export default function CompressPdf() {
     const [level, setLevel] = useState("recommended");
     const [pageRange, setPageRange] = useState(""); // e.g., "1-5,10-15"
     const [removeMetadata, setRemoveMetadata] = useState(false);
-    const fileInputRef = useRef(null);
 
     const compressionSettings = {
         extreme: { scale: 1.0, quality: 0.5, label: "Extreme Compression", desc: "Smallest size, lower quality (72 DPI)" },
@@ -84,12 +85,12 @@ export default function CompressPdf() {
         return pdfjsLib;
     };
 
-    const handleFileChange = (e) => {
-        const selected = e.target.files?.[0];
+    const handleFilesAdded = (selectedFiles) => {
+        const selected = selectedFiles?.[0];
         if (!selected) return;
 
-        if (selected.size > MAX_FILE_SIZE) {
-            toast.error("File exceeds 50MB limit");
+        if (selected.size > maxFileSize) {
+            toast.error(`File exceeds ${formatMaxMb(maxFileSize)}MB limit`);
             return;
         }
         if (!selected.type.includes("pdf") && !selected.name.toLowerCase().endsWith(".pdf")) {
@@ -100,7 +101,6 @@ export default function CompressPdf() {
         setFile(selected);
         setResult(null);
         setProgress(0);
-        e.target.value = ""; // Reset input
     };
 
     const compressPdf = async () => {
@@ -235,30 +235,16 @@ export default function CompressPdf() {
                     <div className="space-y-8">
                         {/* Upload Area */}
                         {!file && !result && (
-                            <Card
-                                onClick={() => fileInputRef.current?.click()}
-                                className="border-2 border-dashed border-border hover:border-primary hover:bg-brand-sky/50/10 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-md"
-                            >
-                                <CardContent className="flex flex-col items-center justify-center py-16">
-                                    <div className="w-20 h-20 bg-brand-sky rounded-full flex items-center justify-center mb-6">
-                                        <Minimize2 className="w-10 h-10 text-primary" />
-                                    </div>
-                                    <h3 className="text-xl font-semibold mb-2 text-foreground">
-                                        Drop PDF file here
-                                    </h3>
-                                    <p className="text-muted-foreground mb-6">or click to browse local files</p>
-                                    <Button size="lg" className="bg-primary hover:bg-brand-navy">
-                                        Select PDF File
-                                    </Button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept=".pdf"
-                                        className="hidden"
-                                        onChange={handleFileChange}
-                                    />
-                                </CardContent>
-                            </Card>
+                            <CollapsibleDropzone
+                                files={[]}
+                                setFiles={handleFilesAdded}
+                                title="Upload PDF to Compress"
+                                description="PDF"
+                                limitsText={`Max 1 file • Max ${formatMaxMb(maxFileSize)}MB`}
+                                accept={{ "application/pdf": [".pdf"] }}
+                                maxFiles={1}
+                                currentFileCount={0}
+                            />
                         )}
 
                         {/* Selected File & Settings */}
@@ -437,7 +423,7 @@ export default function CompressPdf() {
                                             <Button
                                                 size="lg"
                                                 onClick={downloadResult}
-                                                className="bg-primary hover:bg-brand-navy px-8 h-12 text-base shadow-md shadow-primary/20"
+                                                className="bg-primary hover:bg-primary-hover px-8 h-12 text-base shadow-md shadow-primary/20"
                                             >
                                                 <Download className="w-5 h-5 mr-2" />
                                                 Download PDF

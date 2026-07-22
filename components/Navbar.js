@@ -6,7 +6,8 @@ import ThemeToggle from "./ThemeToggle";
 import {
   Menu, X, ChevronDown, LogOut, Image, FileText, Video,
   Music, QrCode, Link2, Archive, Lock, Shield, Globe, Mail, Phone,
-  Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator, MapPin
+  Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator, MapPin,
+  Hash, Pipette, Braces, Binary, Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "../lib/authContext";
@@ -21,6 +22,7 @@ import {
 const ICON_MAP = {
   Image, FileText, Video, Music, QrCode, Link2, Archive, Lock, Shield, Globe,
   Mail, Phone, Database, Server, FileImage, ScanLine, Type, Minimize2, Merge, Calculator, MapPin,
+  Hash, Pipette, Braces, Binary, Sparkles,
 };
 
 function withIcons(categories) {

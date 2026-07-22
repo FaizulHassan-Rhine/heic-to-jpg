@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/authContext";
 import { useSettings } from "../lib/useSettings";
+import { formatMaxMb } from "../lib/formatMaxMb";
 import CollapsibleDropzone from "../components/CollapsibleDropzone";
 import ToolPageShell, { ToolPageHeader } from "../components/ToolPageShell";
 import AuthModal from "../components/AuthModal";
@@ -244,7 +245,8 @@ export default function FileToZip() {
             maxFiles={settings?.general?.maxFiles}
             currentFileCount={files.length}
             title="Upload Files to Archive"
-            description={`All file types • Max ${Math.round(settings.general.maxSize / (1024 * 1024))}MB each • Up to ${settings.general.maxFiles} files`}
+            description="All file types"
+            limitsText={`Max ${formatMaxMb(settings.general.maxSize)}MB each • Up to ${settings.general.maxFiles} files`}
             accept={{
               "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".heic"],
               "application/pdf": [".pdf"],
